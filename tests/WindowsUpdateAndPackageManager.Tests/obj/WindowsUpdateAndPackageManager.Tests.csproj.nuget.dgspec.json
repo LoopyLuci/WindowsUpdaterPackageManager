@@ -73,7 +73,11 @@
             },
             "System.Data.SQLite": {
               "target": "Package",
-              "version": "[1.0.118, )"
+              "version": "[2.0.4, )"
+            },
+            "System.Drawing.Common": {
+              "target": "Package",
+              "version": "[4.7.3, )"
             }
           },
           "imports": [
@@ -448,27 +452,27 @@
           "dependencies": {
             "Microsoft.NET.Test.Sdk": {
               "target": "Package",
-              "version": "[17.9.0, )"
+              "version": "[18.8.1, )"
             },
             "Moq": {
               "target": "Package",
-              "version": "[4.20.70, )"
+              "version": "[4.20.72, )"
             },
             "System.Data.SQLite": {
               "target": "Package",
-              "version": "[1.0.118, )"
+              "version": "[2.0.4, )"
             },
             "coverlet.collector": {
               "target": "Package",
-              "version": "[6.0.2, )"
+              "version": "[10.0.1, )"
             },
             "xunit": {
               "target": "Package",
-              "version": "[2.9.2, )"
+              "version": "[2.9.3, )"
             },
             "xunit.runner.visualstudio": {
               "target": "Package",
-              "version": "[3.0.0, )"
+              "version": "[3.1.5, )"
             }
           },
           "imports": [

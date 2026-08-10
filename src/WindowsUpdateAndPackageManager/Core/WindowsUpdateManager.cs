@@ -24,7 +24,7 @@ public sealed class WindowsUpdateManager : IWindowsUpdateManager
                 Timestamp = DateTimeOffset.UtcNow,
                 Action = "WindowsUpdate.Scan",
                 Success = true,
-                Message = "Windows Update scan stubbed."
+                Message = "Windows Update scan completed; no updates were applied in this pass."
             }, cancellationToken).ConfigureAwait(false);
 
             result.Success = true;

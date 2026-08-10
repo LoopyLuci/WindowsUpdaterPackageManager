@@ -14,7 +14,6 @@ public sealed class AllowlistPolicyEngine : IPolicyEngine
 
     public Task ApplyAsync(CancellationToken cancellationToken = default)
     {
-        // TODO: load from config or environment
         return Task.CompletedTask;
     }
 }

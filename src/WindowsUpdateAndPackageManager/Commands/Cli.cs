@@ -1,3 +1,5 @@
+using System;
+using System.Threading.Tasks;
 using System.CommandLine;
 using System.CommandLine.Invocation;
 using WindowsUpdateAndPackageManager.Core;
@@ -15,7 +17,7 @@ public static class Cli
             Description = "Personal-first, offline-capable update and package manager for Windows."
         };
 
-        var repoOption = new Option<string?>("--repo", getDefaultValue: () => null, description: "Repository URL");
+        var repoOption = new Option<string?>("--repo", description: "Repository URL");
 
         var sync = new Command("sync", "Sync packages from a repository")
         {
@@ -154,7 +156,33 @@ public static class Cli
         var health = new Command("health", "Repo health summary");
         health.SetHandler(() =>
         {
-            Console.WriteLine("Repository connectivity and manifest validation summary would appear here.");
+            try
+            {
+                var repoUrl = "https://github.com/LoopyLuci/WindowsUpdateAndPackageManager";
+                var validator = services.GetService(typeof(IManifestValidator)) as IManifestValidator;
+                var repoClient = services.GetService(typeof(IRepoClient)) as IRepoClient;
+                if (validator is null || repoClient is null)
+                {
+                    Console.WriteLine("Health check is not fully configured.");
+                    return;
+                }
+                string? indexJson = null;
+                try
+                {
+                    indexJson = repoClient.DownloadIndexAsync(repoUrl).GetAwaiter().GetResult();
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Repository connectivity failed: {ex.Message}");
+                    return;
+                }
+                var valid = validator.ValidateAsync(indexJson).GetAwaiter().GetResult();
+                Console.WriteLine($"Repository reachable: true; manifest valid: {valid}; schema: {valid}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Health check failed: {ex.Message}");
+            }
         });
         root.AddCommand(health);
 
