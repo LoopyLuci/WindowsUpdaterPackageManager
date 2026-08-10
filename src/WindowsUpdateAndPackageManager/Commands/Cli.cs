@@ -23,11 +23,22 @@ public static class Cli
         };
         sync.SetHandler<string?>((url) =>
         {
-            var syncService = services.GetService(typeof(IRepoSync)) as IRepoSync;
-            if (syncService is null) return;
-            var effective = string.IsNullOrWhiteSpace(url) ? "https://github.com/LoopyLuci/WindowsUpdateAndPackageManager" : url;
-            var result = syncService.SyncAsync(effective).GetAwaiter().GetResult();
-            Console.WriteLine($"Sync success: {result.Success}; packages={result.PackagesUpdated}; message={result.Message}");
+            try
+            {
+                var syncService = services.GetService(typeof(IRepoSync)) as IRepoSync;
+                if (syncService is null)
+                {
+                    Console.WriteLine("IRepoSync is not registered.");
+                    return;
+                }
+                var effective = string.IsNullOrWhiteSpace(url) ? "https://github.com/LoopyLuci/WindowsUpdateAndPackageManager" : url;
+                var result = syncService.SyncAsync(effective).GetAwaiter().GetResult();
+                Console.WriteLine($"Sync success: {result.Success}; packages={result.PackagesUpdated}; message={result.Message}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Sync failed: {ex.Message}");
+            }
         }, repoOption);
         root.AddCommand(sync);
 
@@ -38,22 +49,38 @@ public static class Cli
         };
         install.SetHandler<string, string?>((id, url) =>
         {
-            var packages = new List<PackageManifest>();
-            var repoUrl = string.IsNullOrWhiteSpace(url) ? "https://github.com/LoopyLuci/WindowsUpdateAndPackageManager" : url;
-            // In real flow, first sync, then resolve package by id.
-            Console.WriteLine($"Install requested: {id} from {repoUrl}");
+            try
+            {
+                var repoUrl = string.IsNullOrWhiteSpace(url) ? "https://github.com/LoopyLuci/WindowsUpdateAndPackageManager" : url;
+                Console.WriteLine($"Install requested: {id} from {repoUrl}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Install failed: {ex.Message}");
+            }
         }, new Argument<string>("id"), repoOption);
         root.AddCommand(install);
 
         var listInstalled = new Command("installed", "List installed packages");
         listInstalled.SetHandler(() =>
         {
-            var pm = services.GetService(typeof(IPackageManager)) as IPackageManager;
-            if (pm is null) return;
-            var installed = pm.ListInstalledAsync().GetAwaiter().GetResult();
-            foreach (var p in installed)
+            try
             {
-                Console.WriteLine($"{p.Id}@{p.Version} - {p.DisplayName}");
+                var pm = services.GetService(typeof(IPackageManager)) as IPackageManager;
+                if (pm is null)
+                {
+                    Console.WriteLine("IPackageManager is not registered.");
+                    return;
+                }
+                var installed = pm.ListInstalledAsync().GetAwaiter().GetResult();
+                foreach (var p in installed)
+                {
+                    Console.WriteLine($"{p.Id}@{p.Version} - {p.DisplayName}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"List installed failed: {ex.Message}");
             }
         });
         root.AddCommand(listInstalled);
@@ -61,12 +88,23 @@ public static class Cli
         var audit = new Command("audit", "Show audit log");
         audit.SetHandler(() =>
         {
-            var auditor = services.GetService(typeof(IAuditor)) as IAuditor;
-            if (auditor is null) return;
-            var entries = auditor.QueryAsync().GetAwaiter().GetResult();
-            foreach (var e in entries.Take(50))
+            try
             {
-                Console.WriteLine($"{e.Timestamp:u} | {e.Action} | {e.PackageId}@{e.Version} | success={e.Success} | {e.Message}");
+                var auditor = services.GetService(typeof(IAuditor)) as IAuditor;
+                if (auditor is null)
+                {
+                    Console.WriteLine("IAuditor is not registered.");
+                    return;
+                }
+                var entries = auditor.QueryAsync().GetAwaiter().GetResult();
+                foreach (var e in entries.Take(50))
+                {
+                    Console.WriteLine($"{e.Timestamp:u} | {e.Action} | {e.PackageId}@{e.Version} | success={e.Success} | {e.Message}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Audit failed: {ex.Message}");
             }
         });
         root.AddCommand(audit);
@@ -74,20 +112,42 @@ public static class Cli
         var rollback = new Command("rollback", "Rollback installed package");
         rollback.SetHandler(() =>
         {
-            var rollbackManager = services.GetService(typeof(RollbackManager)) as RollbackManager;
-            if (rollbackManager is null) return;
-            rollbackManager.RollbackAsync().GetAwaiter().GetResult();
-            Console.WriteLine("Rollback attempted.");
+            try
+            {
+                var rollbackManager = services.GetService(typeof(RollbackManager)) as RollbackManager;
+                if (rollbackManager is null)
+                {
+                    Console.WriteLine("RollbackManager is not registered.");
+                    return;
+                }
+                rollbackManager.RollbackAsync().GetAwaiter().GetResult();
+                Console.WriteLine("Rollback attempted.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Rollback failed: {ex.Message}");
+            }
         });
         root.AddCommand(rollback);
 
         var wu = new Command("windows-update", "Scan and apply Windows updates");
         wu.SetHandler(() =>
         {
-            var manager = services.GetService(typeof(IWindowsUpdateManager)) as IWindowsUpdateManager;
-            if (manager is null) return;
-            var result = manager.ScanAndInstallAsync().GetAwaiter().GetResult();
-            Console.WriteLine($"Success={result.Success}; found={result.UpdatesFound}; installed={result.UpdatesInstalled}; reboot={result.RebootRequired}");
+            try
+            {
+                var manager = services.GetService(typeof(IWindowsUpdateManager)) as IWindowsUpdateManager;
+                if (manager is null)
+                {
+                    Console.WriteLine("IWindowsUpdateManager is not registered.");
+                    return;
+                }
+                var result = manager.ScanAndInstallAsync().GetAwaiter().GetResult();
+                Console.WriteLine($"Success={result.Success}; found={result.UpdatesFound}; installed={result.UpdatesInstalled}; reboot={result.RebootRequired}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Windows Update failed: {ex.Message}");
+            }
         });
         root.AddCommand(wu);
 
@@ -98,6 +158,14 @@ public static class Cli
         });
         root.AddCommand(health);
 
-        return root.InvokeAsync(args);
+        try
+        {
+            return root.InvokeAsync(args);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Command failed: {ex.Message}");
+            return Task.FromResult(1);
+        }
     }
 }

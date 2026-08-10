@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("LoopyLuci")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("0.1.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("0.1.0-alpha+0bb670fa3d1f3a2af028640f597b88cf633c74bb")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("0.1.0-alpha+9644b9fa030abc94a33ac132a2666c284e2c3a5c")]
 [assembly: System.Reflection.AssemblyProductAttribute("WindowsUpdateAndPackageManager")]
 [assembly: System.Reflection.AssemblyTitleAttribute("WindowsUpdateAndPackageManager")]
 [assembly: System.Reflection.AssemblyVersionAttribute("0.1.0.0")]

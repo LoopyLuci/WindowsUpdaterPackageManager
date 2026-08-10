@@ -22,10 +22,28 @@ public sealed class DefaultManifestValidator : IManifestValidator
 
     public async Task<bool> ValidateAsync(string json, CancellationToken cancellationToken = default)
     {
-        var index = await ParseAsync(json, cancellationToken).ConfigureAwait(false);
-        if (index is null) return false;
-        return !string.IsNullOrWhiteSpace(index.SchemaVersion)
-               && index.Packages is not null;
+        try
+        {
+            using var doc = System.Text.Json.JsonDocument.Parse(json);
+            var root = doc.RootElement;
+            if (!root.TryGetProperty("schemaVersion", out var schema) || schema.ValueKind != System.Text.Json.JsonValueKind.String || string.IsNullOrWhiteSpace(schema.GetString()))
+            {
+                return false;
+            }
+            if (!root.TryGetProperty("repositoryUrl", out var repo) || repo.ValueKind != System.Text.Json.JsonValueKind.String || string.IsNullOrWhiteSpace(repo.GetString()))
+            {
+                return false;
+            }
+            if (!root.TryGetProperty("packages", out var packages) || packages.ValueKind != System.Text.Json.JsonValueKind.Array)
+            {
+                return false;
+            }
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     public async Task<bool> VerifyPackageIntegrityAsync(string packagePath, string? expectedSha256, CancellationToken cancellationToken = default)
