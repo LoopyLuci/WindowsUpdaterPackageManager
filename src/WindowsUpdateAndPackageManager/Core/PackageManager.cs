@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using WindowsUpdateAndPackageManager.Data;
+using WindowsUpdateAndPackageManager.Infrastructure;
 using WindowsUpdateAndPackageManager.Models;
 
 namespace WindowsUpdateAndPackageManager.Core;
@@ -8,11 +9,15 @@ public sealed class PackageManager : IPackageManager
 {
     private readonly IStateDatabase _state;
     private readonly IAuditStore _auditStore;
+    private readonly ICacheManager _cache;
+    private readonly IPolicyEngine _policyEngine;
 
-    public PackageManager(IStateDatabase state, IAuditStore auditStore)
+    public PackageManager(IStateDatabase state, IAuditStore auditStore, ICacheManager cache, IPolicyEngine policyEngine)
     {
         _state = state;
         _auditStore = auditStore;
+        _cache = cache;
+        _policyEngine = policyEngine;
     }
 
     public async Task<IReadOnlyList<PackageManifest>> ListInstalledAsync(CancellationToken cancellationToken = default)
@@ -26,6 +31,32 @@ public sealed class PackageManager : IPackageManager
         var result = new InstallResult { PackageId = package.Id };
         try
         {
+            if (!await _policyEngine.IsAllowedAsync(package.Id, cancellationToken).ConfigureAwait(false))
+            {
+                result.Message = $"Package '{package.Id}' is blocked by policy.";
+                return result;
+            }
+
+            if (await _state.IsInstalledAsync(package.Id, package.Version, cancellationToken).ConfigureAwait(false))
+            {
+                result.Success = true;
+                result.InstalledVersion = package.Version;
+                result.Message = "Package is already installed.";
+                return result;
+            }
+
+            if (!await _cache.IsCachedAsync(package.Id, package.Version, cancellationToken).ConfigureAwait(false))
+            {
+                result.Message = "Package is not cached. Run 'sync' first.";
+                return result;
+            }
+
+            if (string.IsNullOrWhiteSpace(package.InstallCommand))
+            {
+                result.Message = "Package has no install command.";
+                return result;
+            }
+
             var psi = new ProcessStartInfo
             {
                 FileName = package.InstallCommand,
@@ -34,19 +65,20 @@ public sealed class PackageManager : IPackageManager
                 WindowStyle = ProcessWindowStyle.Hidden
             };
             using var p = Process.Start(psi);
-            if (p is null) throw new InvalidOperationException("Process did not start.");
+            if (p is null) throw new InvalidOperationException("Installer did not start.");
 
             await p.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
             result.Success = p.ExitCode == 0;
             if (!result.Success)
             {
                 result.Message = $"Installer exited with code {p.ExitCode}.";
+                return result;
             }
-            else
-            {
-                await _state.RecordInstallAsync(package, cancellationToken).ConfigureAwait(false);
-                result.InstalledVersion = package.Version;
-            }
+
+            await _state.RecordInstallAsync(package, cancellationToken).ConfigureAwait(false);
+            result.InstalledVersion = package.Version;
+            result.Success = true;
+            result.Message = "Install completed.";
         }
         catch (Exception ex)
         {
@@ -81,6 +113,12 @@ public sealed class PackageManager : IPackageManager
                 return result;
             }
 
+            if (string.IsNullOrWhiteSpace(target.UninstallCommand))
+            {
+                result.Message = "Package has no uninstall command.";
+                return result;
+            }
+
             var psi = new ProcessStartInfo
             {
                 FileName = target.UninstallCommand,
@@ -93,13 +131,14 @@ public sealed class PackageManager : IPackageManager
 
             await p.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
             result.Success = p.ExitCode == 0;
-            if (!result.Success)
+            if (result.Success)
             {
-                result.Message = $"Uninstaller exited with code {p.ExitCode}.";
+                await _state.RemoveInstallAsync(packageId, cancellationToken).ConfigureAwait(false);
+                result.Message = "Uninstall completed.";
             }
             else
             {
-                await _state.RemoveInstallAsync(packageId, cancellationToken).ConfigureAwait(false);
+                result.Message = $"Uninstaller exited with code {p.ExitCode}.";
             }
         }
         catch (Exception ex)

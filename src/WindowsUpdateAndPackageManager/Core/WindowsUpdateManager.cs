@@ -1,5 +1,11 @@
+using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using WindowsUpdateAndPackageManager.Data;
+using WindowsUpdateAndPackageManager.Infrastructure;
 using WindowsUpdateAndPackageManager.Models;
 
 namespace WindowsUpdateAndPackageManager.Core;
@@ -7,10 +13,12 @@ namespace WindowsUpdateAndPackageManager.Core;
 public sealed class WindowsUpdateManager : IWindowsUpdateManager
 {
     private readonly IAuditStore _auditStore;
+    private readonly IWindowsUpdateApi _windowsUpdateApi;
 
-    public WindowsUpdateManager(IAuditStore auditStore)
+    public WindowsUpdateManager(IAuditStore auditStore, IWindowsUpdateApi windowsUpdateApi)
     {
         _auditStore = auditStore;
+        _windowsUpdateApi = windowsUpdateApi;
     }
 
     public async Task<WindowsUpdateResult> ScanAndInstallAsync(CancellationToken cancellationToken = default)
@@ -18,22 +26,46 @@ public sealed class WindowsUpdateManager : IWindowsUpdateManager
         var result = new WindowsUpdateResult();
         try
         {
+            var updates = await _windowsUpdateApi.SearchAsync("IsInstalled=0", cancellationToken).ConfigureAwait(false);
+            result.UpdatesFound = updates.Count;
+
+            if (result.UpdatesFound > 0)
+            {
+                await _windowsUpdateApi.DownloadAsync(updates, cancellationToken).ConfigureAwait(false);
+                var installResult = await _windowsUpdateApi.InstallAsync(updates, cancellationToken).ConfigureAwait(false);
+
+                result.Success = installResult.Success;
+                result.UpdatesInstalled = installResult.InstalledCount;
+                result.RebootRequired = installResult.RebootRequired;
+                result.Message = installResult.Message ?? $"Installed {installResult.InstalledCount} of {result.UpdatesFound} updates.";
+            }
+            else
+            {
+                result.Success = true;
+                result.Message = "No updates were found.";
+            }
+
             await _auditStore.AppendAsync(new AuditEntry
             {
                 Id = Guid.NewGuid(),
                 Timestamp = DateTimeOffset.UtcNow,
                 Action = "WindowsUpdate.Scan",
-                Success = true,
-                Message = "Windows Update scan completed; no updates were applied in this pass."
+                Success = result.Success,
+                Message = result.Message
             }, cancellationToken).ConfigureAwait(false);
-
-            result.Success = true;
-            result.UpdatesFound = 0;
-            result.UpdatesInstalled = 0;
         }
         catch (Exception ex)
         {
+            result.Success = false;
             result.Message = ex.Message;
+            await _auditStore.AppendAsync(new AuditEntry
+            {
+                Id = Guid.NewGuid(),
+                Timestamp = DateTimeOffset.UtcNow,
+                Action = "WindowsUpdate.Scan",
+                Success = false,
+                Message = ex.Message
+            }, cancellationToken).ConfigureAwait(false);
         }
         return result;
     }
