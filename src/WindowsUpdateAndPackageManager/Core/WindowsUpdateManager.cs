@@ -1,6 +1,5 @@
 using System.Diagnostics;
 using WindowsUpdateAndPackageManager.Data;
-using WindowsUpdateAndPackageManager.Infrastructure;
 using WindowsUpdateAndPackageManager.Models;
 
 namespace WindowsUpdateAndPackageManager.Core;

@@ -1,9 +1,12 @@
+using System.Threading.Tasks;
+using Xunit;
+
 namespace WindowsUpdateAndPackageManager.Tests;
 
 public class RepositoryIndexParserTests
 {
     [Fact]
-    public void Validates_good_index()
+    public async Task Validates_good_index()
     {
         var json = """
         {
@@ -14,14 +17,14 @@ public class RepositoryIndexParserTests
         }
         """;
         var validator = new WindowsUpdateAndPackageManager.Infrastructure.DefaultManifestValidator();
-        Assert.True(validator.ValidateAsync(json).GetAwaiter().GetResult());
+        Assert.True(await validator.ValidateAsync(json));
     }
 
     [Fact]
-    public void Rejects_missing_schema()
+    public async Task Rejects_missing_schema()
     {
         var json = "{}";
         var validator = new WindowsUpdateAndPackageManager.Infrastructure.DefaultManifestValidator();
-        Assert.False(validator.ValidateAsync(json).GetAwaiter().GetResult());
+        Assert.False(await validator.ValidateAsync(json));
     }
 }

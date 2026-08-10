@@ -1,0 +1,7 @@
+D:\Projects\WindowsUpdatePackageManager\tests\WindowsUpdateAndPackageManager.Tests\bin\Debug\net10.0-windows\CoverletSourceRootsMapping_WindowsUpdateAndPackageManager.Tests
+D:\Projects\WindowsUpdatePackageManager\tests\WindowsUpdateAndPackageManager.Tests\obj\Debug\net10.0-windows\WindowsUpdateAndPackageManager.Tests.csproj.AssemblyReference.cache
+D:\Projects\WindowsUpdatePackageManager\tests\WindowsUpdateAndPackageManager.Tests\obj\Debug\net10.0-windows\WindowsUpdateAndPackageManager.Tests.GeneratedMSBuildEditorConfig.editorconfig
+D:\Projects\WindowsUpdatePackageManager\tests\WindowsUpdateAndPackageManager.Tests\obj\Debug\net10.0-windows\WindowsUpdateAndPackageManager.Tests.AssemblyInfoInputs.cache
+D:\Projects\WindowsUpdatePackageManager\tests\WindowsUpdateAndPackageManager.Tests\obj\Debug\net10.0-windows\WindowsUpdateAndPackageManager.Tests.AssemblyInfo.cs
+D:\Projects\WindowsUpdatePackageManager\tests\WindowsUpdateAndPackageManager.Tests\obj\Debug\net10.0-windows\WindowsUpdateAndPackageManager.Tests.csproj.CoreCompileInputs.cache
+D:\Projects\WindowsUpdatePackageManager\tests\WindowsUpdateAndPackageManager.Tests\obj\Debug\net10.0-windows\WindowsUpdateAndPackageManager.Tests.sourcelink.json

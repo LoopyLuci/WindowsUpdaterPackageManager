@@ -1,4 +1,5 @@
 using WindowsUpdateAndPackageManager.Data;
+using WindowsUpdateAndPackageManager.Models;
 
 namespace WindowsUpdateAndPackageManager.Core;
 
@@ -11,6 +12,6 @@ public sealed class Auditor : IAuditor
         _store = store;
     }
 
-    public Task<IReadOnlyList<Models.AuditEntry>> QueryAsync(DateTimeOffset? from = null, DateTimeOffset? to = null, string? action = null, CancellationToken cancellationToken = default)
+    public Task<IReadOnlyList<AuditEntry>> QueryAsync(DateTimeOffset? from = null, DateTimeOffset? to = null, string? action = null, CancellationToken cancellationToken = default)
         => _store.QueryAsync(from, to, action, cancellationToken);
 }
