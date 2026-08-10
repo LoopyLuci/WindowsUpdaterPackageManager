@@ -1,0 +1,6 @@
+D:\Projects\WindowsUpdatePackageManager\src\WindowsUpdateAndPackageManager\obj\Debug\net10.0-windows\win-x64\WindowsUpdateAndPackageManager.csproj.AssemblyReference.cache
+D:\Projects\WindowsUpdatePackageManager\src\WindowsUpdateAndPackageManager\obj\Debug\net10.0-windows\win-x64\WindowsUpdateAndPackageManager.GeneratedMSBuildEditorConfig.editorconfig
+D:\Projects\WindowsUpdatePackageManager\src\WindowsUpdateAndPackageManager\obj\Debug\net10.0-windows\win-x64\WindowsUpdateAndPackageManager.AssemblyInfoInputs.cache
+D:\Projects\WindowsUpdatePackageManager\src\WindowsUpdateAndPackageManager\obj\Debug\net10.0-windows\win-x64\WindowsUpdateAndPackageManager.AssemblyInfo.cs
+D:\Projects\WindowsUpdatePackageManager\src\WindowsUpdateAndPackageManager\obj\Debug\net10.0-windows\win-x64\WindowsUpdateAndPackageManager.csproj.CoreCompileInputs.cache
+D:\Projects\WindowsUpdatePackageManager\src\WindowsUpdateAndPackageManager\obj\Debug\net10.0-windows\win-x64\WindowsUpdateAndPackageManager.sourcelink.json

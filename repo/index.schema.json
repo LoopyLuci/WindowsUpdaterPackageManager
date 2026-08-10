@@ -1,0 +1,137 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "WUPM Repository Index",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "generatedAt",
+    "repositoryUrl",
+    "packages"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+$"
+    },
+    "generatedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "repositoryUrl": {
+      "type": "string",
+      "format": "uri"
+    },
+    "packages": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/package"
+      }
+    }
+  },
+  "definitions": {
+    "package": {
+      "type": "object",
+      "required": [
+        "id",
+        "version",
+        "displayName",
+        "installCommand",
+        "uninstallCommand"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        },
+        "displayName": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "homepage": {
+          "type": "string",
+          "format": "uri"
+        },
+        "license": {
+          "type": "string"
+        },
+        "isDriver": {
+          "type": "boolean"
+        },
+        "sha256": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "sizeBytes": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "architecture": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "minWindowsVersion": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "maxWindowsVersion": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "installCommand": {
+          "type": "string"
+        },
+        "uninstallCommand": {
+          "type": "string"
+        },
+        "requiresReboot": {
+          "type": "boolean"
+        },
+        "dependencies": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "publishedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "isDeprecated": {
+          "type": "boolean"
+        },
+        "deprecationReason": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "changelog": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

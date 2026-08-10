@@ -1,1 +1,1 @@
-Open Source Windows Update and Package Manager to provide various Windows versions with easy update and package management.
+Open Source Windows Update and Package Manager to provide various Windows versions with easy update and package management with individuals and personal use as a first class priority to enable anyone and any company that needs drivers or package management for any version of Windows 10 and older then they can easily access everything from the repo

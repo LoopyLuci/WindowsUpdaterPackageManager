@@ -1,0 +1,39 @@
+{
+  "schemaVersion": "1.0",
+  "generatedAt": "2026-08-10T00:00:00Z",
+  "repositoryUrl": "https://github.com/LoopyLuci/WindowsUpdateAndPackageManager",
+  "packages": [
+    {
+      "id": "7zip",
+      "version": "24.08",
+      "displayName": "7-Zip",
+      "description": "File archiver.",
+      "license": "LGPL-2.1",
+      "isDriver": false,
+      "architecture": "x64",
+      "minWindowsVersion": "Windows 10",
+      "maxWindowsVersion": "Windows 11",
+      "installCommand": "winget install 7zip.7zip",
+      "uninstallCommand": "winget uninstall 7zip.7zip",
+      "requiresReboot": false,
+      "publishedAt": "2026-08-10T00:00:00Z",
+      "isDeprecated": false
+    },
+    {
+      "id": "notepadplusplus",
+      "version": "8.7.4",
+      "displayName": "Notepad++",
+      "description": "Text editor.",
+      "license": "GPL-3.0",
+      "isDriver": false,
+      "architecture": "x64",
+      "minWindowsVersion": "Windows 10",
+      "maxWindowsVersion": "Windows 11",
+      "installCommand": "winget install Notepad++.Notepad++",
+      "uninstallCommand": "winget uninstall Notepad++.Notepad++",
+      "requiresReboot": false,
+      "publishedAt": "2026-08-10T00:00:00Z",
+      "isDeprecated": false
+    }
+  ]
+}
