@@ -50,7 +50,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Sign release artifacts
-        if: ${{ !empty(secrets.AZURE_SIGNING_CLIENT_ID) }}
+        if: ${{ secrets.AZURE_SIGNING_CLIENT_ID != '' }}
         env:
           AZURE_SIGNING_CLIENT_ID: ${{ secrets.AZURE_SIGNING_CLIENT_ID }}
           AZURE_SIGNING_TENANT_ID: ${{ secrets.AZURE_SIGNING_TENANT_ID }}
