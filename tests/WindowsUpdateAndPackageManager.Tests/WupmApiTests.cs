@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
@@ -53,6 +54,7 @@ public sealed class WupmApiTests : IClassFixture<WebApplicationFactory<Program>>
     [Fact]
     public async Task Root_returns_ok_status()
     {
+        SimpleRateLimiter.Reset();
         using var client = _factory.CreateClient();
         using var response = await client.GetAsync("/");
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -61,6 +63,7 @@ public sealed class WupmApiTests : IClassFixture<WebApplicationFactory<Program>>
     [Fact]
     public async Task Packages_endpoint_returns_mocked_packages()
     {
+        SimpleRateLimiter.Reset();
         using var client = _factory.CreateClient();
         using var response = await client.GetAsync("/packages?repositoryUrl=https://example.invalid/repo");
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -69,6 +72,7 @@ public sealed class WupmApiTests : IClassFixture<WebApplicationFactory<Program>>
     [Fact]
     public async Task Installed_endpoint_returns_mocked_installed()
     {
+        SimpleRateLimiter.Reset();
         using var client = _factory.CreateClient();
         using var response = await client.GetAsync("/installed");
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -77,6 +81,7 @@ public sealed class WupmApiTests : IClassFixture<WebApplicationFactory<Program>>
     [Fact]
     public async Task Install_endpoint_returns_ok_with_mock()
     {
+        SimpleRateLimiter.Reset();
         using var client = _factory.CreateClient();
         var payload = new StringContent("{\"id\":\"test\",\"version\":\"1.0\"}", System.Text.Encoding.UTF8, "application/json");
         using var response = await client.PostAsync("/install", payload);
@@ -86,6 +91,7 @@ public sealed class WupmApiTests : IClassFixture<WebApplicationFactory<Program>>
     [Fact]
     public async Task Sync_endpoint_returns_ok_with_mock()
     {
+        SimpleRateLimiter.Reset();
         using var client = _factory.CreateClient();
         using var response = await client.PostAsync("/sync?repositoryUrl=https://example.invalid/repo", null);
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -94,6 +100,7 @@ public sealed class WupmApiTests : IClassFixture<WebApplicationFactory<Program>>
     [Fact]
     public async Task WindowsUpdate_endpoint_returns_ok_with_mock()
     {
+        SimpleRateLimiter.Reset();
         using var client = _factory.CreateClient();
         using var response = await client.PostAsync("/windows-update", null);
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -102,6 +109,7 @@ public sealed class WupmApiTests : IClassFixture<WebApplicationFactory<Program>>
     [Fact]
     public async Task Audit_endpoint_returns_ok_with_mock()
     {
+        SimpleRateLimiter.Reset();
         using var client = _factory.CreateClient();
         using var response = await client.GetAsync("/audit");
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -113,6 +121,7 @@ public sealed class WupmApiTests : IClassFixture<WebApplicationFactory<Program>>
         try
         {
             Environment.SetEnvironmentVariable("WUPM_API_KEY", "secret");
+            SimpleRateLimiter.Reset();
             using var factory = new WebApplicationFactory<Program>();
             using var client = factory.CreateClient();
             using var response = await client.GetAsync("/audit");
@@ -130,6 +139,7 @@ public sealed class WupmApiTests : IClassFixture<WebApplicationFactory<Program>>
         try
         {
             Environment.SetEnvironmentVariable("WUPM_API_KEY", "secret");
+            SimpleRateLimiter.Reset();
             using var factory = new WebApplicationFactory<Program>();
             using var client = factory.CreateClient();
             client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", "secret");
@@ -148,6 +158,7 @@ public sealed class WupmApiTests : IClassFixture<WebApplicationFactory<Program>>
         try
         {
             Environment.SetEnvironmentVariable("WUPM_API_KEY", "secret");
+            SimpleRateLimiter.Reset();
             using var factory = new WebApplicationFactory<Program>();
             using var client = factory.CreateClient();
             client.DefaultRequestHeaders.Add("X-Api-Key", "secret");
@@ -157,6 +168,58 @@ public sealed class WupmApiTests : IClassFixture<WebApplicationFactory<Program>>
         finally
         {
             Environment.SetEnvironmentVariable("WUPM_API_KEY", null);
+        }
+    }
+
+    [Fact]
+    public async Task Install_endpoint_uses_stricter_rate_limit_than_listing()
+    {
+        const int limit = 10;
+        try
+        {
+            Environment.SetEnvironmentVariable("WUPM_API_KEY", "secret");
+            SimpleRateLimiter.Reset();
+            using var factory = new WebApplicationFactory<Program>();
+            using var client = factory.CreateClient();
+            client.DefaultRequestHeaders.Add("X-Api-Key", "secret");
+            var payload = new StringContent("{\"id\":\"test\",\"version\":\"1.0\"}", System.Text.Encoding.UTF8, "application/json");
+
+            for (var i = 0; i < limit; i++)
+            {
+                using var response = await client.PostAsync("/install", payload);
+                Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            }
+
+            using var responseAfterLimit = await client.PostAsync("/install", payload);
+            Assert.Equal(HttpStatusCode.TooManyRequests, responseAfterLimit.StatusCode);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("WUPM_API_KEY", null);
+            SimpleRateLimiter.Reset();
+        }
+    }
+
+    [Fact]
+    public async Task With_mtls_enabled_without_client_certificate_returns_forbidden()
+    {
+        try
+        {
+            Environment.SetEnvironmentVariable("WUPM_API_KEY", null);
+            Environment.SetEnvironmentVariable("WUPM_API_MTLS_ENABLED", "true");
+            Environment.SetEnvironmentVariable("WUPM_API_MTLS_ALLOWED_THUMBPRINTS", "AAA");
+            SimpleRateLimiter.Reset();
+            using var factory = new WebApplicationFactory<Program>();
+            using var client = factory.CreateClient();
+            using var response = await client.GetAsync("/installed");
+            Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("WUPM_API_KEY", null);
+            Environment.SetEnvironmentVariable("WUPM_API_MTLS_ENABLED", null);
+            Environment.SetEnvironmentVariable("WUPM_API_MTLS_ALLOWED_THUMBPRINTS", null);
+            SimpleRateLimiter.Reset();
         }
     }
 }

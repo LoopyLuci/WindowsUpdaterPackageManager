@@ -1,3 +1,5 @@
+using System.Net;
+using System.Security.Cryptography.X509Certificates;
 using System.Text.Json;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -59,6 +61,40 @@ if (!string.IsNullOrWhiteSpace(apiKey))
     });
 }
 
+var mTlsEnabled = string.Equals(Environment.GetEnvironmentVariable("WUPM_API_MTLS_ENABLED"), "true", StringComparison.OrdinalIgnoreCase);
+if (mTlsEnabled)
+{
+    app.Use(async (context, next) =>
+    {
+        var cert = context.Connection.ClientCertificate;
+        if (cert is null)
+        {
+            context.Response.StatusCode = StatusCodes.Status403Forbidden;
+            await context.Response.WriteAsJsonAsync(new { error = "Client certificate required." });
+            return;
+        }
+
+        var allowed = Environment.GetEnvironmentVariable("WUPM_API_MTLS_ALLOWED_THUMBPRINTS");
+        if (!string.IsNullOrWhiteSpace(allowed))
+        {
+            var allowedSet = new HashSet<string>(allowed.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries), StringComparer.OrdinalIgnoreCase);
+            if (!allowedSet.Contains("*") && !allowedSet.Contains(cert.Thumbprint))
+            {
+                context.Response.StatusCode = StatusCodes.Status403Forbidden;
+                await context.Response.WriteAsJsonAsync(new { error = "Client certificate not allowed." });
+                return;
+            }
+        }
+
+        await next();
+    });
+}
+
+var strictEndpoints = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+{
+    "/install", "/sync", "/windows-update"
+};
+
 app.Use(async (context, next) =>
 {
     var path = context.Request.Path;
@@ -68,8 +104,9 @@ app.Use(async (context, next) =>
         return;
     }
 
-    var key = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
-    if (!SimpleRateLimiter.TryCheck(key, out var retryAfter))
+    var key = $"{context.Connection.RemoteIpAddress?.ToString() ?? "unknown"}:{path}";
+    var limit = strictEndpoints.Contains(path) ? 10 : 120;
+    if (!SimpleRateLimiter.TryCheck(key, limit, TimeSpan.FromSeconds(60), out var retryAfter))
     {
         context.Response.StatusCode = StatusCodes.Status429TooManyRequests;
         context.Response.Headers.RetryAfter = ((int)retryAfter.Value.TotalSeconds).ToString();
@@ -137,25 +174,28 @@ app.MapGet("/audit", async (IServiceProvider sp, DateTimeOffset? from = null, Da
 
 app.Run();
 
-static class SimpleRateLimiter
+public static class SimpleRateLimiter
 {
     private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, (int count, DateTime expires)> _store = new();
-    private static readonly TimeSpan _window = TimeSpan.FromSeconds(60);
-    private const int _limit = 120;
 
-    public static bool TryCheck(string key, out TimeSpan? retryAfter)
+    public static void Reset()
+    {
+        _store.Clear();
+    }
+
+    public static bool TryCheck(string key, int limit, TimeSpan window, out TimeSpan? retryAfter)
     {
         var now = DateTime.UtcNow;
-        var entry = _store.GetOrAdd(key, _ => (0, now.Add(_window)));
+        var entry = _store.GetOrAdd(key, _ => (0, now.Add(window)));
 
         if (entry.expires < now)
         {
-            _store.TryUpdate(key, (1, now.Add(_window)), entry);
+            _store.TryUpdate(key, (1, now.Add(window)), entry);
             retryAfter = null;
             return true;
         }
 
-        if (entry.count >= _limit)
+        if (entry.count >= limit)
         {
             retryAfter = entry.expires - now;
             return false;
@@ -167,4 +207,3 @@ static class SimpleRateLimiter
         return true;
     }
 }
-
