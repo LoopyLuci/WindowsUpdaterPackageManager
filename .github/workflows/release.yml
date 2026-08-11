@@ -27,11 +27,23 @@ jobs:
         run: |
           Compress-Archive -Path ${{ github.workspace }}/publish/cli/* -DestinationPath ${{ github.workspace }}/wupm-cli.zip
           Compress-Archive -Path ${{ github.workspace }}/publish/api/* -DestinationPath ${{ github.workspace }}/wupm-api.zip
+      - name: Generate SBOM
+        run: |
+          $sbom = @{ bomFormat = "CycloneDX"; specVersion = "1.5"; version = 1; components = @() }
+          foreach ($proj in @("src/WindowsUpdateAndPackageManager.Core/WindowsUpdateAndPackageManager.Core.csproj","src/Wupm.Cli/Wupm.Cli.csproj","src/WupmApi/WupmApi.csproj")) {
+            $xml = [xml](Get-Content $proj)
+            $ns = New-Object Xml.XmlNamespaceManager $xml.NameTable
+            $ns.AddNamespace("msb","http://schemas.microsoft.com/developer/msbuild/2003")
+            $props = $xml.SelectNodes("//msb:PropertyGroup/msb:PackageVersion|//msb:PackageReference/msb:Version", $ns)
+            foreach ($p in $props) { $sbom.components += @{ type = "library"; name = $p.InnerText; version = "n/a" } }
+          }
+          $sbom | ConvertTo-Json -Depth 5 | Out-File -FilePath ${{ github.workspace }}/sbom.json
       - name: Upload release assets
         uses: softprops/action-gh-release@v2
         with:
           files: |
             ${{ github.workspace }}/wupm-cli.zip
             ${{ github.workspace }}/wupm-api.zip
+            ${{ github.workspace }}/sbom.json
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

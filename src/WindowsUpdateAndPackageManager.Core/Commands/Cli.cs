@@ -462,6 +462,48 @@ public static class Cli
         }, new Argument<string>("sourceDir"), new Argument<string>("outputDir"));
         root.AddCommand(pack);
 
+        var publish = new Command("publish", "Publish a GitHub Release from a packed package");
+        var publishTagOption = new Option<string>("--tag") { Arity = ArgumentArity.ExactlyOne };
+        var publishChangelogOption = new Option<string?>("--changelog");
+        publish.AddOption(publishTagOption);
+        publish.AddOption(publishChangelogOption);
+        publish.SetHandler<string, string?, string?>((tag, changelog, repositoryUrl) =>
+        {
+            try
+            {
+                var repo = string.IsNullOrWhiteSpace(repositoryUrl) ? "LoopyLuci/WindowsUpdateAndPackageManager" : repositoryUrl!;
+                var parts = repo.Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                if (parts.Length < 2)
+                {
+                    Console.WriteLine("Repository must be in owner/repo format.");
+                    return;
+                }
+
+                var publisher = services.GetService(typeof(GitHubReleasePublisher)) as GitHubReleasePublisher;
+                if (publisher is null)
+                {
+                    Console.WriteLine("GitHub release publisher is not configured.");
+                    return;
+                }
+
+                var output = Path.Combine(Environment.CurrentDirectory, "publish");
+                var zip = Directory.EnumerateFiles(output, "*.zip").FirstOrDefault();
+                if (string.IsNullOrEmpty(zip))
+                {
+                    Console.WriteLine("No zip artifact found in ./publish. Run `wupm pack` first.");
+                    return;
+                }
+
+                var ok = publisher.PublishReleaseAsync(parts[0], parts[1], tag, zip, changelog).GetAwaiter().GetResult();
+                Console.WriteLine(ok ? "Release published." : "Release publish failed.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Publish failed: {ex.Message}");
+            }
+        }, publishTagOption, publishChangelogOption, repoOption);
+        root.AddCommand(publish);
+
         var selfUpdate = new Command("self-update", "Check for WUPM updates");
         selfUpdate.SetHandler(() =>
         {

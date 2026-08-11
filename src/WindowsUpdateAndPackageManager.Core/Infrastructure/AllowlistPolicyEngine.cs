@@ -17,6 +17,9 @@ public sealed class AllowlistPolicyEngine : IPolicyEngine
     public Task<bool> ShouldBlockRebootAsync(CancellationToken cancellationToken = default)
         => Task.FromResult(false);
 
+    public Task<bool> VerifyDriverAsync(Models.DriverPackageManifest manifest, CancellationToken cancellationToken = default)
+        => Task.FromResult(false);
+
     public Task ApplyAsync(CancellationToken cancellationToken = default)
         => Task.CompletedTask;
 

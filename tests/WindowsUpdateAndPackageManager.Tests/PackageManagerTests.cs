@@ -132,5 +132,6 @@ public sealed class PackageManagerTests
         public Task<bool> IsAllowedAsync(string packageId, CancellationToken cancellationToken = default) => Task.FromResult(_allow);
         public Task<bool> ShouldBlockRebootAsync(CancellationToken cancellationToken = default) => Task.FromResult(false);
         public Task ApplyAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
+        public Task<bool> VerifyDriverAsync(Models.DriverPackageManifest manifest, CancellationToken cancellationToken = default) => Task.FromResult(true);
     }
 }

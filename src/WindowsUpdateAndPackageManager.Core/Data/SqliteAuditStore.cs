@@ -1,11 +1,13 @@
 using System.Text.Json;
 using Microsoft.Data.Sqlite;
+using Serilog;
 using WindowsUpdateAndPackageManager.Models;
 
 namespace WindowsUpdateAndPackageManager.Data;
 
 public sealed class SqliteAuditStore : IAuditStore
 {
+    private static readonly ILogger Logger = Log.ForContext<SqliteAuditStore>();
     private readonly string _connectionString;
     private bool _initialized;
     private static readonly string Schema = "CREATE TABLE IF NOT EXISTS AuditEntries (" +
@@ -92,6 +94,7 @@ public sealed class SqliteAuditStore : IAuditStore
                 Message = reader.IsDBNull(8) ? null : reader.GetString(8)
             });
         }
+        Logger.Information("Audit query returned {Count} entries", list.Count);
         return list;
     }
 }
