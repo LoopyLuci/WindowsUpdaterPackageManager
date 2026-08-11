@@ -28,10 +28,14 @@ dotnet run -- policy-deny badapp
 dotnet run -- health
 dotnet run -- pack ./myapp ./out
 dotnet run -- self-update
+dotnet run -- verify ./package.zip --sha256 <hex>
 dotnet run -- delta-update --id myapp --from 1.0
 dotnet run -- offline mount C:\images\install.wim
 dotnet run -- offline apply <mountPath> C:\packages\driver.cab
 dotnet run -- offline dismount <mountPath>
+dotnet run -- service install --repo https://github.com/LoopyLuci/WindowsUpdateAndPackageManager
+dotnet run -- service status
+dotnet run -- service uninstall
 ```
 
 ## PowerShell
@@ -57,24 +61,52 @@ The REST API supports optional authentication. Enable it by setting the `WUPM_AP
 
 Unauthenticated requests receive `401 Unauthorized` when auth is enabled. When `WUPM_API_KEY` is not set, the API remains open for local use.
 
-## GitHub Releases
+## Security Notes
+
+- Set `WUPM_API_KEY` to enable REST API auth. Unauthenticated requests receive `401 Unauthorized`. The `/` health endpoint remains accessible when auth is enabled.
+- Audit logs are written to `logs/wupm-api-.log` and local SQLite state. Treat these files as sensitive; they contain package action metadata. Rotate logs and restrict filesystem access.
+- `wupm publish` and `SelfUpdater` use `GITHUB_TOKEN` only as a Bearer token in `Authorization` headers; values are not logged or persisted by WUPM.
+
+## Releases
 
 Pushing a tag like `v0.2.0` triggers the release workflow, which builds and publishes `wupm-cli.zip` and `wupm-api.zip` as GitHub Release assets.
+
+### Triggering a release
+
+1. Ensure your repo has the `GITHUB_TOKEN` with `contents: write` permission. The default token in GitHub Actions has this permission automatically.
+2. Create and push an annotated tag:
+   ```bash
+   git tag -a v0.2.0 -m "Release v0.2.0"
+   git push origin v0.2.0
+   ```
+3. The `.github/workflows/release.yml` workflow runs automatically on tag push. It produces two artifacts:
+   - `wupm-cli.zip` - standalone CLI
+   - `wupm-api.zip` - standalone API host
+
+### Installing a release locally
+
+```bash
+# Download from the GitHub Release page and extract
+Expand-Archive -Path wupm-cli.zip -DestinationPath C:\Tools\wupm
+# or for API host
+Expand-Archive -Path wupm-api.zip -DestinationPath C:\Tools\wupm-api
+```
+
+### Local publish workflow
+
+```bash
+dotnet run --project src/Wupm.Cli -- publish --tag v0.2.0-test --dry-run
+dotnet run --project src/Wupm.Cli -- publish --tag v0.2.0-test --token $env:GITHUB_TOKEN
+```
 
 ## Contributing
 
 See `CONTRIBUTING.md`.
 
-## Roadmap
+## Repository Schema Versioning
 
-- [x] Manifest authoring guide
-- [x] First curated package set
-- [x] Authenticode verification
-- [x] Windows Update Agent integration
-- [x] REST API surface for remote management
-- [x] Signed package catalog
-- [x] Delta update support
-- [x] Offline image servicing
-- [x] PowerShell integration
-- [ ] Air-gap repository mirroring
-- [ ] Driver catalog curation pipeline
+- Current schema version: `1.0`
+- WUPM validates `schemaVersion` strictly; unknown versions are rejected.
+- Additive field additions must bump `schemaVersion` and be reflected in `repo/index.schema.json`.
+- Removal or renaming of fields requires a new major schema version and a migration path documented in `RELEASES.md`.
+- The parser rejects indices with missing or unsupported `schemaVersion` values.

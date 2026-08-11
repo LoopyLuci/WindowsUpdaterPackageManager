@@ -115,7 +115,7 @@ public sealed class WupmApiTests : IClassFixture<WebApplicationFactory<Program>>
             Environment.SetEnvironmentVariable("WUPM_API_KEY", "secret");
             using var factory = new WebApplicationFactory<Program>();
             using var client = factory.CreateClient();
-            using var response = await client.GetAsync("/");
+            using var response = await client.GetAsync("/audit");
             Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
         }
         finally

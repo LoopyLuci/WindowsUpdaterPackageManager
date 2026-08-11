@@ -83,6 +83,12 @@ if (!string.IsNullOrWhiteSpace(apiKey))
 {
     app.Use(async (context, next) =>
     {
+        if (string.Equals(context.Request.Path, "/", StringComparison.OrdinalIgnoreCase))
+        {
+            await next();
+            return;
+        }
+
         if (!context.Request.Headers.TryGetValue("Authorization", out var auth) &&
             !context.Request.Headers.TryGetValue("X-Api-Key", out auth))
         {

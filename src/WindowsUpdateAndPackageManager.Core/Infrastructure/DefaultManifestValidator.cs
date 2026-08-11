@@ -51,6 +51,12 @@ public sealed class DefaultManifestValidator : IManifestValidator
         {
             return false;
         }
+
+        if (!IsSupportedSchemaVersion(schema.GetString()!))
+        {
+            return false;
+        }
+
         if (!root.TryGetProperty("repositoryUrl", out var repo) || repo.ValueKind != JsonValueKind.String || string.IsNullOrWhiteSpace(repo.GetString()))
         {
             return false;
@@ -82,6 +88,11 @@ public sealed class DefaultManifestValidator : IManifestValidator
         }
 
         return true;
+    }
+
+    private static bool IsSupportedSchemaVersion(string? version)
+    {
+        return version is "1.0";
     }
 
     private static bool IsHexSha256(string? value)

@@ -12,11 +12,16 @@ public sealed class GitHubReleasePublisher
         _http = http ?? new HttpClient();
     }
 
-    public async Task<bool> PublishReleaseAsync(string owner, string repo, string tag, string zipPath, string? changelog = null, CancellationToken cancellationToken = default)
+    public async Task<bool> PublishReleaseAsync(string owner, string repo, string tag, string zipPath, string? changelog = null, string? token = null, CancellationToken cancellationToken = default)
     {
         using var request = new HttpRequestMessage(HttpMethod.Post, $"https://api.github.com/repos/{owner}/{repo}/releases");
         request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.github+json"));
         request.Headers.UserAgent.Add(new ProductInfoHeaderValue("wupm", "1.0"));
+        if (!string.IsNullOrWhiteSpace(token))
+        {
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        }
+
         request.Content = new StringContent(JsonSerializer.Serialize(new
         {
             tag_name = tag,
@@ -27,10 +32,10 @@ public sealed class GitHubReleasePublisher
         }));
         request.Content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
 
-        using var response = await _http.SendAsync(request, cancellationToken);
+        using var response = await _http.SendAsync(request, cancellationToken).ConfigureAwait(false);
         if (!response.IsSuccessStatusCode) return false;
 
-        var body = await response.Content.ReadAsStringAsync(cancellationToken);
+        var body = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
         var uploadUrl = JsonDocument.Parse(body).RootElement.GetProperty("upload_url").GetString();
         if (string.IsNullOrWhiteSpace(uploadUrl)) return false;
 
@@ -38,10 +43,15 @@ public sealed class GitHubReleasePublisher
         using var asset = new HttpRequestMessage(HttpMethod.Post, $"{uploadUrl}?name={Path.GetFileName(zipPath)}");
         asset.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.github+json"));
         asset.Headers.UserAgent.Add(new ProductInfoHeaderValue("wupm", "1.0"));
+        if (!string.IsNullOrWhiteSpace(token))
+        {
+            asset.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        }
+
         asset.Content = new StreamContent(zipBytes);
         asset.Content.Headers.ContentType = new MediaTypeHeaderValue("application/zip");
 
-        using var assetResponse = await _http.SendAsync(asset, cancellationToken);
+        using var assetResponse = await _http.SendAsync(asset, cancellationToken).ConfigureAwait(false);
         return assetResponse.IsSuccessStatusCode;
     }
 

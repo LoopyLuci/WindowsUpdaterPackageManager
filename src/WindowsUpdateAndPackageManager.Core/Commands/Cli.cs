@@ -372,6 +372,49 @@ public static class Cli
         });
         root.AddCommand(health);
 
+        var verify = new Command("verify", "Verify a package file by SHA256 and optional Authenticode signature");
+        var verifyPackageArg = new Argument<string>("packagePath") { Description = "Path to package file" };
+        var verifyShaOption = new Option<string?>("--sha256") { Description = "Expected SHA256 hex digest" };
+        var verifySignatureOption = new Option<bool>("--signature") { Description = "Require valid Authenticode signature" };
+        verify.AddArgument(verifyPackageArg);
+        verify.AddOption(verifyShaOption);
+        verify.AddOption(verifySignatureOption);
+        verify.SetHandler<string, string?, bool>(async (packagePath, expectedSha256, requireSignature) =>
+        {
+            try
+            {
+                if (!File.Exists(packagePath))
+                {
+                    Console.WriteLine($"Package not found: {packagePath}");
+                    return;
+                }
+
+                var verifier = services.GetService(typeof(ISignatureVerifier)) as ISignatureVerifier;
+                var integrity = services.GetService(typeof(IManifestValidator)) as IManifestValidator;
+                if (integrity is null)
+                {
+                    Console.WriteLine("Verifier is not configured.");
+                    return;
+                }
+
+                var shaOk = await integrity.VerifyPackageIntegrityAsync(packagePath, expectedSha256).ConfigureAwait(false);
+                var sigOk = !requireSignature || (verifier?.Verify(packagePath) ?? true);
+                if (shaOk && sigOk)
+                {
+                    Console.WriteLine($"Verify passed: {Path.GetFileName(packagePath)}");
+                }
+                else
+                {
+                    Console.WriteLine($"Verify failed: sha={shaOk}, signature={sigOk}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Verify failed: {ex.Message}");
+            }
+        }, verifyPackageArg, verifyShaOption, verifySignatureOption);
+        root.AddCommand(verify);
+
         var pack = new Command("pack", "Create a .wupkg package from a folder")
         {
             new Argument<string>("sourceDir") { Description = "Source directory" },
@@ -674,6 +717,79 @@ public static class Cli
         }, new Argument<string>("mountPath"), new Option<bool>("--discard"));
         offlineMount.AddCommand(offlineDismount);
         root.AddCommand(offlineMount);
+
+        var service = new Command("service", "Windows service/scheduled task management for unattended sync and Windows Update");
+        var serviceInstall = new Command("install", "Install a scheduled task for automatic sync and Windows Update");
+        var serviceInstallRepoOption = new Option<string?>("--repo") { Description = "Repository URL" };
+        var serviceInstallScheduleOption = new Option<string?>("--schedule") { Description = "Schedule in HH:mm format, default 09:00" };
+        serviceInstall.AddOption(serviceInstallRepoOption);
+        serviceInstall.AddOption(serviceInstallScheduleOption);
+        serviceInstall.SetHandler<string?, string?>((repo, schedule) =>
+        {
+            try
+            {
+                var mgr = services.GetService(typeof(IServiceManager)) as IServiceManager;
+                if (mgr is null)
+                {
+                    Console.WriteLine("Service manager is not configured.");
+                    return;
+                }
+
+                var ok = mgr.InstallAsync(repo, schedule).GetAwaiter().GetResult();
+                Console.WriteLine(ok ? "Service installed." : "Service installation failed.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Service install failed: {ex.Message}");
+            }
+        }, serviceInstallRepoOption, serviceInstallScheduleOption);
+
+        var serviceUninstall = new Command("uninstall", "Remove the WUPM scheduled task");
+        serviceUninstall.SetHandler(() =>
+        {
+            try
+            {
+                var mgr = services.GetService(typeof(IServiceManager)) as IServiceManager;
+                if (mgr is null)
+                {
+                    Console.WriteLine("Service manager is not configured.");
+                    return;
+                }
+
+                var ok = mgr.UninstallAsync().GetAwaiter().GetResult();
+                Console.WriteLine(ok ? "Service removed." : "Service removal failed.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Service uninstall failed: {ex.Message}");
+            }
+        });
+
+        var serviceStatus = new Command("status", "Show the WUPM scheduled task status");
+        serviceStatus.SetHandler(() =>
+        {
+            try
+            {
+                var mgr = services.GetService(typeof(IServiceManager)) as IServiceManager;
+                if (mgr is null)
+                {
+                    Console.WriteLine("Service manager is not configured.");
+                    return;
+                }
+
+                var status = mgr.StatusAsync().GetAwaiter().GetResult();
+                Console.WriteLine(string.IsNullOrWhiteSpace(status) ? "Service not found." : status);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Service status failed: {ex.Message}");
+            }
+        });
+
+        service.AddCommand(serviceInstall);
+        service.AddCommand(serviceUninstall);
+        service.AddCommand(serviceStatus);
+        root.AddCommand(service);
 
         try
         {
