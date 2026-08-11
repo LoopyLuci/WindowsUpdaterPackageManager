@@ -41,6 +41,7 @@ public static class Composition
         services.AddSingleton<ISignatureVerifier>(_ => new AuthenticodeVerifier(new SignaturePolicyOptions()));
         services.AddSingleton<IDismProcessRunner, DefaultDismProcessRunner>();
         services.AddSingleton<IProcessRunner, DefaultProcessRunner>();
+        services.AddSingleton<ISelfUpdater, SelfUpdater>();
         services.AddSingleton<GitHubReleasePublisher>();
         services.AddSingleton<IOfflineImageService, OfflineImageService>();
         services.AddSingleton<IDeltaStore>(sp => new SqliteDeltaStore(cacheRoot));

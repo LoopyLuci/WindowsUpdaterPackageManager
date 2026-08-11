@@ -1,5 +1,6 @@
 using System.Net.Http;
 using System.Security.Cryptography;
+using System.Text.Json;
 using WindowsUpdateAndPackageManager.Models;
 
 namespace WindowsUpdateAndPackageManager.Infrastructure;
@@ -25,20 +26,7 @@ public sealed class DefaultManifestValidator : IManifestValidator
         try
         {
             using var doc = System.Text.Json.JsonDocument.Parse(json);
-            var root = doc.RootElement;
-            if (!root.TryGetProperty("schemaVersion", out var schema) || schema.ValueKind != System.Text.Json.JsonValueKind.String || string.IsNullOrWhiteSpace(schema.GetString()))
-            {
-                return false;
-            }
-            if (!root.TryGetProperty("repositoryUrl", out var repo) || repo.ValueKind != System.Text.Json.JsonValueKind.String || string.IsNullOrWhiteSpace(repo.GetString()))
-            {
-                return false;
-            }
-            if (!root.TryGetProperty("packages", out var packages) || packages.ValueKind != System.Text.Json.JsonValueKind.Array)
-            {
-                return false;
-            }
-            return true;
+            return ValidateIndex(doc.RootElement);
         }
         catch
         {
@@ -54,5 +42,57 @@ public sealed class DefaultManifestValidator : IManifestValidator
         var hash = await sha.ComputeHashAsync(stream, cancellationToken).ConfigureAwait(false);
         var hex = Convert.ToHexString(hash).ToLowerInvariant();
         return string.Equals(hex, expectedSha256, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool ValidateIndex(JsonElement root)
+    {
+        if (root.ValueKind != JsonValueKind.Object) return false;
+        if (!root.TryGetProperty("schemaVersion", out var schema) || schema.ValueKind != JsonValueKind.String || string.IsNullOrWhiteSpace(schema.GetString()))
+        {
+            return false;
+        }
+        if (!root.TryGetProperty("repositoryUrl", out var repo) || repo.ValueKind != JsonValueKind.String || string.IsNullOrWhiteSpace(repo.GetString()))
+        {
+            return false;
+        }
+        if (!root.TryGetProperty("packages", out var packages) || packages.ValueKind != JsonValueKind.Array)
+        {
+            return false;
+        }
+
+        foreach (var pkg in packages.EnumerateArray())
+        {
+            if (pkg.ValueKind != JsonValueKind.Object) return false;
+            if (!pkg.TryGetProperty("id", out var id) || id.ValueKind != JsonValueKind.String || string.IsNullOrWhiteSpace(id.GetString()))
+            {
+                return false;
+            }
+            if (!pkg.TryGetProperty("version", out var version) || version.ValueKind != JsonValueKind.String || string.IsNullOrWhiteSpace(version.GetString()))
+            {
+                return false;
+            }
+            if (!pkg.TryGetProperty("sha256", out var sha) || sha.ValueKind != JsonValueKind.String || !IsHexSha256(sha.GetString()))
+            {
+                return false;
+            }
+            if (!pkg.TryGetProperty("created", out var created) || created.ValueKind != JsonValueKind.String || string.IsNullOrWhiteSpace(created.GetString()))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static bool IsHexSha256(string? value)
+    {
+        if (value is null) return false;
+        if (value.Length != 64) return false;
+        foreach (var ch in value)
+        {
+            var isHex = (ch >= '0' && ch <= '9') || (ch >= 'A' && ch <= 'F') || (ch >= 'a' && ch <= 'f');
+            if (!isHex) return false;
+        }
+        return true;
     }
 }

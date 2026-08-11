@@ -540,36 +540,24 @@ public static class Cli
         }, publishTagOption, publishChangelogOption, publishDryRunOption, publishTokenOption, repoOption);
         root.AddCommand(publish);
 
-        var selfUpdate = new Command("self-update", "Check for WUPM updates");
+        var selfUpdate = new Command("self-update", "Update WUPM to the latest GitHub release");
         selfUpdate.SetHandler(() =>
         {
             try
             {
-                var repoClient = services.GetService(typeof(IRepoClient)) as IRepoClient;
-                if (repoClient is null)
+                var updater = services.GetService(typeof(ISelfUpdater)) as ISelfUpdater;
+                if (updater is null)
                 {
-                    Console.WriteLine("Repo client is not configured.");
+                    Console.WriteLine("Self-updater is not configured.");
                     return;
                 }
 
-                var releaseJson = repoClient.GetLatestReleaseAsync("https://github.com/LoopyLuci/WindowsUpdateAndPackageManager").GetAwaiter().GetResult();
-                if (string.IsNullOrWhiteSpace(releaseJson))
-                {
-                    Console.WriteLine("Could not retrieve latest release.");
-                    return;
-                }
-
-                using var doc = System.Text.Json.JsonDocument.Parse(releaseJson);
-                var root = doc.RootElement;
-                var tag = root.GetProperty("tag_name").GetString();
-                var url = root.GetProperty("html_url").GetString();
-
-                Console.WriteLine($"Latest release: {tag}");
-                Console.WriteLine($"Release page: {url}");
+                var started = updater.SelfUpdateAsync().GetAwaiter().GetResult();
+                Console.WriteLine(started ? "Self-update started. The new version will launch shortly." : "Self-update failed.");
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Self-update check failed: {ex.Message}");
+                Console.WriteLine($"Self-update failed: {ex.Message}");
             }
         });
         root.AddCommand(selfUpdate);

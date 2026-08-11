@@ -1,137 +1,98 @@
 {
-  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://loopyluci.github.io/WindowsUpdateAndPackageManager/schemas/index.schema.json",
   "title": "WUPM Repository Index",
   "type": "object",
-  "required": [
-    "schemaVersion",
-    "generatedAt",
-    "repositoryUrl",
-    "packages"
-  ],
+  "required": ["schemaVersion", "packages"],
   "properties": {
     "schemaVersion": {
       "type": "string",
       "pattern": "^\\d+\\.\\d+$"
     },
+    "repository": {
+      "type": "string",
+      "format": "uri"
+    },
     "generatedAt": {
       "type": "string",
       "format": "date-time"
     },
-    "repositoryUrl": {
-      "type": "string",
-      "format": "uri"
-    },
     "packages": {
       "type": "array",
       "items": {
-        "$ref": "#/definitions/package"
+        "$ref": "#/$defs/package"
       }
     }
   },
-  "definitions": {
+  "$defs": {
     "package": {
       "type": "object",
-      "required": [
-        "id",
-        "version",
-        "displayName",
-        "installCommand",
-        "uninstallCommand"
-      ],
+      "required": ["id", "version", "sha256", "created"],
       "properties": {
         "id": {
-          "type": "string"
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
         },
         "version": {
-          "type": "string"
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
         },
-        "displayName": {
-          "type": "string"
+        "title": {
+          "type": "string",
+          "maxLength": 256
         },
         "description": {
-          "type": "string"
-        },
-        "homepage": {
           "type": "string",
-          "format": "uri"
-        },
-        "license": {
-          "type": "string"
-        },
-        "isDriver": {
-          "type": "boolean"
-        },
-        "sha256": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "sizeBytes": {
-          "type": [
-            "integer",
-            "null"
-          ]
-        },
-        "architecture": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "minWindowsVersion": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "maxWindowsVersion": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "maxLength": 2048
         },
         "installCommand": {
-          "type": "string"
+          "type": "string",
+          "minLength": 1
         },
         "uninstallCommand": {
           "type": "string"
         },
+        "supportsOffline": {
+          "type": "boolean"
+        },
         "requiresReboot": {
           "type": "boolean"
         },
-        "dependencies": {
-          "type": [
-            "array",
-            "null"
-          ],
-          "items": {
-            "type": "string"
-          }
+        "sha256": {
+          "type": "string",
+          "pattern": "^[A-Fa-f0-9]{64}$"
         },
-        "publishedAt": {
+        "created": {
           "type": "string",
           "format": "date-time"
         },
-        "isDeprecated": {
-          "type": "boolean"
-        },
-        "deprecationReason": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "changelog": {
-          "type": [
-            "array",
-            "null"
-          ],
+        "dependencies": {
+          "type": "array",
           "items": {
             "type": "string"
           }
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "deltaFrom": {
+          "type": "string"
+        },
+        "artifactUrl": {
+          "type": "string",
+          "format": "uri"
+        },
+        "driverManifestUrl": {
+          "type": "string",
+          "format": "uri"
         }
-      }
+      },
+      "additionalProperties": true
     }
   }
 }

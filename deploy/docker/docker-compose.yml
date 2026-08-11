@@ -1,0 +1,17 @@
+name: wupm-api
+services:
+  api:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - WUPM_API_KEY=dev-key
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/"]
+      interval: 5s
+      timeout: 2s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
