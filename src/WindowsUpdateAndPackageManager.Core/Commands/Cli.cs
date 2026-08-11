@@ -899,6 +899,36 @@ public static class Cli
         }, migrateInput, migrateTarget, migrateOutput);
         root.AddCommand(migrate);
 
+        var doctor = new Command("doctor", "Run environment and connectivity diagnostics");
+        doctor.SetHandler(() =>
+        {
+            try
+            {
+                Console.WriteLine("WUPM doctor diagnostics:");
+                Console.WriteLine();
+
+                var apiKey = Environment.GetEnvironmentVariable("WUPM_API_KEY");
+                Console.WriteLine($"WUPM_API_KEY: {(string.IsNullOrWhiteSpace(apiKey) ? "not set" : "set")}");
+
+                var mtlsEnabled = string.Equals(Environment.GetEnvironmentVariable("WUPM_API_MTLS_ENABLED"), "true", StringComparison.OrdinalIgnoreCase);
+                Console.WriteLine($"WUPM_API_MTLS_ENABLED: {mtlsEnabled}");
+
+                var allowedThumbprints = Environment.GetEnvironmentVariable("WUPM_API_MTLS_ALLOWED_THUMBPRINTS");
+                Console.WriteLine($"WUPM_API_MTLS_ALLOWED_THUMBPRINTS: {(string.IsNullOrWhiteSpace(allowedThumbprints) ? "not set" : "set")}");
+
+                var githubToken = Environment.GetEnvironmentVariable("GITHUB_TOKEN");
+                Console.WriteLine($"GITHUB_TOKEN: {(string.IsNullOrWhiteSpace(githubToken) ? "not set" : "set")}");
+
+                Console.WriteLine();
+                Console.WriteLine("Rate limiter state: reset if needed via test hook.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Doctor failed: {ex.Message}");
+            }
+        });
+        root.AddCommand(doctor);
+
         try
         {
             return root.InvokeAsync(args);

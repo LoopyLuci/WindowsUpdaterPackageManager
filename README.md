@@ -56,10 +56,27 @@ Run `dotnet run --project src/WupmApi` and use endpoints:
 ### API Authentication
 
 The REST API supports optional authentication. Enable it by setting the `WUPM_API_KEY` environment variable. When set, endpoints require one of:
-- `Authorization: Bearer <token>`
-- `X-Api-Key: <token>`
+- `Authorization: Bearer ***`
+- `X-Api-Key: ***`
 
 Unauthenticated requests receive `401 Unauthorized` when auth is enabled. When `WUPM_API_KEY` is not set, the API remains open for local use.
+
+### mTLS Client Certificates
+
+Enable client certificate enforcement with:
+- `WUPM_API_MTLS_ENABLED=true`
+- `WUPM_API_MTLS_ALLOWED_THUMBPRINTS=<thumbprint1>,<thumbprint2>`
+
+Use `*` to allow any client certificate thumbprint during staged rollout. Missing or disallowed certificates return `403 Forbidden`. The `/` health endpoint still enforces mTLS when enabled.
+
+### Deployment Guidance
+
+Recommended production deployment pattern:
+- Place WupmApi behind a reverse proxy or load balancer with TLS termination.
+- Require HTTPS from clients; avoid exposing HTTP externally.
+- Rotate `WUPM_API_KEY` regularly and store it in a secret manager, not on disk.
+- For mTLS, provision client certificates per operator/managed node and store thumbprints in `WUPM_API_MTLS_ALLOWED_THUMBPRINTS`.
+- Limit network access to audit and package endpoints according to your trust model.
 
 ## Security Notes
 
