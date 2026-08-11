@@ -5,7 +5,7 @@ namespace WindowsUpdateAndPackageManager.Core;
 
 public interface ISelfUpdater
 {
-    Task<bool> SelfUpdateAsync(CancellationToken cancellationToken = default);
+    Task<bool> SelfUpdateAsync(string? tag = null, CancellationToken cancellationToken = default);
 }
 
 public sealed class SelfUpdater : ISelfUpdater
@@ -36,11 +36,15 @@ public sealed class SelfUpdater : ISelfUpdater
         _downloadAssetAsync = downloadAssetAsync ?? DefaultDownloadAssetAsync;
     }
 
-    public async Task<bool> SelfUpdateAsync(CancellationToken cancellationToken = default)
+    public async Task<bool> SelfUpdateAsync(string? tag = null, CancellationToken cancellationToken = default)
     {
         try
         {
-            var latestRelease = await _fetchReleaseAsync($"https://api.github.com/repos/{_githubOwner}/{_githubRepo}/releases/latest", cancellationToken).ConfigureAwait(false);
+            var releaseUrl = string.IsNullOrWhiteSpace(tag)
+                ? $"https://api.github.com/repos/{_githubOwner}/{_githubRepo}/releases/latest"
+                : $"https://api.github.com/repos/{_githubOwner}/{_githubRepo}/releases/tags/{tag}";
+
+            var latestRelease = await _fetchReleaseAsync(releaseUrl, cancellationToken).ConfigureAwait(false);
             if (latestRelease is null) return false;
 
             var tempDir = Path.Combine(Path.GetTempPath(), "wupm-selfupdate", Guid.NewGuid().ToString("N"));

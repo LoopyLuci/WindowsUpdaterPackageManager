@@ -592,7 +592,9 @@ public static class Cli
         root.AddCommand(publish);
 
         var selfUpdate = new Command("self-update", "Update WUPM to the latest GitHub release");
-        selfUpdate.SetHandler(() =>
+        var selfUpdateTagOption = new Option<string>("--tag");
+        selfUpdate.AddOption(selfUpdateTagOption);
+        selfUpdate.SetHandler<string?>(async tag =>
         {
             try
             {
@@ -603,14 +605,14 @@ public static class Cli
                     return;
                 }
 
-                var started = updater.SelfUpdateAsync().GetAwaiter().GetResult();
+                var started = await updater.SelfUpdateAsync(tag);
                 Console.WriteLine(started ? "Self-update started. The new version will launch shortly." : "Self-update failed.");
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Self-update failed: {ex.Message}");
             }
-        });
+        }, selfUpdateTagOption);
         root.AddCommand(selfUpdate);
 
         var deltaUpdate = new Command("delta-update", "Apply a delta update for a package");
