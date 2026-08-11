@@ -12,6 +12,7 @@ using Xunit;
 
 namespace WindowsUpdateAndPackageManager.Tests;
 
+[Collection("Console")]
 public sealed class DeltaOfflineCliTests
 {
     private static IServiceProvider BuildServices(params (Type type, object instance)[] services)
