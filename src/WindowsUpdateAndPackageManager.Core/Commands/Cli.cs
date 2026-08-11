@@ -436,23 +436,24 @@ public static class Cli
                 }
 
                 var manifestJson = await File.ReadAllTextAsync(manifestPath);
+                System.Text.Json.JsonElement manifestRoot = default;
                 try
                 {
                     using var doc = System.Text.Json.JsonDocument.Parse(manifestJson);
-                    var root = doc.RootElement;
-                    if (root.ValueKind != System.Text.Json.JsonValueKind.Object)
+                    manifestRoot = doc.RootElement;
+                    if (manifestRoot.ValueKind != System.Text.Json.JsonValueKind.Object)
                     {
                         Console.WriteLine("manifest.json must be a JSON object.");
                         return;
                     }
 
-                    if (!root.TryGetProperty("id", out var id) || id.ValueKind != System.Text.Json.JsonValueKind.String || string.IsNullOrWhiteSpace(id.GetString()))
+                    if (!manifestRoot.TryGetProperty("id", out var id) || id.ValueKind != System.Text.Json.JsonValueKind.String || string.IsNullOrWhiteSpace(id.GetString()))
                     {
                         Console.WriteLine("manifest.json is missing required field: id");
                         return;
                     }
 
-                    if (!root.TryGetProperty("version", out var version) || version.ValueKind != System.Text.Json.JsonValueKind.String || string.IsNullOrWhiteSpace(version.GetString()))
+                    if (!manifestRoot.TryGetProperty("version", out var version) || version.ValueKind != System.Text.Json.JsonValueKind.String || string.IsNullOrWhiteSpace(version.GetString()))
                     {
                         Console.WriteLine("manifest.json is missing required field: version");
                         return;
@@ -475,26 +476,31 @@ public static class Cli
                 var sha256 = Convert.ToHexString(hash).ToLowerInvariant();
 
                 var deltaPath = Path.Combine(output, $"{packageId}.delta.json");
+                var previousSha256 = string.Empty;
+                if (manifestRoot.TryGetProperty("previousSha256", out var prev) && prev.ValueKind == System.Text.Json.JsonValueKind.String)
+                {
+                    previousSha256 = prev.GetString() ?? string.Empty;
+                }
+
                 var packManifest = new PackManifest
                 {
                     Id = packageId,
                     Version = new DirectoryInfo(source).Name,
                     Sha256 = sha256,
-                    Created = DateTimeOffset.UtcNow
+                    Created = DateTimeOffset.UtcNow,
+                    PreviousSha256 = previousSha256
                 };
 
-                if (manifest.TryGetProperty("previousSha256", out var prev) && prev.ValueKind == System.Text.Json.JsonValueKind.String)
-                {
-                    packManifest.PreviousSha256 = prev.GetString();
-                }
-
                 var deltaAvailable = !string.IsNullOrWhiteSpace(packManifest.PreviousSha256);
-                var packJson = System.Text.Json.JsonSerializer.Serialize(packManifest);
-                using var packDoc = System.Text.Json.JsonDocument.Parse(packJson);
-                var packNode = System.Text.Json.JsonNode.Parse(packDoc.RootElement.GetRawText())!.AsObject();
-                packNode["deltaAvailable"] = deltaAvailable;
-                packNode["previousSha256"] = packManifest.PreviousSha256 ?? string.Empty;
-                var deltaJson = packNode.ToJsonString();
+                var deltaJson = System.Text.Json.JsonSerializer.Serialize(new
+                {
+                    id = packManifest.Id,
+                    version = packManifest.Version,
+                    sha256 = packManifest.Sha256,
+                    created = packManifest.Created,
+                    previousSha256 = packManifest.PreviousSha256 ?? string.Empty,
+                    deltaAvailable
+                });
                 await File.WriteAllTextAsync(deltaPath, deltaJson);
 
                 Console.WriteLine($"Created package: {zipPath}");
