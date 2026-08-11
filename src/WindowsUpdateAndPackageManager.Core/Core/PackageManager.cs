@@ -11,13 +11,15 @@ public sealed class PackageManager : IPackageManager
     private readonly IAuditStore _auditStore;
     private readonly ICacheManager _cache;
     private readonly IPolicyEngine _policyEngine;
+    private readonly ISignatureVerifier? _signatureVerifier;
 
-    public PackageManager(IStateDatabase state, IAuditStore auditStore, ICacheManager cache, IPolicyEngine policyEngine)
+    public PackageManager(IStateDatabase state, IAuditStore auditStore, ICacheManager cache, IPolicyEngine policyEngine, ISignatureVerifier? signatureVerifier = null)
     {
         _state = state;
         _auditStore = auditStore;
         _cache = cache;
         _policyEngine = policyEngine;
+        _signatureVerifier = signatureVerifier;
     }
 
     public async Task<IReadOnlyList<PackageManifest>> ListInstalledAsync(CancellationToken cancellationToken = default)
@@ -49,6 +51,17 @@ public sealed class PackageManager : IPackageManager
             {
                 result.Message = "Package is not cached. Run 'sync' first.";
                 return result;
+            }
+
+            if (_signatureVerifier is not null)
+            {
+                var cacheDir = await _cache.EnsurePackageCacheAsync(package.Id, package.Version, cancellationToken).ConfigureAwait(false);
+                var packagePath = Path.Combine(cacheDir, $"{package.Id}@{package.Version}.wupkg");
+                if (!_signatureVerifier.Verify(packagePath))
+                {
+                    result.Message = "Package signature verification failed.";
+                    return result;
+                }
             }
 
             if (string.IsNullOrWhiteSpace(package.InstallCommand))

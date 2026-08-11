@@ -32,6 +32,7 @@ public static class Composition
         services.AddSingleton<IManifestValidator>(sp => new DefaultManifestValidator());
         services.AddSingleton<ICacheManager>(sp => new DefaultCacheManager(cacheRoot));
         services.AddSingleton<IPolicyEngine>(sp => new AllowlistPolicyEngine());
+        services.AddSingleton<ISignatureVerifier, AuthenticodeVerifier>();
 
         if (!string.IsNullOrWhiteSpace(repositoryUrl))
         {

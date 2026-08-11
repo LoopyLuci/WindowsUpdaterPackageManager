@@ -2,23 +2,9 @@
 
   <PropertyGroup>
     <TargetFramework>net10.0-windows</TargetFramework>
-    <OutputType>Exe</OutputType>
     <RootNamespace>WindowsUpdateAndPackageManager</RootNamespace>
-    <AssemblyName>WindowsUpdateAndPackageManager</AssemblyName>
-    <Version>0.1.0-alpha</Version>
-    <Authors>LoopyLuci</Authors>
-    <RepositoryUrl>https://github.com/LoopyLuci/WindowsUpdateAndPackageManager</RepositoryUrl>
-    <RepositoryType>git</RepositoryType>
-    <License>MIT</License>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <UseWindowsForms>false</UseWindowsForms>
-    <UseWPF>false</UseWPF>
-    <PublishSingleFile>true</PublishSingleFile>
-    <SelfContained>true</SelfContained>
-    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
-    <PublishReadyToRun>true</PublishReadyToRun>
-    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
   </PropertyGroup>
 
   <ItemGroup>

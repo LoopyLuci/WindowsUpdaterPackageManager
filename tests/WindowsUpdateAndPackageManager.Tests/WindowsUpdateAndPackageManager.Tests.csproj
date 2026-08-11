@@ -17,7 +17,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\WindowsUpdateAndPackageManager\WindowsUpdateAndPackageManager.csproj" />
+    <ProjectReference Include="..\..\src\Wupm.Cli\Wupm.Cli.csproj" />
   </ItemGroup>
 
 </Project>

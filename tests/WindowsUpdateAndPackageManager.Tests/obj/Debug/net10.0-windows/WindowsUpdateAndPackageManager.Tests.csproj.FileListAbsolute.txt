@@ -7,9 +7,6 @@ D:\Projects\WindowsUpdatePackageManager\tests\WindowsUpdateAndPackageManager.Tes
 D:\Projects\WindowsUpdatePackageManager\tests\WindowsUpdateAndPackageManager.Tests\obj\Debug\net10.0-windows\WindowsUpdateAndPackageManager.Tests.sourcelink.json
 D:\Projects\WindowsUpdatePackageManager\tests\WindowsUpdateAndPackageManager.Tests\bin\Debug\net10.0-windows\testhost.dll
 D:\Projects\WindowsUpdatePackageManager\tests\WindowsUpdateAndPackageManager.Tests\bin\Debug\net10.0-windows\xunit.abstractions.dll
-D:\Projects\WindowsUpdatePackageManager\tests\WindowsUpdateAndPackageManager.Tests\bin\Debug\net10.0-windows\WindowsUpdateAndPackageManager.deps.json
-D:\Projects\WindowsUpdatePackageManager\tests\WindowsUpdateAndPackageManager.Tests\bin\Debug\net10.0-windows\WindowsUpdateAndPackageManager.runtimeconfig.json
-D:\Projects\WindowsUpdatePackageManager\tests\WindowsUpdateAndPackageManager.Tests\bin\Debug\net10.0-windows\WindowsUpdateAndPackageManager.exe
 D:\Projects\WindowsUpdatePackageManager\tests\WindowsUpdateAndPackageManager.Tests\bin\Debug\net10.0-windows\testhost.exe
 D:\Projects\WindowsUpdatePackageManager\tests\WindowsUpdateAndPackageManager.Tests\bin\Debug\net10.0-windows\xunit.runner.visualstudio.testadapter.dll
 D:\Projects\WindowsUpdatePackageManager\tests\WindowsUpdateAndPackageManager.Tests\bin\Debug\net10.0-windows\WindowsUpdateAndPackageManager.Tests.deps.json
@@ -153,3 +150,8 @@ D:\Projects\WindowsUpdatePackageManager\tests\WindowsUpdateAndPackageManager.Tes
 D:\Projects\WindowsUpdatePackageManager\tests\WindowsUpdateAndPackageManager.Tests\obj\Debug\net10.0-windows\WindowsUpdateAndPackageManager.Tests.genruntimeconfig.cache
 D:\Projects\WindowsUpdatePackageManager\tests\WindowsUpdateAndPackageManager.Tests\obj\Debug\net10.0-windows\ref\WindowsUpdateAndPackageManager.Tests.dll
 D:\Projects\WindowsUpdatePackageManager\tests\WindowsUpdateAndPackageManager.Tests\bin\Debug\net10.0-windows\.msCoverageSourceRootsMapping_WindowsUpdateAndPackageManager.Tests
+D:\Projects\WindowsUpdatePackageManager\tests\WindowsUpdateAndPackageManager.Tests\bin\Debug\net10.0-windows\Wupm.Cli.deps.json
+D:\Projects\WindowsUpdatePackageManager\tests\WindowsUpdateAndPackageManager.Tests\bin\Debug\net10.0-windows\Wupm.Cli.runtimeconfig.json
+D:\Projects\WindowsUpdatePackageManager\tests\WindowsUpdateAndPackageManager.Tests\bin\Debug\net10.0-windows\Wupm.Cli.exe
+D:\Projects\WindowsUpdatePackageManager\tests\WindowsUpdateAndPackageManager.Tests\bin\Debug\net10.0-windows\Wupm.Cli.dll
+D:\Projects\WindowsUpdatePackageManager\tests\WindowsUpdateAndPackageManager.Tests\bin\Debug\net10.0-windows\Wupm.Cli.pdb

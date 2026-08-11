@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.0",
-  "generatedAt": "2026-08-10T00:00:00Z",
+  "generatedAt": "2026-08-11T00:00:00Z",
   "repositoryUrl": "https://github.com/LoopyLuci/WindowsUpdateAndPackageManager",
   "packages": [
     {
@@ -33,6 +33,54 @@
       "uninstallCommand": "winget uninstall Notepad++.Notepad++",
       "requiresReboot": false,
       "publishedAt": "2026-08-10T00:00:00Z",
+      "isDeprecated": false
+    },
+    {
+      "id": "firefox",
+      "version": "130.0",
+      "displayName": "Mozilla Firefox",
+      "description": "Web browser.",
+      "license": "MPL-2.0",
+      "isDriver": false,
+      "architecture": "x64",
+      "minWindowsVersion": "Windows 10",
+      "maxWindowsVersion": "Windows 11",
+      "installCommand": "winget install Mozilla.Firefox",
+      "uninstallCommand": "winget uninstall Mozilla.Firefox",
+      "requiresReboot": false,
+      "publishedAt": "2026-08-11T00:00:00Z",
+      "isDeprecated": false
+    },
+    {
+      "id": "vc-redist-2022",
+      "version": "14.40.33817",
+      "displayName": "Visual C++ Redistributable 2022",
+      "description": "Runtime libraries for Visual Studio 2022.",
+      "license": "MSRCLA",
+      "isDriver": false,
+      "architecture": "x64",
+      "minWindowsVersion": "Windows 10",
+      "maxWindowsVersion": "Windows 11",
+      "installCommand": "winget install Microsoft.VC++2022Redist-x64",
+      "uninstallCommand": "winget uninstall Microsoft.VC++2022Redist-x64",
+      "requiresReboot": false,
+      "publishedAt": "2026-08-11T00:00:00Z",
+      "isDeprecated": false
+    },
+    {
+      "id": "intel-graphics",
+      "version": "31.0.101.5458",
+      "displayName": "Intel Graphics Driver",
+      "description": "Intel UHD Graphics driver package.",
+      "license": "Intel",
+      "isDriver": true,
+      "architecture": "x64",
+      "minWindowsVersion": "Windows 10",
+      "maxWindowsVersion": "Windows 11",
+      "installCommand": "pnputil /add-driver .\\oem\\*.inf /subdirs /install",
+      "uninstallCommand": "pnputil /delete-driver oem*.inf /uninstall /force",
+      "requiresReboot": true,
+      "publishedAt": "2026-08-11T00:00:00Z",
       "isDeprecated": false
     }
   ]

@@ -4,6 +4,7 @@ using System.IO.Compression;
 using System.Threading.Tasks;
 using System.CommandLine;
 using System.CommandLine.Invocation;
+using Microsoft.Extensions.DependencyInjection;
 using WindowsUpdateAndPackageManager.Core;
 using WindowsUpdateAndPackageManager.Infrastructure;
 using WindowsUpdateAndPackageManager.Models;
@@ -454,5 +455,38 @@ public static class Cli
             Console.WriteLine($"Command failed: {ex.Message}");
             return Task.FromResult(1);
         }
+    }
+
+    public static async Task PackPackage(IServiceProvider services, string sourceDir, string outputDir)
+    {
+        var source = Path.GetFullPath(sourceDir);
+        var output = Path.GetFullPath(outputDir);
+        Directory.CreateDirectory(output);
+
+        var packageId = new DirectoryInfo(source).Name;
+        var manifestPath = Path.Combine(source, "manifest.json");
+        if (!File.Exists(manifestPath))
+        {
+            throw new FileNotFoundException("manifest.json is missing in the source directory.", manifestPath);
+        }
+
+        var zipPath = Path.Combine(output, $"{packageId}.wupkg");
+        if (File.Exists(zipPath)) File.Delete(zipPath);
+
+        ZipFile.CreateFromDirectory(source, zipPath);
+        using var sha = System.Security.Cryptography.SHA256.Create();
+        await using var stream = File.OpenRead(zipPath);
+        var hash = await sha.ComputeHashAsync(stream);
+        var sha256 = Convert.ToHexString(hash).ToLowerInvariant();
+
+        Console.WriteLine($"Created package: {zipPath}");
+        Console.WriteLine($"SHA256: {sha256}");
+    }
+
+    public static async Task<string?> GetLatestRelease(IServiceProvider services, string repositoryUrl)
+    {
+        var repoClient = services.GetService(typeof(IRepoClient)) as IRepoClient;
+        if (repoClient is null) throw new InvalidOperationException("Repo client is not configured.");
+        return await repoClient.GetLatestReleaseAsync(repositoryUrl);
     }
 }
