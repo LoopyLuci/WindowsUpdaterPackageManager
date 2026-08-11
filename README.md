@@ -72,6 +72,20 @@ Unauthenticated requests receive `401 Unauthorized` when auth is enabled. When `
 
 Pushing a tag like `v0.2.0` triggers the release workflow, which builds and publishes `wupm-cli.zip` and `wupm-api.zip` as GitHub Release assets.
 
+### Delta packaging
+
+Use `wupm pack` with a `manifest.json` that includes `previousSha256` to produce a `.delta.json`:
+
+```json
+{
+  "id": "windows-update-bundle",
+  "version": "2.0",
+  "previousSha256": "<sha256 of previous package>"
+}
+```
+
+Output includes `deltaAvailable` and `previousSha256` in `.delta.json`. Apply deltas with `wupm delta-update --id <id> --from <version>` or combine with offline servicing via `wupm delta-apply --id <id> --from <version> --mountPath <path>`.
+
 ### Triggering a release
 
 1. Ensure your repo has the `GITHUB_TOKEN` with `contents: write` permission. The default token in GitHub Actions has this permission automatically.
@@ -99,21 +113,6 @@ Expand-Archive -Path wupm-api.zip -DestinationPath C:\Tools\wupm-api
 dotnet run --project src/Wupm.Cli -- publish --tag v0.2.0-test --dry-run
 dotnet run --project src/Wupm.Cli -- publish --tag v0.2.0-test --token $env:GITHUB_TOKEN
 ```
-
-### Authenticode signing
-
-WUPM verifies Authenticode signatures when the signature verifier is configured. To publish signed artifacts:
-
-1. Obtain a code-signing certificate and install it in the current user or machine store.
-2. Sign published executables before zipping:
-   ```powershell
-   $cert = Get-ChildItem Cert:\CurrentUser\My -CodeSigningCert | Select-Object -First 1
-   Set-AuthenticodeSignature -FilePath .\publish\cli\Wupm.Cli.exe -Certificate $cert
-   Set-AuthenticodeSignature -FilePath .\publish\api\WupmApi.exe -Certificate $cert
-   ```
-3. Zip the signed outputs and publish as release assets.
-
-Unsigned packages are blocked by default unless `AllowUntrusted` is explicitly enabled in policy. Treat unsigned downloads as untrusted.
 
 ### Authenticode signing
 
