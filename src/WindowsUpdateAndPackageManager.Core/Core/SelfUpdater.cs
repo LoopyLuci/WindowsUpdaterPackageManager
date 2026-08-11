@@ -151,6 +151,12 @@ Remove-Item $backup -Force
                 return file;
             }
         }
+
+        foreach (var file in Directory.EnumerateFiles(directory, "*.exe", SearchOption.AllDirectories))
+        {
+            return file;
+        }
+
         return null;
     }
 
