@@ -24,8 +24,11 @@ public sealed class CliCommandTests
             await WindowsUpdateAndPackageManager.Commands.Cli.PackPackage(null!, source, output);
 
             var zip = Path.Combine(output, new DirectoryInfo(source).Name + ".wupkg");
+            var delta = Path.Combine(output, new DirectoryInfo(source).Name + ".delta.json");
             Assert.True(File.Exists(zip));
             Assert.True(new FileInfo(zip).Length > 0);
+            Assert.True(File.Exists(delta));
+            Assert.Contains("\"sha256\":", File.ReadAllText(delta));
         }
         finally
         {

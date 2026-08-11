@@ -27,15 +27,22 @@ public sealed class DeltaOfflineCliTests
     public void DeltaUpdate_prints_applied_when_delta_succeeds()
     {
         var provider = new Mock<IPackageDeltaProvider>();
-        provider.Setup(x => x.GetDeltaAsync(It.IsAny<string>(), It.IsAny<string>(), "latest", default)).ReturnsAsync(new WindowsUpdateAndPackageManager.Core.DeltaManifest { PackageId = "pkg", FromVersion = "1.0", ToVersion = "2.0", DeltaUrl = "https://example.invalid/delta", DeltaSize = 1, DeltaHash = "abc" });
+        provider.Setup(x => x.GetDeltaAsync(It.IsAny<string>(), It.IsAny<string>(), "latest", default)).ReturnsAsync(new DeltaManifest { PackageId = "pkg", FromVersion = "1.0", ToVersion = "2.0", DeltaUrl = "https://example.invalid/delta", DeltaSize = 1, DeltaHash = "abc" });
         provider.Setup(x => x.ApplyDeltaAsync(It.IsAny<string>(), It.IsAny<string>(), "latest", default)).ReturnsAsync(true);
         var services = BuildServices((typeof(IPackageDeltaProvider), provider.Object));
 
         var output = new StringBuilder();
         using var writer = new StringWriter(output);
-        Console.SetOut(writer);
-
-        Cli.Run(new[] { "delta-update", "pkg", "1.0" }, services).GetAwaiter().GetResult();
+        var original = Console.Out;
+        try
+        {
+            Console.SetOut(writer);
+            Cli.Run(new[] { "delta-update", "--id", "pkg", "--from", "1.0" }, services).GetAwaiter().GetResult();
+        }
+        finally
+        {
+            Console.SetOut(original);
+        }
 
         Assert.Contains("Delta update applied successfully.", output.ToString());
     }
@@ -44,14 +51,21 @@ public sealed class DeltaOfflineCliTests
     public void DeltaUpdate_prints_no_delta_when_unavailable()
     {
         var provider = new Mock<IPackageDeltaProvider>();
-        provider.Setup(x => x.GetDeltaAsync(It.IsAny<string>(), It.IsAny<string>(), "latest", default)).ReturnsAsync((WindowsUpdateAndPackageManager.Core.DeltaManifest?)null);
+        provider.Setup(x => x.GetDeltaAsync(It.IsAny<string>(), It.IsAny<string>(), "latest", default)).ReturnsAsync((DeltaManifest?)null);
         var services = BuildServices((typeof(IPackageDeltaProvider), provider.Object));
 
         var output = new StringBuilder();
         using var writer = new StringWriter(output);
-        Console.SetOut(writer);
-
-        Cli.Run(new[] { "delta-update", "pkg", "1.0" }, services).GetAwaiter().GetResult();
+        var original = Console.Out;
+        try
+        {
+            Console.SetOut(writer);
+            Cli.Run(new[] { "delta-update", "--id", "pkg", "--from", "1.0" }, services).GetAwaiter().GetResult();
+        }
+        finally
+        {
+            Console.SetOut(original);
+        }
 
         Assert.Contains("No delta available for pkg from 1.0 to latest.", output.ToString());
     }
@@ -65,9 +79,16 @@ public sealed class DeltaOfflineCliTests
 
         var output = new StringBuilder();
         using var writer = new StringWriter(output);
-        Console.SetOut(writer);
-
-        Cli.Run(new[] { "offline", "mount", "C:\\missing\\image.wim" }, services).GetAwaiter().GetResult();
+        var original = Console.Out;
+        try
+        {
+            Console.SetOut(writer);
+            Cli.Run(new[] { "offline", "mount", "C:\\missing\\image.wim" }, services).GetAwaiter().GetResult();
+        }
+        finally
+        {
+            Console.SetOut(original);
+        }
 
         Assert.Contains("Mount failed: not found", output.ToString());
     }
@@ -81,9 +102,16 @@ public sealed class DeltaOfflineCliTests
 
         var output = new StringBuilder();
         using var writer = new StringWriter(output);
-        Console.SetOut(writer);
-
-        Cli.Run(new[] { "offline", "apply", "C:\\missing\\mount", "C:\\pkg.wupkg" }, services).GetAwaiter().GetResult();
+        var original = Console.Out;
+        try
+        {
+            Console.SetOut(writer);
+            Cli.Run(new[] { "offline", "apply", "C:\\missing\\mount", "C:\\pkg.wupkg" }, services).GetAwaiter().GetResult();
+        }
+        finally
+        {
+            Console.SetOut(original);
+        }
 
         Assert.Contains("Apply failed: not mounted", output.ToString());
     }
@@ -97,9 +125,16 @@ public sealed class DeltaOfflineCliTests
 
         var output = new StringBuilder();
         using var writer = new StringWriter(output);
-        Console.SetOut(writer);
-
-        Cli.Run(new[] { "offline", "dismount", "C:\\missing\\mount" }, services).GetAwaiter().GetResult();
+        var original = Console.Out;
+        try
+        {
+            Console.SetOut(writer);
+            Cli.Run(new[] { "offline", "dismount", "C:\\missing\\mount" }, services).GetAwaiter().GetResult();
+        }
+        finally
+        {
+            Console.SetOut(original);
+        }
 
         Assert.Contains("Dismount failed: missing", output.ToString());
     }

@@ -4,6 +4,13 @@ namespace WindowsUpdateAndPackageManager.Core;
 
 public sealed class OfflineImageService : IOfflineImageService
 {
+    private readonly IDismProcessRunner _dism;
+
+    public OfflineImageService(IDismProcessRunner? dism = null)
+    {
+        _dism = dism ?? new DefaultDismProcessRunner();
+    }
+
     public async Task<OfflineImageResult> MountOrOpenAsync(string imagePath, CancellationToken cancellationToken = default)
     {
         var result = new OfflineImageResult();
@@ -12,20 +19,8 @@ public sealed class OfflineImageService : IOfflineImageService
             var mountDir = Path.Combine(Path.GetTempPath(), $"wupm-image-{Guid.NewGuid():N}");
             Directory.CreateDirectory(mountDir);
 
-            var psi = new ProcessStartInfo
-            {
-                FileName = "dism.exe",
-                Arguments = $"/Mount-Image /ImageFile:\"{imagePath}\" /MountDir:\"{mountDir}\"",
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                UseShellExecute = false,
-                CreateNoWindow = true
-            };
-            using var p = Process.Start(psi);
-            if (p is null) throw new InvalidOperationException("Failed to start DISM.");
-            await p.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
-
-            if (p.ExitCode == 0)
+            var exitCode = await _dism.RunAsync("dism.exe", $"/Mount-Image /ImageFile:\"{imagePath}\" /MountDir:\"{mountDir}\"", cancellationToken).ConfigureAwait(false);
+            if (exitCode == 0)
             {
                 result.Success = true;
                 result.MountPath = mountDir;
@@ -34,7 +29,7 @@ public sealed class OfflineImageService : IOfflineImageService
             else
             {
                 Directory.Delete(mountDir, true);
-                result.Message = $"DISM exited with code {p.ExitCode}.";
+                result.Message = $"DISM exited with code {exitCode}.";
             }
         }
         catch (Exception ex)
@@ -50,21 +45,9 @@ public sealed class OfflineImageService : IOfflineImageService
         var result = new OfflineImageResult();
         try
         {
-            var psi = new ProcessStartInfo
-            {
-                FileName = "dism.exe",
-                Arguments = $"/Image:\"{imageMountPath}\" /Add-Package /PackagePath:\"{packagePath}\"",
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                UseShellExecute = false,
-                CreateNoWindow = true
-            };
-            using var p = Process.Start(psi);
-            if (p is null) throw new InvalidOperationException("Failed to start DISM.");
-            await p.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
-
-            result.Success = p.ExitCode == 0;
-            result.Message = p.ExitCode == 0 ? "Package applied successfully." : $"DISM exited with code {p.ExitCode}.";
+            var exitCode = await _dism.RunAsync("dism.exe", $"/Image:\"{imageMountPath}\" /Add-Package /PackagePath:\"{packagePath}\"", cancellationToken).ConfigureAwait(false);
+            result.Success = exitCode == 0;
+            result.Message = exitCode == 0 ? "Package applied successfully." : $"DISM exited with code {exitCode}.";
         }
         catch (Exception ex)
         {
@@ -80,22 +63,10 @@ public sealed class OfflineImageService : IOfflineImageService
         try
         {
             var commit = discard ? "/Discard" : "/Commit";
-            var psi = new ProcessStartInfo
-            {
-                FileName = "dism.exe",
-                Arguments = $"/Unmount-Image /MountDir:\"{imageMountPath}\" {commit}",
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                UseShellExecute = false,
-                CreateNoWindow = true
-            };
-            using var p = Process.Start(psi);
-            if (p is null) throw new InvalidOperationException("Failed to start DISM.");
-            await p.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
-
-            result.Success = p.ExitCode == 0;
-            result.Message = p.ExitCode == 0 ? "Image dismounted successfully." : $"DISM exited with code {p.ExitCode}.";
-            if (p.ExitCode == 0)
+            var exitCode = await _dism.RunAsync("dism.exe", $"/Unmount-Image /MountDir:\"{imageMountPath}\" {commit}", cancellationToken).ConfigureAwait(false);
+            result.Success = exitCode == 0;
+            result.Message = exitCode == 0 ? "Image dismounted successfully." : $"DISM exited with code {exitCode}.";
+            if (exitCode == 0)
             {
                 Directory.Delete(imageMountPath, true);
             }

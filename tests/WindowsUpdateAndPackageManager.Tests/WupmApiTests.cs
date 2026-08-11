@@ -106,4 +106,57 @@ public sealed class WupmApiTests : IClassFixture<WebApplicationFactory<Program>>
         using var response = await client.GetAsync("/audit");
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
+
+    [Fact]
+    public async Task With_api_key_set_missing_header_returns_unauthorized()
+    {
+        try
+        {
+            Environment.SetEnvironmentVariable("WUPM_API_KEY", "secret");
+            using var factory = new WebApplicationFactory<Program>();
+            using var client = factory.CreateClient();
+            using var response = await client.GetAsync("/");
+            Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("WUPM_API_KEY", null);
+        }
+    }
+
+    [Fact]
+    public async Task With_api_key_set_valid_bearer_returns_ok()
+    {
+        try
+        {
+            Environment.SetEnvironmentVariable("WUPM_API_KEY", "secret");
+            using var factory = new WebApplicationFactory<Program>();
+            using var client = factory.CreateClient();
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", "secret");
+            using var response = await client.GetAsync("/");
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("WUPM_API_KEY", null);
+        }
+    }
+
+    [Fact]
+    public async Task With_api_key_set_valid_xapikey_returns_ok()
+    {
+        try
+        {
+            Environment.SetEnvironmentVariable("WUPM_API_KEY", "secret");
+            using var factory = new WebApplicationFactory<Program>();
+            using var client = factory.CreateClient();
+            client.DefaultRequestHeaders.Add("X-Api-Key", "secret");
+            using var response = await client.GetAsync("/");
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("WUPM_API_KEY", null);
+        }
+    }
 }

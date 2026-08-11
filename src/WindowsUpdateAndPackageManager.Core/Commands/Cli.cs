@@ -431,6 +431,16 @@ public static class Cli
                 var hash = await sha.ComputeHashAsync(stream);
                 var sha256 = Convert.ToHexString(hash).ToLowerInvariant();
 
+                var deltaPath = Path.Combine(output, $"{packageId}.delta.json");
+                var deltaJson = System.Text.Json.JsonSerializer.Serialize(new
+                {
+                    id = packageId,
+                    version = new DirectoryInfo(source).Name,
+                    sha256,
+                    created = DateTimeOffset.UtcNow.ToString("o")
+                });
+                await File.WriteAllTextAsync(deltaPath, deltaJson);
+
                 Console.WriteLine($"Created package: {zipPath}");
                 Console.WriteLine($"SHA256: {sha256}");
             }
@@ -475,12 +485,12 @@ public static class Cli
         });
         root.AddCommand(selfUpdate);
 
-        var deltaUpdate = new Command("delta-update", "Apply a delta update for a package")
-        {
-            new Argument<string>("id") { Description = "Package ID" },
-            new Argument<string>("fromVersion") { Description = "Current installed version" },
-            repoOption
-        };
+        var deltaUpdate = new Command("delta-update", "Apply a delta update for a package");
+        var deltaIdOption = new Option<string>("--id");
+        var deltaFromOption = new Option<string>("--from");
+        deltaUpdate.AddOption(deltaIdOption);
+        deltaUpdate.AddOption(deltaFromOption);
+        deltaUpdate.AddOption(repoOption);
         deltaUpdate.SetHandler<string, string, string?>(async (id, fromVersion, repositoryUrl) =>
         {
             try
@@ -506,7 +516,7 @@ public static class Cli
             {
                 Console.WriteLine($"Delta update failed: {ex.Message}");
             }
-        }, new Argument<string>("id"), new Argument<string>("fromVersion"), repoOption);
+        }, deltaIdOption, deltaFromOption, repoOption);
         root.AddCommand(deltaUpdate);
 
         var offlineMount = new Command("offline", "Offline image servicing");
@@ -620,6 +630,16 @@ public static class Cli
         await using var stream = File.OpenRead(zipPath);
         var hash = await sha.ComputeHashAsync(stream);
         var sha256 = Convert.ToHexString(hash).ToLowerInvariant();
+
+        var deltaPath = Path.Combine(output, $"{packageId}.delta.json");
+        var deltaJson = System.Text.Json.JsonSerializer.Serialize(new
+        {
+            id = packageId,
+            version = new DirectoryInfo(source).Name,
+            sha256,
+            created = DateTimeOffset.UtcNow.ToString("o")
+        });
+        await File.WriteAllTextAsync(deltaPath, deltaJson);
 
         Console.WriteLine($"Created package: {zipPath}");
         Console.WriteLine($"SHA256: {sha256}");

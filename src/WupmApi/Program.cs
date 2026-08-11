@@ -61,4 +61,32 @@ app.MapGet("/audit", async (IServiceProvider sp, DateTimeOffset? from = null, Da
     return Results.Ok(entries);
 });
 
+var apiKey = Environment.GetEnvironmentVariable("WUPM_API_KEY");
+if (!string.IsNullOrWhiteSpace(apiKey))
+{
+    app.Use(async (context, next) =>
+    {
+        if (!context.Request.Headers.TryGetValue("Authorization", out var auth) &&
+            !context.Request.Headers.TryGetValue("X-Api-Key", out auth))
+        {
+            auth = string.Empty;
+        }
+
+        var token = auth.ToString();
+        if (token.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+        {
+            token = token.Substring("Bearer ".Length).Trim();
+        }
+
+        if (!string.Equals(token, apiKey, StringComparison.Ordinal))
+        {
+            context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+            await context.Response.WriteAsJsonAsync(new { error = "Unauthorized" });
+            return;
+        }
+
+        await next();
+    });
+}
+
 app.Run();
