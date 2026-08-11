@@ -23,6 +23,63 @@ var app = builder.Build();
 
 app.MapGet("/", () => Results.Ok(new { status = "ok", name = "wupm-api" }));
 
+var apiKey = Environment.GetEnvironmentVariable("WUPM_API_KEY");
+if (!string.IsNullOrWhiteSpace(apiKey))
+{
+    app.Use(async (context, next) =>
+    {
+        var path = context.Request.Path;
+        if (string.Equals(path, "/", StringComparison.OrdinalIgnoreCase))
+        {
+            await next();
+            return;
+        }
+
+        if (!context.Request.Headers.TryGetValue("Authorization", out var auth) &&
+            !context.Request.Headers.TryGetValue("X-Api-Key", out auth))
+        {
+            auth = string.Empty;
+        }
+
+        var token = auth.ToString();
+        if (token.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+        {
+            token = token.Substring("Bearer ".Length).Trim();
+        }
+
+        if (!string.Equals(token, apiKey, StringComparison.Ordinal))
+        {
+            Log.Warning("Unauthorized request to {Path}", path);
+            context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+            await context.Response.WriteAsJsonAsync(new { error = "Unauthorized" });
+            return;
+        }
+
+        await next();
+    });
+}
+
+app.Use(async (context, next) =>
+{
+    var path = context.Request.Path;
+    if (string.Equals(path, "/", StringComparison.OrdinalIgnoreCase))
+    {
+        await next();
+        return;
+    }
+
+    var key = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+    if (!SimpleRateLimiter.TryCheck(key, out var retryAfter))
+    {
+        context.Response.StatusCode = StatusCodes.Status429TooManyRequests;
+        context.Response.Headers.RetryAfter = ((int)retryAfter.Value.TotalSeconds).ToString();
+        await context.Response.WriteAsJsonAsync(new { error = "Too many requests.", retryAfter = retryAfter.Value.TotalSeconds });
+        return;
+    }
+
+    await next();
+});
+
 app.MapGet("/packages", async (IServiceProvider sp, string repositoryUrl = "https://github.com/LoopyLuci/WindowsUpdateAndPackageManager") =>
 {
     var repoSync = sp.GetRequiredService<IRepoSync>();
@@ -78,39 +135,36 @@ app.MapGet("/audit", async (IServiceProvider sp, DateTimeOffset? from = null, Da
     return Results.Ok(entries);
 });
 
-var apiKey = Environment.GetEnvironmentVariable("WUPM_API_KEY");
-if (!string.IsNullOrWhiteSpace(apiKey))
+app.Run();
+
+static class SimpleRateLimiter
 {
-    app.Use(async (context, next) =>
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, (int count, DateTime expires)> _store = new();
+    private static readonly TimeSpan _window = TimeSpan.FromSeconds(60);
+    private const int _limit = 120;
+
+    public static bool TryCheck(string key, out TimeSpan? retryAfter)
     {
-        if (string.Equals(context.Request.Path, "/", StringComparison.OrdinalIgnoreCase))
+        var now = DateTime.UtcNow;
+        var entry = _store.GetOrAdd(key, _ => (0, now.Add(_window)));
+
+        if (entry.expires < now)
         {
-            await next();
-            return;
+            _store.TryUpdate(key, (1, now.Add(_window)), entry);
+            retryAfter = null;
+            return true;
         }
 
-        if (!context.Request.Headers.TryGetValue("Authorization", out var auth) &&
-            !context.Request.Headers.TryGetValue("X-Api-Key", out auth))
+        if (entry.count >= _limit)
         {
-            auth = string.Empty;
+            retryAfter = entry.expires - now;
+            return false;
         }
 
-        var token = auth.ToString();
-        if (token.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
-        {
-            token = token.Substring("Bearer ".Length).Trim();
-        }
-
-        if (!string.Equals(token, apiKey, StringComparison.Ordinal))
-        {
-            Log.Warning("Unauthorized request to {Path}", context.Request.Path);
-            context.Response.StatusCode = StatusCodes.Status401Unauthorized;
-            await context.Response.WriteAsJsonAsync(new { error = "Unauthorized" });
-            return;
-        }
-
-        await next();
-    });
+        var next = (entry.count + 1, entry.expires);
+        _store.TryUpdate(key, next, entry);
+        retryAfter = null;
+        return true;
+    }
 }
 
-app.Run();

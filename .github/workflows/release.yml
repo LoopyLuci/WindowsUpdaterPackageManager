@@ -47,3 +47,15 @@ jobs:
             ${{ github.workspace }}/sbom.json
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Sign release artifacts
+        if: ${{ secrets.AZURE_SIGNING_CLIENT_ID != '' }}
+        env:
+          AZURE_SIGNING_CLIENT_ID: ${{ secrets.AZURE_SIGNING_CLIENT_ID }}
+          AZURE_SIGNING_TENANT_ID: ${{ secrets.AZURE_SIGNING_TENANT_ID }}
+          AZURE_SIGNING_SECRET: ${{ secrets.AZURE_SIGNING_SECRET }}
+        run: |
+          $cert = Get-ChildItem Cert:\CurrentUser\My -CodeSigningCert | Select-Object -First 1
+          if ($null -eq $cert) { Write-Host 'No code-signing certificate found; skipping signing.'; exit 0; }
+          Set-AuthenticodeSignature -FilePath ${{ github.workspace }}/wupm-cli.zip -Certificate $cert -TimestampServer 'http://timestamp.digicert.com'
+          Set-AuthenticodeSignature -FilePath ${{ github.workspace }}/wupm-api.zip -Certificate $cert -TimestampServer 'http://timestamp.digicert.com'

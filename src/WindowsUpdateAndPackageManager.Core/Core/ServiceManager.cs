@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 
 namespace WindowsUpdateAndPackageManager.Core;
 
@@ -37,22 +38,57 @@ public sealed class ServiceManager : IServiceManager
             throw new InvalidOperationException("Repository URL is required for service install.");
         }
 
-        var sc = ParseSchedule(schedule) ?? "DAILY";
-        var st = ParseStartTime(schedule) ?? "09:00";
-
-        var args = $"sync --repo \"{repo}\"";
-        var psi = new ProcessStartInfo
+        try
         {
-            FileName = "schtasks.exe",
-            ArgumentList = { "/Create", "/TN", TaskName, "/TR", $"\"{_wupmPath}\" {args}", "/SC", sc, "/ST", st, "/F" },
-            UseShellExecute = false,
-            CreateNoWindow = true
-        };
+            dynamic? taskService = null;
+            try
+            {
+                taskService = Activator.CreateInstance(Type.GetTypeFromProgID("Schedule.Service")!)!;
+                taskService.Connect();
 
-        using var proc = Process.Start(psi);
-        if (proc is null) return false;
-        await proc.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
-        return proc.ExitCode == 0;
+                var rootFolder = taskService.GetFolder(@"\");
+                var folder = rootFolder.GetFolder(TaskPath);
+
+                var definition = taskService.NewTask(0);
+                definition.RegistrationInfo.Description = "WUPM automatic sync and Windows Update";
+                definition.RegistrationInfo.Author = "WUPM";
+
+                var trigger = definition.Triggers.Create(2);
+                trigger.StartBoundary = DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ss");
+                trigger.Enabled = true;
+
+                var action = definition.Actions.Create(0);
+                action.Path = _wupmPath;
+                action.Arguments = $"sync --repo \"{repo}\"";
+
+                definition.Settings.Enabled = true;
+                definition.Settings.AllowDemandStart = true;
+                definition.Settings.DisallowStartIfOnBatteries = false;
+                definition.Settings.StopIfGoingOnBatteries = false;
+
+                folder.RegisterTaskDefinition(
+                    TaskName,
+                    definition,
+                    6,
+                    null,
+                    null,
+                    3);
+
+                return true;
+            }
+            finally
+            {
+                if (taskService is not null)
+                {
+                    Marshal.ReleaseComObject(taskService);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Service install failed: {ex.Message}");
+            return false;
+        }
     }
 
     public async Task<bool> UninstallAsync(CancellationToken cancellationToken = default)
@@ -64,37 +100,80 @@ public sealed class ServiceManager : IServiceManager
             return false;
         }
 
-        var psi = new ProcessStartInfo
+        try
         {
-            FileName = "schtasks.exe",
-            ArgumentList = { "/Delete", "/TN", TaskName, "/F" },
-            UseShellExecute = false,
-            CreateNoWindow = true
-        };
+            dynamic? taskService = null;
+            try
+            {
+                taskService = Activator.CreateInstance(Type.GetTypeFromProgID("Schedule.Service")!)!;
+                taskService.Connect();
 
-        using var proc = Process.Start(psi);
-        if (proc is null) return false;
-        await proc.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
-        return proc.ExitCode == 0;
+                var rootFolder = taskService.GetFolder(@"\");
+                try
+                {
+                    var folder = rootFolder.GetFolder(TaskPath);
+                    folder.DeleteTask(TaskName, 0);
+                    return true;
+                }
+                catch
+                {
+                    return false;
+                }
+            }
+            finally
+            {
+                if (taskService is not null)
+                {
+                    Marshal.ReleaseComObject(taskService);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Service uninstall failed: {ex.Message}");
+            return false;
+        }
     }
 
     public async Task<string?> StatusAsync(CancellationToken cancellationToken = default)
     {
         await Task.CompletedTask.ConfigureAwait(false);
-        var psi = new ProcessStartInfo
+        try
         {
-            FileName = "schtasks.exe",
-            ArgumentList = { "/Query", "/TN", TaskName, "/FO", "LIST", "/V" },
-            UseShellExecute = false,
-            CreateNoWindow = true,
-            RedirectStandardOutput = true
-        };
+            dynamic? taskService = null;
+            try
+            {
+                taskService = Activator.CreateInstance(Type.GetTypeFromProgID("Schedule.Service")!)!;
+                taskService.Connect();
 
-        using var proc = Process.Start(psi);
-        if (proc is null) return null;
-        var output = await proc.StandardOutput.ReadToEndAsync(cancellationToken).ConfigureAwait(false);
-        await proc.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
-        return proc.ExitCode == 0 ? output : null;
+                var rootFolder = taskService.GetFolder(@"\");
+                try
+                {
+                    var folder = rootFolder.GetFolder(TaskPath);
+                    var task = folder.GetTask(TaskName);
+                    var state = task.State;
+                    var lastRun = task.LastRunTime.ToString("u");
+                    var nextRun = task.NextRunTime.ToString("u");
+                    return $"State={state}; LastRun={lastRun}; NextRun={nextRun}";
+                }
+                catch
+                {
+                    return "Task not found.";
+                }
+            }
+            finally
+            {
+                if (taskService is not null)
+                {
+                    Marshal.ReleaseComObject(taskService);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Service status failed: {ex.Message}");
+            return null;
+        }
     }
 
     private static bool IsRunningAsAdministrator()
@@ -109,26 +188,5 @@ public sealed class ServiceManager : IServiceManager
         {
             return false;
         }
-    }
-
-    private static string? ParseSchedule(string? schedule)
-    {
-        if (string.IsNullOrWhiteSpace(schedule)) return null;
-        return schedule.Trim().ToUpperInvariant() switch
-        {
-            "DAILY" or "HOURLY" or "MINUTE" => schedule.Trim().ToUpperInvariant(),
-            _ => null
-        };
-    }
-
-    private static string? ParseStartTime(string? schedule)
-    {
-        if (string.IsNullOrWhiteSpace(schedule)) return null;
-        var parts = schedule.Trim().Split(':', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        if (parts.Length == 2 && int.TryParse(parts[0], out _) && int.TryParse(parts[1], out _))
-        {
-            return schedule.Trim();
-        }
-        return null;
     }
 }
