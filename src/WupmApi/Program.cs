@@ -109,8 +109,8 @@ app.Use(async (context, next) =>
     if (!SimpleRateLimiter.TryCheck(key, limit, TimeSpan.FromSeconds(60), out var retryAfter))
     {
         context.Response.StatusCode = StatusCodes.Status429TooManyRequests;
-        context.Response.Headers.RetryAfter = ((int)retryAfter.Value.TotalSeconds).ToString();
-        await context.Response.WriteAsJsonAsync(new { error = "Too many requests.", retryAfter = retryAfter.Value.TotalSeconds });
+        context.Response.Headers.RetryAfter = ((int)retryAfter.TotalSeconds).ToString();
+        await context.Response.WriteAsJsonAsync(new { error = "Too many requests.", retryAfter = retryAfter.TotalSeconds });
         return;
     }
 
@@ -183,7 +183,7 @@ public static class SimpleRateLimiter
         _store.Clear();
     }
 
-    public static bool TryCheck(string key, int limit, TimeSpan window, out TimeSpan? retryAfter)
+    public static bool TryCheck(string key, int limit, TimeSpan window, out TimeSpan retryAfter)
     {
         var now = DateTime.UtcNow;
         var entry = _store.GetOrAdd(key, _ => (0, now.Add(window)));
@@ -191,7 +191,7 @@ public static class SimpleRateLimiter
         if (entry.expires < now)
         {
             _store.TryUpdate(key, (1, now.Add(window)), entry);
-            retryAfter = null;
+            retryAfter = TimeSpan.Zero;
             return true;
         }
 
@@ -203,7 +203,7 @@ public static class SimpleRateLimiter
 
         var next = (entry.count + 1, entry.expires);
         _store.TryUpdate(key, next, entry);
-        retryAfter = null;
+        retryAfter = TimeSpan.Zero;
         return true;
     }
 }
