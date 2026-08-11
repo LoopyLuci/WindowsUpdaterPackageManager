@@ -133,6 +133,21 @@ Unsigned packages are blocked by default unless `AllowUntrusted` is explicitly e
 
 See `CONTRIBUTING.md`.
 
+## Repository Setup
+
+Recommended `main` branch protection:
+
+- Require status checks: `build`, `test`
+- Require branches to be up to date before merging
+- Require a pull request before merging
+- Require 1 approving review
+- Require review from `CODEOWNERS`
+- Include administrators in restrictions
+- Disable force pushes
+- Disable deletions
+
+`CODEOWNERS` is configured so `@LoopyLuci` reviews all changes.
+
 ## Repository Schema Versioning
 
 - Current schema version: `1.0`
