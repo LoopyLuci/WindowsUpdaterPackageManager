@@ -1,5 +1,3 @@
-using System;
-using System.IO;
 using System.Text;
 using Microsoft.Extensions.DependencyInjection;
 using WindowsUpdateAndPackageManager.Core;
@@ -13,80 +11,74 @@ public sealed class ServiceCliTests
     [Fact]
     public async Task Service_install_prints_success()
     {
-        var services = BuildServicesWithFakeServiceManager();
-        var output = new StringWriter();
-        var original = Console.Out;
-        try
-        {
-            Console.SetOut(output);
-            await WindowsUpdateAndPackageManager.Commands.Cli.Run(new[] { "service", "install", "--repo", "https://example.invalid/repo" }, services);
-        }
-        finally
-        {
-            Console.SetOut(original);
-            if (services is IDisposable d) d.Dispose();
-        }
-
-        Assert.Contains("Service installed.", output.ToString());
+        var services = BuildServicesWithFakeServiceManager(installResult: true);
+        var output = RunCli(services, "service install --repo https://example.invalid/repo");
+        Assert.Equal("Service installed.", output.Text.Trim());
     }
 
     [Fact]
     public async Task Service_uninstall_prints_removed()
     {
-        var services = BuildServicesWithFakeServiceManager();
-        var output = new StringWriter();
-        var original = Console.Out;
-        try
-        {
-            Console.SetOut(output);
-            await WindowsUpdateAndPackageManager.Commands.Cli.Run(new[] { "service", "uninstall" }, services);
-        }
-        finally
-        {
-            Console.SetOut(original);
-            if (services is IDisposable d) d.Dispose();
-        }
-
-        Assert.Contains("Service removed.", output.ToString());
+        var services = BuildServicesWithFakeServiceManager(uninstallResult: true);
+        var output = RunCli(services, "service uninstall");
+        Assert.Equal("Service removed.", output.Text.Trim());
     }
 
     [Fact]
     public async Task Service_status_prints_status()
     {
-        var services = BuildServicesWithFakeServiceManager();
-        var output = new StringWriter();
-        var original = Console.Out;
+        var services = BuildServicesWithFakeServiceManager(statusText: "Ready");
+        var output = RunCli(services, "service status");
+        Assert.Equal("Ready", output.Text.Trim());
+    }
+
+    private static IServiceProvider BuildServicesWithFakeServiceManager(bool? installResult = null, bool? uninstallResult = null, string? statusText = null)
+    {
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddSingleton<IServiceManager, FakeServiceManager>(_ => new FakeServiceManager(installResult, uninstallResult, statusText));
+        return services.BuildServiceProvider();
+    }
+
+    private static (string Text, int ExitCode) RunCli(IServiceProvider services, string args)
+    {
+        var originalOut = Console.Out;
         try
         {
-            Console.SetOut(output);
-            await WindowsUpdateAndPackageManager.Commands.Cli.Run(new[] { "service", "status" }, services);
+            var sb = new StringBuilder();
+            using var writer = new StringWriter(sb);
+            Console.SetOut(writer);
+
+            var exit = WindowsUpdateAndPackageManager.Commands.Cli.Run(args.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries), services).GetAwaiter().GetResult();
+            writer.Flush();
+            return (sb.ToString(), exit);
         }
         finally
         {
-            Console.SetOut(original);
-            if (services is IDisposable d) d.Dispose();
+            Console.SetOut(originalOut);
         }
-
-        Assert.Contains("STATUS:", output.ToString());
-    }
-
-    private static IServiceProvider BuildServicesWithFakeServiceManager()
-    {
-        var services = new Microsoft.Extensions.DependencyInjection.ServiceCollection();
-        WindowsUpdateAndPackageManager.Commands.Composition.RegisterInto(services, AppContext.BaseDirectory);
-        services.AddSingleton<IServiceManager, FakeServiceManager>();
-        return services.BuildServiceProvider();
     }
 
     private sealed class FakeServiceManager : IServiceManager
     {
+        private readonly bool? _installResult;
+        private readonly bool? _uninstallResult;
+        private readonly string? _statusText;
+
+        public FakeServiceManager(bool? installResult, bool? uninstallResult, string? statusText)
+        {
+            _installResult = installResult;
+            _uninstallResult = uninstallResult;
+            _statusText = statusText;
+        }
+
         public Task<bool> InstallAsync(string? repositoryUrl = null, string? schedule = null, CancellationToken cancellationToken = default)
-            => Task.FromResult(true);
+            => Task.FromResult(_installResult ?? false);
 
         public Task<bool> UninstallAsync(CancellationToken cancellationToken = default)
-            => Task.FromResult(true);
+            => Task.FromResult(_uninstallResult ?? false);
 
         public Task<string?> StatusAsync(CancellationToken cancellationToken = default)
-            => Task.FromResult<string?>("STATUS: ready");
+            => Task.FromResult<string?>(_statusText);
     }
 }

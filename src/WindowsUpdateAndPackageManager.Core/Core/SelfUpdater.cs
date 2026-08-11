@@ -18,7 +18,14 @@ public sealed class SelfUpdater : ISelfUpdater
     private readonly Func<string, CancellationToken, Task<string?>> _fetchReleaseAsync;
     private readonly Func<string, string, CancellationToken, Task> _downloadAssetAsync;
 
-    public SelfUpdater(string? currentExePath = null, string? githubOwner = null, string? githubRepo = null, string? assetName = null, Func<ProcessStartInfo, Task<bool>>? processStartAsync = null, Func<string, CancellationToken, Task<string?>>? fetchReleaseAsync = null, Func<string, string, CancellationToken, Task>? downloadAssetAsync = null)
+    public SelfUpdater(
+        string? currentExePath = null,
+        string? githubOwner = null,
+        string? githubRepo = null,
+        string? assetName = null,
+        Func<ProcessStartInfo, Task<bool>>? processStartAsync = null,
+        Func<string, CancellationToken, Task<string?>>? fetchReleaseAsync = null,
+        Func<string, string, CancellationToken, Task>? downloadAssetAsync = null)
     {
         _currentExePath = currentExePath ?? Environment.ProcessPath ?? throw new InvalidOperationException("Cannot determine current executable path.");
         _githubOwner = githubOwner ?? "LoopyLuci";

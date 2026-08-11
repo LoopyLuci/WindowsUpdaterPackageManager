@@ -25,17 +25,26 @@ public sealed class ServiceManager : IServiceManager
     public async Task<bool> InstallAsync(string? repositoryUrl = null, string? schedule = null, CancellationToken cancellationToken = default)
     {
         await Task.CompletedTask.ConfigureAwait(false);
+        if (!IsRunningAsAdministrator())
+        {
+            Console.WriteLine("Service install requires administrator privileges. Please run from an elevated terminal.");
+            return false;
+        }
+
         var repo = string.IsNullOrWhiteSpace(repositoryUrl) ? _repositoryUrl : repositoryUrl;
         if (string.IsNullOrWhiteSpace(repo))
         {
             throw new InvalidOperationException("Repository URL is required for service install.");
         }
 
+        var sc = ParseSchedule(schedule) ?? "DAILY";
+        var st = ParseStartTime(schedule) ?? "09:00";
+
         var args = $"sync --repo \"{repo}\"";
         var psi = new ProcessStartInfo
         {
             FileName = "schtasks.exe",
-            ArgumentList = { "/Create", "/TN", TaskName, "/TR", $"\"{_wupmPath}\" {args}", "/SC", "DAILY", "/ST", "09:00", "/F" },
+            ArgumentList = { "/Create", "/TN", TaskName, "/TR", $"\"{_wupmPath}\" {args}", "/SC", sc, "/ST", st, "/F" },
             UseShellExecute = false,
             CreateNoWindow = true
         };
@@ -49,6 +58,12 @@ public sealed class ServiceManager : IServiceManager
     public async Task<bool> UninstallAsync(CancellationToken cancellationToken = default)
     {
         await Task.CompletedTask.ConfigureAwait(false);
+        if (!IsRunningAsAdministrator())
+        {
+            Console.WriteLine("Service uninstall requires administrator privileges. Please run from an elevated terminal.");
+            return false;
+        }
+
         var psi = new ProcessStartInfo
         {
             FileName = "schtasks.exe",
@@ -80,5 +95,40 @@ public sealed class ServiceManager : IServiceManager
         var output = await proc.StandardOutput.ReadToEndAsync(cancellationToken).ConfigureAwait(false);
         await proc.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
         return proc.ExitCode == 0 ? output : null;
+    }
+
+    private static bool IsRunningAsAdministrator()
+    {
+        try
+        {
+            var identity = System.Security.Principal.WindowsIdentity.GetCurrent();
+            var principal = new System.Security.Principal.WindowsPrincipal(identity);
+            return principal.IsInRole(System.Security.Principal.WindowsBuiltInRole.Administrator);
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static string? ParseSchedule(string? schedule)
+    {
+        if (string.IsNullOrWhiteSpace(schedule)) return null;
+        return schedule.Trim().ToUpperInvariant() switch
+        {
+            "DAILY" or "HOURLY" or "MINUTE" => schedule.Trim().ToUpperInvariant(),
+            _ => null
+        };
+    }
+
+    private static string? ParseStartTime(string? schedule)
+    {
+        if (string.IsNullOrWhiteSpace(schedule)) return null;
+        var parts = schedule.Trim().Split(':', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (parts.Length == 2 && int.TryParse(parts[0], out _) && int.TryParse(parts[1], out _))
+        {
+            return schedule.Trim();
+        }
+        return null;
     }
 }

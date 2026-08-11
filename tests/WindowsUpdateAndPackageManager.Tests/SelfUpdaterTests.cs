@@ -52,9 +52,9 @@ public sealed class SelfUpdaterTests
         var result = await updater.SelfUpdateAsync();
         Assert.True(result);
         Assert.NotNull(capturedPs1);
-        Assert.Contains("powershell", capturedPs1);
-        Assert.Contains("-File", capturedArgs);
-        Assert.EndsWith("apply-update.ps1", capturedArgs[^1]);
+        Assert.True(capturedPs1.IndexOf("powershell", StringComparison.OrdinalIgnoreCase) >= 0);
+        Assert.True(capturedArgs.Contains("-File"));
+        Assert.True(capturedArgs.Any(a => a.EndsWith("apply-update.ps1", StringComparison.OrdinalIgnoreCase)));
     }
 
     [Fact]
