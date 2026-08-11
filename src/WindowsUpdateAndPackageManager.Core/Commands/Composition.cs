@@ -11,6 +11,12 @@ public static class Composition
     public static IServiceProvider Build(string rootPath, string? repositoryUrl = null)
     {
         var services = new ServiceCollection();
+        RegisterInto(services, rootPath, repositoryUrl);
+        return services.BuildServiceProvider();
+    }
+
+    public static void RegisterInto(IServiceCollection services, string rootPath, string? repositoryUrl = null)
+    {
         var dataRoot = Path.Combine(rootPath, ".wupm");
         Directory.CreateDirectory(dataRoot);
         var cacheRoot = Path.Combine(dataRoot, "cache");
@@ -33,13 +39,12 @@ public static class Composition
         services.AddSingleton<ICacheManager>(sp => new DefaultCacheManager(cacheRoot));
         services.AddSingleton<IPolicyEngine>(sp => new AllowlistPolicyEngine());
         services.AddSingleton<ISignatureVerifier, AuthenticodeVerifier>();
+        services.AddSingleton<IOfflineImageService, OfflineImageService>();
 
         if (!string.IsNullOrWhiteSpace(repositoryUrl))
         {
             services.AddSingleton(sp => new RepoSyncOptions { RepositoryUrl = repositoryUrl });
         }
-
-        return services.BuildServiceProvider();
     }
 }
 

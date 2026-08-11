@@ -385,7 +385,6 @@ public static class Cli
                 var output = Path.GetFullPath(outputDir);
                 Directory.CreateDirectory(output);
 
-                var packageId = new DirectoryInfo(source).Name;
                 var manifestPath = Path.Combine(source, "manifest.json");
                 if (!File.Exists(manifestPath))
                 {
@@ -393,6 +392,36 @@ public static class Cli
                     return;
                 }
 
+                var manifestJson = await File.ReadAllTextAsync(manifestPath);
+                try
+                {
+                    using var doc = System.Text.Json.JsonDocument.Parse(manifestJson);
+                    var root = doc.RootElement;
+                    if (root.ValueKind != System.Text.Json.JsonValueKind.Object)
+                    {
+                        Console.WriteLine("manifest.json must be a JSON object.");
+                        return;
+                    }
+
+                    if (!root.TryGetProperty("id", out var id) || id.ValueKind != System.Text.Json.JsonValueKind.String || string.IsNullOrWhiteSpace(id.GetString()))
+                    {
+                        Console.WriteLine("manifest.json is missing required field: id");
+                        return;
+                    }
+
+                    if (!root.TryGetProperty("version", out var version) || version.ValueKind != System.Text.Json.JsonValueKind.String || string.IsNullOrWhiteSpace(version.GetString()))
+                    {
+                        Console.WriteLine("manifest.json is missing required field: version");
+                        return;
+                    }
+                }
+                catch (System.Text.Json.JsonException ex)
+                {
+                    Console.WriteLine($"manifest.json is invalid JSON: {ex.Message}");
+                    return;
+                }
+
+                var packageId = new DirectoryInfo(source).Name;
                 var zipPath = Path.Combine(output, $"{packageId}.wupkg");
                 if (File.Exists(zipPath)) File.Delete(zipPath);
 

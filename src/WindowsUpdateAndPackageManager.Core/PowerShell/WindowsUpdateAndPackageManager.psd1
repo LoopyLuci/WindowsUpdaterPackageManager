@@ -1,6 +1,6 @@
 @{
     RootModule = 'WindowsUpdateAndPackageManager.psm1'
-    ModuleVersion = '0.1.0-alpha'
+    ModuleVersion = '0.1.0.0'
     GUID = '2d2c7b4a-1e6a-4b3f-9c2d-5e8f1a7b3c4d'
     Author = 'LoopyLuci'
     CompanyName = 'LoopyLuci'
