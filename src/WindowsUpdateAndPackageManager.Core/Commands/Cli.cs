@@ -483,16 +483,18 @@ public static class Cli
                     Created = DateTimeOffset.UtcNow
                 };
 
-                if (string.IsNullOrWhiteSpace(packManifest.Id) ||
-                    string.IsNullOrWhiteSpace(packManifest.Version) ||
-                    string.IsNullOrWhiteSpace(packManifest.Sha256) ||
-                    packManifest.Sha256.Length != 64)
+                if (manifest.TryGetProperty("previousSha256", out var prev) && prev.ValueKind == System.Text.Json.JsonValueKind.String)
                 {
-                    Console.WriteLine("Generated delta manifest is invalid.");
-                    return;
+                    packManifest.PreviousSha256 = prev.GetString();
                 }
 
-                var deltaJson = System.Text.Json.JsonSerializer.Serialize(packManifest);
+                var deltaAvailable = !string.IsNullOrWhiteSpace(packManifest.PreviousSha256);
+                var packJson = System.Text.Json.JsonSerializer.Serialize(packManifest);
+                using var packDoc = System.Text.Json.JsonDocument.Parse(packJson);
+                var packNode = System.Text.Json.JsonNode.Parse(packDoc.RootElement.GetRawText())!.AsObject();
+                packNode["deltaAvailable"] = deltaAvailable;
+                packNode["previousSha256"] = packManifest.PreviousSha256 ?? string.Empty;
+                var deltaJson = packNode.ToJsonString();
                 await File.WriteAllTextAsync(deltaPath, deltaJson);
 
                 Console.WriteLine($"Created package: {zipPath}");
@@ -638,6 +640,61 @@ public static class Cli
             }
         }, deltaIdOption, deltaFromOption, repoOption);
         root.AddCommand(deltaUpdate);
+
+        var deltaApply = new Command("delta-apply", "Apply a delta update and optionally apply the result to an offline image");
+        var deltaApplyId = new Option<string>("--id") { Description = "Package ID" };
+        var deltaApplyFrom = new Option<string>("--from") { Description = "Source version" };
+        var deltaApplyMount = new Option<string?>("--mountPath") { Description = "Offline image mount path" };
+        deltaApply.AddOption(deltaApplyId);
+        deltaApply.AddOption(deltaApplyFrom);
+        deltaApply.AddOption(deltaApplyMount);
+        deltaApply.SetHandler<string, string, string?>((id, fromVersion, mountPath) =>
+        {
+            try
+            {
+                var provider = services.GetService(typeof(IPackageDeltaProvider)) as IPackageDeltaProvider;
+                if (provider is null)
+                {
+                    Console.WriteLine("Delta provider is not configured.");
+                    return;
+                }
+
+                var applied = provider.ApplyDeltaAsync(id, fromVersion, "latest").GetAwaiter().GetResult();
+                if (!applied)
+                {
+                    Console.WriteLine("Delta apply failed.");
+                    return;
+                }
+
+                Console.WriteLine("Delta applied successfully.");
+
+                if (!string.IsNullOrWhiteSpace(mountPath))
+                {
+                    var offline = services.GetService(typeof(IOfflineImageService)) as IOfflineImageService;
+                    if (offline is null)
+                    {
+                        Console.WriteLine("Offline image service is not configured.");
+                        return;
+                    }
+
+                    var cacheRoot = services.GetService(typeof(ICacheManager)) as ICacheManager;
+                    var packagePath = cacheRoot is null ? string.Empty : Path.Combine(cacheRoot.GetType().Name, id, "latest", $"{id}@latest.wupkg");
+                    if (string.IsNullOrWhiteSpace(packagePath) || !File.Exists(packagePath))
+                    {
+                        Console.WriteLine("Applied package path could not be resolved for offline apply.");
+                        return;
+                    }
+
+                    var result = offline.ApplyPackageAsync(mountPath, packagePath).GetAwaiter().GetResult();
+                    Console.WriteLine(result.Success ? "Package applied to offline image." : $"Offline apply failed: {result.Message}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Delta apply failed: {ex.Message}");
+            }
+        }, deltaApplyId, deltaApplyFrom, deltaApplyMount);
+        root.AddCommand(deltaApply);
 
         var offlineMount = new Command("offline", "Offline image servicing");
         var offlineMountSub = new Command("mount", "Mount a WIM/ISO image")

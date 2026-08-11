@@ -66,6 +66,7 @@ Unauthenticated requests receive `401 Unauthorized` when auth is enabled. When `
 - Set `WUPM_API_KEY` to enable REST API auth. Unauthenticated requests receive `401 Unauthorized`. The `/` health endpoint remains accessible when auth is enabled.
 - Audit logs are written to `logs/wupm-api-.log` and local SQLite state. Treat these files as sensitive; they contain package action metadata. Rotate logs and restrict filesystem access.
 - `wupm publish` and `SelfUpdater` use `GITHUB_TOKEN` only as a Bearer token in `Authorization` headers; values are not logged or persisted by WUPM.
+- Package install verifies Authenticode signatures when a signature verifier is configured. By default, unsigned packages are blocked unless `AllowUntrusted` is explicitly enabled in policy. Maintainers should sign release artifacts with a trusted code-signing certificate before publishing.
 
 ## Releases
 
@@ -98,6 +99,36 @@ Expand-Archive -Path wupm-api.zip -DestinationPath C:\Tools\wupm-api
 dotnet run --project src/Wupm.Cli -- publish --tag v0.2.0-test --dry-run
 dotnet run --project src/Wupm.Cli -- publish --tag v0.2.0-test --token $env:GITHUB_TOKEN
 ```
+
+### Authenticode signing
+
+WUPM verifies Authenticode signatures when the signature verifier is configured. To publish signed artifacts:
+
+1. Obtain a code-signing certificate and install it in the current user or machine store.
+2. Sign published executables before zipping:
+   ```powershell
+   $cert = Get-ChildItem Cert:\CurrentUser\My -CodeSigningCert | Select-Object -First 1
+   Set-AuthenticodeSignature -FilePath .\publish\cli\Wupm.Cli.exe -Certificate $cert
+   Set-AuthenticodeSignature -FilePath .\publish\api\WupmApi.exe -Certificate $cert
+   ```
+3. Zip the signed outputs and publish as release assets.
+
+Unsigned packages are blocked by default unless `AllowUntrusted` is explicitly enabled in policy. Treat unsigned downloads as untrusted.
+
+### Authenticode signing
+
+WUPM verifies Authenticode signatures when the signature verifier is configured. To publish signed artifacts:
+
+1. Obtain a code-signing certificate and install it in the current user or machine store.
+2. Sign published executables before zipping:
+   ```powershell
+   $cert = Get-ChildItem Cert:\CurrentUser\My -CodeSigningCert | Select-Object -First 1
+   Set-AuthenticodeSignature -FilePath .\publish\cli\Wupm.Cli.exe -Certificate $cert
+   Set-AuthenticodeSignature -FilePath .\publish\api\WupmApi.exe -Certificate $cert
+   ```
+3. Zip the signed outputs and publish as release assets.
+
+Unsigned packages are blocked by default unless `AllowUntrusted` is explicitly enabled in policy. Treat unsigned downloads as untrusted.
 
 ## Contributing
 
