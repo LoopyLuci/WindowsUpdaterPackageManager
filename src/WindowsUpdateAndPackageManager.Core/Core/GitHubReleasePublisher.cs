@@ -1,4 +1,5 @@
 using System.Net.Http.Headers;
+using System.Text.Json;
 
 namespace WindowsUpdateAndPackageManager.Core;
 
@@ -16,7 +17,7 @@ public sealed class GitHubReleasePublisher
         using var request = new HttpRequestMessage(HttpMethod.Post, $"https://api.github.com/repos/{owner}/{repo}/releases");
         request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.github+json"));
         request.Headers.UserAgent.Add(new ProductInfoHeaderValue("wupm", "1.0"));
-        request.Content = new StringContent(System.Text.Json.JsonSerializer.Serialize(new
+        request.Content = new StringContent(JsonSerializer.Serialize(new
         {
             tag_name = tag,
             name = tag,
@@ -30,7 +31,7 @@ public sealed class GitHubReleasePublisher
         if (!response.IsSuccessStatusCode) return false;
 
         var body = await response.Content.ReadAsStringAsync(cancellationToken);
-        var uploadUrl = System.Text.Json.JsonDocument.Parse(body).RootElement.GetProperty("upload_url").GetString();
+        var uploadUrl = JsonDocument.Parse(body).RootElement.GetProperty("upload_url").GetString();
         if (string.IsNullOrWhiteSpace(uploadUrl)) return false;
 
         using var zipBytes = new FileStream(zipPath, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, FileOptions.SequentialScan);
@@ -43,4 +44,75 @@ public sealed class GitHubReleasePublisher
         using var assetResponse = await _http.SendAsync(asset, cancellationToken);
         return assetResponse.IsSuccessStatusCode;
     }
+
+    public async Task<GitHubRelease?> CreateReleaseAsync(string owner, string repo, string tag, string title, string? token = null, CancellationToken cancellationToken = default)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Post, $"https://api.github.com/repos/{owner}/{repo}/releases");
+        request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.github+json"));
+        request.Headers.UserAgent.Add(new ProductInfoHeaderValue("wupm", "1.0"));
+        if (!string.IsNullOrWhiteSpace(token))
+        {
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        }
+
+        request.Content = new StringContent(JsonSerializer.Serialize(new
+        {
+            tag_name = tag,
+            name = title,
+            body = title,
+            draft = false,
+            prerelease = false
+        }));
+        request.Content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
+
+        using var response = await _http.SendAsync(request, cancellationToken);
+        if (!response.IsSuccessStatusCode) return null;
+
+        var body = await response.Content.ReadAsStringAsync(cancellationToken);
+        using var doc = JsonDocument.Parse(body);
+        var root = doc.RootElement;
+        return new GitHubRelease
+        {
+            Id = root.GetProperty("id").GetInt64(),
+            HtmlUrl = root.GetProperty("html_url").GetString() ?? string.Empty
+        };
+    }
+
+    public async Task<GitHubAsset?> UploadAssetAsync(string owner, string repo, long releaseId, string filePath, string? token = null, CancellationToken cancellationToken = default)
+    {
+        var uploadUrl = $"https://uploads.github.com/repos/{owner}/{repo}/releases/{releaseId}/assets?name={Uri.EscapeDataString(Path.GetFileName(filePath))}";
+        using var request = new HttpRequestMessage(HttpMethod.Post, uploadUrl);
+        request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.github+json"));
+        request.Headers.UserAgent.Add(new ProductInfoHeaderValue("wupm", "1.0"));
+        if (!string.IsNullOrWhiteSpace(token))
+        {
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        }
+
+        using var stream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, FileOptions.SequentialScan);
+        request.Content = new StreamContent(stream);
+        request.Content.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
+
+        using var response = await _http.SendAsync(request, cancellationToken);
+        if (!response.IsSuccessStatusCode) return null;
+
+        var body = await response.Content.ReadAsStringAsync(cancellationToken);
+        using var doc = JsonDocument.Parse(body);
+        var root = doc.RootElement;
+        return new GitHubAsset
+        {
+            BrowserDownloadUrl = root.GetProperty("browser_download_url").GetString() ?? string.Empty
+        };
+    }
+}
+
+public sealed class GitHubRelease
+{
+    public long Id { get; set; }
+    public string HtmlUrl { get; set; } = string.Empty;
+}
+
+public sealed class GitHubAsset
+{
+    public string BrowserDownloadUrl { get; set; } = string.Empty;
 }

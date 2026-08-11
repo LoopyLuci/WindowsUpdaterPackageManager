@@ -1,4 +1,6 @@
 using System.IO;
+using System.Runtime.InteropServices;
+using System.Security.Principal;
 using System.Threading.Tasks;
 using Xunit;
 
@@ -6,7 +8,7 @@ namespace WindowsUpdateAndPackageManager.Tests;
 
 public sealed class OfflineImageIntegrationTests
 {
-    [Fact(Skip = "Requires Windows with DISM and admin privileges")]
+    [Fact(Skip = "Requires Windows, administrator privileges, and a real WIM/FS layout. Use `dotnet test --filter \"FullyQualifiedName~OfflineImageIntegrationTests\"` on Windows to run.")]
     public async Task MountAndDismount_real_wim_requires_admin()
     {
         var wim = @"C:\mount\test.wim";

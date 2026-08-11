@@ -1,0 +1,23 @@
+package: LoopyLuci.WindowsUpdateAndPackageManager
+version: '0.1.0'
+authors:
+  - LoopyLuci
+owners:
+  - LoopyLuci
+license: MIT
+licenseUrl: https://opensource.org/licenses/MIT
+projectUrl: https://github.com/LoopyLuci/WindowsUpdateAndPackageManager
+description: Personal-first, offline-capable Windows update and package manager for Windows 10 and older.
+tags:
+  - windows
+  - update
+  - package-manager
+  - dism
+  - offline
+  - cli
+  - powershell
+  - driver
+  - management
+  - wupm
+copyright: Copyright LoopyLuci. All rights reserved.
+requireLicenseAcceptance: false

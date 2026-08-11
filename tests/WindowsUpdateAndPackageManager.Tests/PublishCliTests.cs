@@ -8,21 +8,33 @@ namespace WindowsUpdateAndPackageManager.Tests;
 public class PublishCliTests
 {
     [Fact]
-    public async Task Publish_command_requires_zip_artifact()
+    public async Task Publish_command_dry_run_prints_planned_artifacts()
     {
         var root = AppContext.BaseDirectory;
         var services = WindowsUpdateAndPackageManager.Commands.Composition.Build(root);
         try
         {
-            var outputDir = Path.Combine(root, "publish");
-            Directory.CreateDirectory(outputDir);
-            File.WriteAllText(Path.Combine(outputDir, "dummy.zip"), "zip");
+            var artifact = Path.Combine(root, "wupm-cli.zip");
+            File.WriteAllText(artifact, "zip");
 
-            var exitCode = await WindowsUpdateAndPackageManager.Commands.Cli.Run(new[] { "publish", "--tag", "v1.0.0-test" }, services);
-            Assert.Equal(0, exitCode);
+            var output = new StringWriter();
+            var original = Console.Out;
+            try
+            {
+                Console.SetOut(output);
+                await WindowsUpdateAndPackageManager.Commands.Cli.Run(new[] { "publish", "--tag", "v1.0.0-test", "--dry-run" }, services);
+            }
+            finally
+            {
+                Console.SetOut(original);
+            }
+
+            Assert.Contains("Dry run completed. No release was created.", output.ToString());
+            Assert.Contains("wupm-cli.zip", output.ToString());
         }
         finally
         {
+            if (File.Exists(Path.Combine(root, "wupm-cli.zip"))) File.Delete(Path.Combine(root, "wupm-cli.zip"));
             if (services is IDisposable d) d.Dispose();
         }
     }

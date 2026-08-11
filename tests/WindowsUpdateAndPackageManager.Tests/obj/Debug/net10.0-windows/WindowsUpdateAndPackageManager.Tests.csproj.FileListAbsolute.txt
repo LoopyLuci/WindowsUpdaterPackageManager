@@ -830,3 +830,12 @@ D:\Projects\WindowsUpdatePackageManager\tests\WindowsUpdateAndPackageManager.Tes
 D:\Projects\WindowsUpdatePackageManager\tests\WindowsUpdateAndPackageManager.Tests\bin\Debug\net10.0-windows\runtimes\win-arm64\native\e_sqlite3.dll
 D:\Projects\WindowsUpdatePackageManager\tests\WindowsUpdateAndPackageManager.Tests\bin\Debug\net10.0-windows\runtimes\win-x64\native\e_sqlite3.dll
 D:\Projects\WindowsUpdatePackageManager\tests\WindowsUpdateAndPackageManager.Tests\bin\Debug\net10.0-windows\runtimes\win-x86\native\e_sqlite3.dll
+D:\Projects\WindowsUpdatePackageManager\tests\WindowsUpdateAndPackageManager.Tests\bin\Debug\net10.0-windows\Serilog.dll
+D:\Projects\WindowsUpdatePackageManager\tests\WindowsUpdateAndPackageManager.Tests\bin\Debug\net10.0-windows\Serilog.AspNetCore.dll
+D:\Projects\WindowsUpdatePackageManager\tests\WindowsUpdateAndPackageManager.Tests\bin\Debug\net10.0-windows\Serilog.Extensions.Hosting.dll
+D:\Projects\WindowsUpdatePackageManager\tests\WindowsUpdateAndPackageManager.Tests\bin\Debug\net10.0-windows\Serilog.Extensions.Logging.dll
+D:\Projects\WindowsUpdatePackageManager\tests\WindowsUpdateAndPackageManager.Tests\bin\Debug\net10.0-windows\Serilog.Formatting.Compact.dll
+D:\Projects\WindowsUpdatePackageManager\tests\WindowsUpdateAndPackageManager.Tests\bin\Debug\net10.0-windows\Serilog.Settings.Configuration.dll
+D:\Projects\WindowsUpdatePackageManager\tests\WindowsUpdateAndPackageManager.Tests\bin\Debug\net10.0-windows\Serilog.Sinks.Console.dll
+D:\Projects\WindowsUpdatePackageManager\tests\WindowsUpdateAndPackageManager.Tests\bin\Debug\net10.0-windows\Serilog.Sinks.Debug.dll
+D:\Projects\WindowsUpdatePackageManager\tests\WindowsUpdateAndPackageManager.Tests\bin\Debug\net10.0-windows\Serilog.Sinks.File.dll

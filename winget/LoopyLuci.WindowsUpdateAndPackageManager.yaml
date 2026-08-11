@@ -1,0 +1,25 @@
+Id: LoopyLuci.WindowsUpdateAndPackageManager
+Name: Windows Update and Package Manager
+Version: 0.1.0
+Publisher: LoopyLuci
+License: MIT
+Description: Personal-first, offline-capable Windows update and package manager for Windows 10 and older.
+ReleaseDate: 2026-08-11
+Tags:
+  - windows
+  - update
+  - package-manager
+  - dism
+  - offline
+  - cli
+  - powershell
+  - driver
+  - management
+  - wupm
+Homepage: https://github.com/LoopyLuci/WindowsUpdateAndPackageManager
+Documentation: https://github.com/LoopyLuci/WindowsUpdateAndPackageManager#readme
+Installers:
+  - Url: https://github.com/LoopyLuci/WindowsUpdateAndPackageManager/releases/download/v0.1.0/wupm-cli.zip
+    Sha256: REPLACE_WITH_ACTUAL_SHA256
+    Type: zip
+ManifestType: default

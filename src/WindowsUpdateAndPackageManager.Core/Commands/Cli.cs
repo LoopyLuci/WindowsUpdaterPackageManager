@@ -465,9 +465,13 @@ public static class Cli
         var publish = new Command("publish", "Publish a GitHub Release from a packed package");
         var publishTagOption = new Option<string>("--tag") { Arity = ArgumentArity.ExactlyOne };
         var publishChangelogOption = new Option<string?>("--changelog");
+        var publishDryRunOption = new Option<bool>("--dry-run");
+        var publishTokenOption = new Option<string?>("--token");
         publish.AddOption(publishTagOption);
         publish.AddOption(publishChangelogOption);
-        publish.SetHandler<string, string?, string?>((tag, changelog, repositoryUrl) =>
+        publish.AddOption(publishDryRunOption);
+        publish.AddOption(publishTokenOption);
+        publish.SetHandler<string, string?, bool, string?, string?>((tag, changelog, dryRun, token, repositoryUrl) =>
         {
             try
             {
@@ -486,22 +490,54 @@ public static class Cli
                     return;
                 }
 
-                var output = Path.Combine(Environment.CurrentDirectory, "publish");
-                var zip = Directory.EnumerateFiles(output, "*.zip").FirstOrDefault();
-                if (string.IsNullOrEmpty(zip))
+                var artifacts = Directory.GetFiles(Environment.CurrentDirectory, "*.zip")
+                    .Concat(Directory.GetFiles(Environment.CurrentDirectory, "*.wupkg"))
+                    .Concat(Directory.GetFiles(Environment.CurrentDirectory, "*.json"))
+                    .Where(File.Exists)
+                    .ToArray();
+                Console.WriteLine($"Repository: {repo}");
+                Console.WriteLine($"Tag: {tag}");
+                Console.WriteLine($"Dry run: {dryRun}");
+                Console.WriteLine($"Artifacts to upload: {artifacts.Length}");
+
+                if (dryRun)
                 {
-                    Console.WriteLine("No zip artifact found in ./publish. Run `wupm pack` first.");
+                    foreach (var artifact in artifacts)
+                    {
+                        Console.WriteLine($"Would upload: {Path.GetFileName(artifact)}");
+                    }
+
+                    Console.WriteLine("Dry run completed. No release was created.");
                     return;
                 }
 
-                var ok = publisher.PublishReleaseAsync(parts[0], parts[1], tag, zip, changelog).GetAwaiter().GetResult();
-                Console.WriteLine(ok ? "Release published." : "Release publish failed.");
+                var effectiveToken = string.IsNullOrWhiteSpace(token) ? Environment.GetEnvironmentVariable("GITHUB_TOKEN") : token!;
+                if (string.IsNullOrWhiteSpace(effectiveToken))
+                {
+                    Console.WriteLine("GitHub token is required. Pass --token or set GITHUB_TOKEN.");
+                    return;
+                }
+
+                var title = string.IsNullOrWhiteSpace(changelog) ? $"Release {tag}" : changelog;
+                var release = publisher.CreateReleaseAsync(parts[0], parts[1], tag, title, token: effectiveToken).GetAwaiter().GetResult();
+                if (release is null)
+                {
+                    Console.WriteLine("Release creation returned no result.");
+                    return;
+                }
+
+                Console.WriteLine($"Release URL: {release.HtmlUrl}");
+                foreach (var artifact in artifacts)
+                {
+                    var asset = publisher.UploadAssetAsync(parts[0], parts[1], release.Id, artifact, effectiveToken).GetAwaiter().GetResult();
+                    Console.WriteLine($"Uploaded asset: {asset?.BrowserDownloadUrl ?? artifact}");
+                }
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Publish failed: {ex.Message}");
             }
-        }, publishTagOption, publishChangelogOption, repoOption);
+        }, publishTagOption, publishChangelogOption, publishDryRunOption, publishTokenOption, repoOption);
         root.AddCommand(publish);
 
         var selfUpdate = new Command("self-update", "Check for WUPM updates");

@@ -38,7 +38,7 @@ public static class Composition
         services.AddSingleton<IManifestValidator>(sp => new DefaultManifestValidator());
         services.AddSingleton<ICacheManager>(sp => new DefaultCacheManager(cacheRoot));
         services.AddSingleton<IPolicyEngine>(sp => new AllowlistPolicyEngine());
-        services.AddSingleton<ISignatureVerifier, AuthenticodeVerifier>();
+        services.AddSingleton<ISignatureVerifier>(_ => new AuthenticodeVerifier(new SignaturePolicyOptions()));
         services.AddSingleton<IDismProcessRunner, DefaultDismProcessRunner>();
         services.AddSingleton<IProcessRunner, DefaultProcessRunner>();
         services.AddSingleton<GitHubReleasePublisher>();
