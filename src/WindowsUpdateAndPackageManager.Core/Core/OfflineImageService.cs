@@ -5,77 +5,94 @@ namespace WindowsUpdateAndPackageManager.Core;
 public sealed class OfflineImageService : IOfflineImageService
 {
     private readonly IDismProcessRunner _dism;
+    private readonly OfflineServiceOptions _options;
 
-    public OfflineImageService(IDismProcessRunner? dism = null)
+    public OfflineImageService(IDismProcessRunner dism, OfflineServiceOptions? options = null)
     {
-        _dism = dism ?? new DefaultDismProcessRunner();
+        _dism = dism;
+        _options = options ?? new OfflineServiceOptions();
     }
 
     public async Task<OfflineImageResult> MountOrOpenAsync(string imagePath, CancellationToken cancellationToken = default)
     {
-        var result = new OfflineImageResult();
         try
         {
-            var mountDir = Path.Combine(Path.GetTempPath(), $"wupm-image-{Guid.NewGuid():N}");
-            Directory.CreateDirectory(mountDir);
+            if (string.IsNullOrWhiteSpace(imagePath) || !File.Exists(imagePath))
+            {
+                return new OfflineImageResult { Success = false, Message = "Image path does not exist." };
+            }
 
-            var exitCode = await _dism.RunAsync("dism.exe", $"/Mount-Image /ImageFile:\"{imagePath}\" /MountDir:\"{mountDir}\"", cancellationToken).ConfigureAwait(false);
-            if (exitCode == 0)
-            {
-                result.Success = true;
-                result.MountPath = mountDir;
-                result.Message = "Image mounted successfully.";
-            }
-            else
-            {
-                Directory.Delete(mountDir, true);
-                result.Message = $"DISM exited with code {exitCode}.";
-            }
+            var args = $"/Mount-Image /ImageFile:\"{imagePath}\" /MountDir:\"{GetMountPath(imagePath)}\" /ReadOnly";
+            var exit = await RunWithRetryAsync("dism.exe", args, cancellationToken);
+            return new OfflineImageResult { Success = exit == 0, MountPath = exit == 0 ? GetMountPath(imagePath) : null, Message = exit == 0 ? null : $"DISM exited with code {exit}" };
         }
         catch (Exception ex)
         {
-            result.Message = $"Mount failed: {ex.Message}";
+            return new OfflineImageResult { Success = false, Message = ex.Message };
         }
-
-        return result;
     }
 
-    public async Task<OfflineImageResult> ApplyPackageAsync(string imageMountPath, string packagePath, CancellationToken cancellationToken = default)
+    public async Task<OfflineImageResult> ApplyPackageAsync(string mountPath, string packagePath, CancellationToken cancellationToken = default)
     {
-        var result = new OfflineImageResult();
         try
         {
-            var exitCode = await _dism.RunAsync("dism.exe", $"/Image:\"{imageMountPath}\" /Add-Package /PackagePath:\"{packagePath}\"", cancellationToken).ConfigureAwait(false);
-            result.Success = exitCode == 0;
-            result.Message = exitCode == 0 ? "Package applied successfully." : $"DISM exited with code {exitCode}.";
+            if (string.IsNullOrWhiteSpace(mountPath) || !Directory.Exists(mountPath))
+            {
+                return new OfflineImageResult { Success = false, Message = "Mount path does not exist." };
+            }
+
+            if (string.IsNullOrWhiteSpace(packagePath) || !File.Exists(packagePath))
+            {
+                return new OfflineImageResult { Success = false, Message = "Package path does not exist." };
+            }
+
+            var args = $"/Image:\"{mountPath}\" /Add-Package /PackagePath:\"{packagePath}\"";
+            var exit = await RunWithRetryAsync("dism.exe", args, cancellationToken);
+            return new OfflineImageResult { Success = exit == 0, Message = exit == 0 ? null : $"DISM exited with code {exit}" };
         }
         catch (Exception ex)
         {
-            result.Message = $"Apply failed: {ex.Message}";
+            return new OfflineImageResult { Success = false, Message = ex.Message };
         }
-
-        return result;
     }
 
-    public async Task<OfflineImageResult> DismountAsync(string imageMountPath, bool discard = false, CancellationToken cancellationToken = default)
+    public async Task<OfflineImageResult> DismountAsync(string mountPath, bool commit, CancellationToken cancellationToken = default)
     {
-        var result = new OfflineImageResult();
         try
         {
-            var commit = discard ? "/Discard" : "/Commit";
-            var exitCode = await _dism.RunAsync("dism.exe", $"/Unmount-Image /MountDir:\"{imageMountPath}\" {commit}", cancellationToken).ConfigureAwait(false);
-            result.Success = exitCode == 0;
-            result.Message = exitCode == 0 ? "Image dismounted successfully." : $"DISM exited with code {exitCode}.";
-            if (exitCode == 0)
+            if (string.IsNullOrWhiteSpace(mountPath) || !Directory.Exists(mountPath))
             {
-                Directory.Delete(imageMountPath, true);
+                return new OfflineImageResult { Success = false, Message = "Mount path does not exist." };
             }
+
+            var commitArg = commit ? "/Commit-Image" : "/Discard-Image";
+            var args = $"/Unmount-Image /MountDir:\"{mountPath}\" {commitArg}";
+            var exit = await RunWithRetryAsync("dism.exe", args, cancellationToken);
+            return new OfflineImageResult { Success = exit == 0, Message = exit == 0 ? null : $"DISM exited with code {exit}" };
         }
         catch (Exception ex)
         {
-            result.Message = $"Dismount failed: {ex.Message}";
+            return new OfflineImageResult { Success = false, Message = ex.Message };
         }
+    }
 
-        return result;
+    private async Task<int> RunWithRetryAsync(string fileName, string arguments, CancellationToken cancellationToken)
+    {
+        for (var attempt = 0; attempt <= _options.DismMaxRetries; attempt++)
+        {
+            using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            cts.CancelAfter(TimeSpan.FromSeconds(_options.DismTimeoutSeconds));
+            var exit = await _dism.RunAsync(fileName, arguments, cts.Token);
+            if (exit == 0) return 0;
+            if (attempt == _options.DismMaxRetries) return exit;
+            await Task.Delay(_options.DismRetryDelayMs, cancellationToken);
+        }
+        return -1;
+    }
+
+    private static string GetMountPath(string imagePath)
+    {
+        var name = Path.GetFileNameWithoutExtension(imagePath) ?? "mount";
+        return Path.Combine(Path.GetTempPath(), "wupm-mounts", name);
     }
 }

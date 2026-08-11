@@ -40,6 +40,7 @@ public static class Composition
         services.AddSingleton<IPolicyEngine>(sp => new AllowlistPolicyEngine());
         services.AddSingleton<ISignatureVerifier, AuthenticodeVerifier>();
         services.AddSingleton<IDismProcessRunner, DefaultDismProcessRunner>();
+        services.AddSingleton<IProcessRunner, DefaultProcessRunner>();
         services.AddSingleton<IOfflineImageService, OfflineImageService>();
         services.AddSingleton<IDeltaStore>(sp => new SqliteDeltaStore(cacheRoot));
         services.AddSingleton<IPackageDeltaProvider, PackageDeltaProvider>();

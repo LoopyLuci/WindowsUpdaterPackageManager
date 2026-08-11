@@ -106,25 +106,25 @@ public sealed class PowerShellCmdletExecutionTests
     }
 
     [Fact]
-    public void SetPolicyAllow_adds_to_allowlist()
+    public async Task SetPolicyAllow_adds_to_allowlist()
     {
         var policy = new AllowlistPolicyEngine();
         var services = BuildServices((typeof(IPolicyEngine), policy));
 
         PowerShellModule.SetPolicyAllow(services, "pkg");
 
-        Assert.True(policy.IsAllowedAsync("pkg").GetAwaiter().GetResult());
+        Assert.True(await policy.IsAllowedAsync("pkg"));
     }
 
     [Fact]
-    public void SetPolicyDeny_adds_to_denylist()
+    public async Task SetPolicyDeny_adds_to_denylist()
     {
         var policy = new AllowlistPolicyEngine();
         var services = BuildServices((typeof(IPolicyEngine), policy));
 
         PowerShellModule.SetPolicyDeny(services, "badpkg");
 
-        Assert.False(policy.IsAllowedAsync("badpkg").GetAwaiter().GetResult());
+        Assert.False(await policy.IsAllowedAsync("badpkg"));
     }
 
     [Fact]

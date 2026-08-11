@@ -10,14 +10,26 @@ public sealed class DefaultDismProcessRunner : IDismProcessRunner
         {
             FileName = fileName,
             Arguments = arguments,
+            UseShellExecute = false,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
-            UseShellExecute = false,
             CreateNoWindow = true
         };
-        using var p = Process.Start(psi);
-        if (p is null) throw new InvalidOperationException("Failed to start DISM.");
-        await p.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
-        return p.ExitCode;
+
+        using var process = new Process { StartInfo = psi, EnableRaisingEvents = true };
+        var tcs = new TaskCompletionSource<bool>();
+
+        process.Exited += (_, __) => tcs.TrySetResult(true);
+        if (!process.Start()) throw new InvalidOperationException($"Failed to start process: {fileName}");
+
+        using var registration = cancellationToken.Register(() =>
+        {
+            try { if (!process.HasExited) process.Kill(true); }
+            catch { }
+            tcs.TrySetCanceled(cancellationToken);
+        });
+
+        await tcs.Task;
+        return process.ExitCode;
     }
 }

@@ -432,13 +432,24 @@ public static class Cli
                 var sha256 = Convert.ToHexString(hash).ToLowerInvariant();
 
                 var deltaPath = Path.Combine(output, $"{packageId}.delta.json");
-                var deltaJson = System.Text.Json.JsonSerializer.Serialize(new
+                var packManifest = new PackManifest
                 {
-                    id = packageId,
-                    version = new DirectoryInfo(source).Name,
-                    sha256,
-                    created = DateTimeOffset.UtcNow.ToString("o")
-                });
+                    Id = packageId,
+                    Version = new DirectoryInfo(source).Name,
+                    Sha256 = sha256,
+                    Created = DateTimeOffset.UtcNow
+                };
+
+                if (string.IsNullOrWhiteSpace(packManifest.Id) ||
+                    string.IsNullOrWhiteSpace(packManifest.Version) ||
+                    string.IsNullOrWhiteSpace(packManifest.Sha256) ||
+                    packManifest.Sha256.Length != 64)
+                {
+                    Console.WriteLine("Generated delta manifest is invalid.");
+                    return;
+                }
+
+                var deltaJson = System.Text.Json.JsonSerializer.Serialize(packManifest);
                 await File.WriteAllTextAsync(deltaPath, deltaJson);
 
                 Console.WriteLine($"Created package: {zipPath}");
@@ -632,13 +643,24 @@ public static class Cli
         var sha256 = Convert.ToHexString(hash).ToLowerInvariant();
 
         var deltaPath = Path.Combine(output, $"{packageId}.delta.json");
-        var deltaJson = System.Text.Json.JsonSerializer.Serialize(new
+        var packManifest = new PackManifest
         {
-            id = packageId,
-            version = new DirectoryInfo(source).Name,
-            sha256,
-            created = DateTimeOffset.UtcNow.ToString("o")
-        });
+            Id = packageId,
+            Version = new DirectoryInfo(source).Name,
+            Sha256 = sha256,
+            Created = DateTimeOffset.UtcNow
+        };
+
+        if (string.IsNullOrWhiteSpace(packManifest.Id) ||
+            string.IsNullOrWhiteSpace(packManifest.Version) ||
+            string.IsNullOrWhiteSpace(packManifest.Sha256) ||
+            packManifest.Sha256.Length != 64)
+        {
+            Console.WriteLine("Generated delta manifest is invalid.");
+            return;
+        }
+
+        var deltaJson = System.Text.Json.JsonSerializer.Serialize(packManifest);
         await File.WriteAllTextAsync(deltaPath, deltaJson);
 
         Console.WriteLine($"Created package: {zipPath}");

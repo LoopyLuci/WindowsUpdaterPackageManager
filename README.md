@@ -28,7 +28,7 @@ dotnet run -- policy-deny badapp
 dotnet run -- health
 dotnet run -- pack ./myapp ./out
 dotnet run -- self-update
-dotnet run -- delta-update myapp 1.0
+dotnet run -- delta-update --id myapp --from 1.0
 dotnet run -- offline mount C:\images\install.wim
 dotnet run -- offline apply <mountPath> C:\packages\driver.cab
 dotnet run -- offline dismount <mountPath>
@@ -49,6 +49,18 @@ Run `dotnet run --project src/WupmApi` and use endpoints:
 - `POST /windows-update` - Run Windows Update scan/install
 - `GET /audit?from=&to=&action=` - Query audit log
 
+### API Authentication
+
+The REST API supports optional authentication. Enable it by setting the `WUPM_API_KEY` environment variable. When set, endpoints require one of:
+- `Authorization: Bearer <token>`
+- `X-Api-Key: <token>`
+
+Unauthenticated requests receive `401 Unauthorized` when auth is enabled. When `WUPM_API_KEY` is not set, the API remains open for local use.
+
+## GitHub Releases
+
+Pushing a tag like `v0.2.0` triggers the release workflow, which builds and publishes `wupm-cli.zip` and `wupm-api.zip` as GitHub Release assets.
+
 ## Contributing
 
 See `CONTRIBUTING.md`.
@@ -59,6 +71,10 @@ See `CONTRIBUTING.md`.
 - [x] First curated package set
 - [x] Authenticode verification
 - [x] Windows Update Agent integration
-- [ ] REST API surface for remote management
-- [ ] Signed package catalog
-- [ ] Delta update support
+- [x] REST API surface for remote management
+- [x] Signed package catalog
+- [x] Delta update support
+- [x] Offline image servicing
+- [x] PowerShell integration
+- [ ] Air-gap repository mirroring
+- [ ] Driver catalog curation pipeline

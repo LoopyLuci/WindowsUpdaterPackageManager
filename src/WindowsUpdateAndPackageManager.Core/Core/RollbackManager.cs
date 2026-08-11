@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using WindowsUpdateAndPackageManager.Data;
 using WindowsUpdateAndPackageManager.Models;
 
@@ -8,11 +7,13 @@ public sealed class RollbackManager
 {
     private readonly IStateDatabase _state;
     private readonly IAuditStore _auditStore;
+    private readonly IProcessRunner _processRunner;
 
-    public RollbackManager(IStateDatabase state, IAuditStore auditStore)
+    public RollbackManager(IStateDatabase state, IAuditStore auditStore, IProcessRunner? processRunner = null)
     {
         _state = state;
         _auditStore = auditStore;
+        _processRunner = processRunner ?? new DefaultProcessRunner();
     }
 
     public async Task<bool> RollbackAsync(string? packageId = null, CancellationToken cancellationToken = default)
@@ -41,17 +42,8 @@ public sealed class RollbackManager
         {
             try
             {
-                var psi = new ProcessStartInfo
-                {
-                    FileName = pkg.UninstallCommand,
-                    UseShellExecute = true,
-                    Verb = "runas",
-                    WindowStyle = ProcessWindowStyle.Hidden
-                };
-                using var p = Process.Start(psi);
-                if (p is null) continue;
-                await p.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
-                if (p.ExitCode == 0)
+                var exit = await _processRunner.StartAndWaitAsync(pkg.UninstallCommand, string.Empty, cancellationToken).ConfigureAwait(false);
+                if (exit == 0)
                 {
                     await _state.RemoveInstallAsync(pkg.Id, cancellationToken).ConfigureAwait(false);
                     anySuccess = true;
