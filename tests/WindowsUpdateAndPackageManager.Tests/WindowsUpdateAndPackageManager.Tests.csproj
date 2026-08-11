@@ -5,6 +5,8 @@
     <RootNamespace>WindowsUpdateAndPackageManager.Tests</RootNamespace>
     <AssemblyName>WindowsUpdateAndPackageManager.Tests</AssemblyName>
     <IsPackable>false</IsPackable>
+    <NoWarn>$(NoWarn);NU1903;CS8632</NoWarn>
+    <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
 
   <ItemGroup>
@@ -19,6 +21,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\src\WindowsUpdateAndPackageManager.Core\WindowsUpdateAndPackageManager.csproj" />
     <ProjectReference Include="..\..\src\Wupm.Cli\Wupm.Cli.csproj" />
     <ProjectReference Include="..\..\src\WupmApi\WupmApi.csproj" />
   </ItemGroup>

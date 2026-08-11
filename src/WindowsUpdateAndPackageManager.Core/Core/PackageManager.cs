@@ -56,6 +56,12 @@ public sealed class PackageManager : IPackageManager
             if (_signatureVerifier is not null)
             {
                 var cacheDir = await _cache.EnsurePackageCacheAsync(package.Id, package.Version, cancellationToken).ConfigureAwait(false);
+                if (string.IsNullOrWhiteSpace(cacheDir))
+                {
+                    result.Message = "Package cache is not available.";
+                    return result;
+                }
+
                 var packagePath = Path.Combine(cacheDir, $"{package.Id}@{package.Version}.wupkg");
                 if (!_signatureVerifier.Verify(packagePath))
                 {

@@ -481,7 +481,7 @@ public static class Cli
             new Argument<string>("fromVersion") { Description = "Current installed version" },
             repoOption
         };
-        deltaUpdate.SetHandler<string, string, string>(async (id, fromVersion, repositoryUrl) =>
+        deltaUpdate.SetHandler<string, string, string?>(async (id, fromVersion, repositoryUrl) =>
         {
             try
             {
