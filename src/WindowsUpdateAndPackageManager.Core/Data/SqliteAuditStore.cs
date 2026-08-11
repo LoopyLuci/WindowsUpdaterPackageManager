@@ -7,7 +7,8 @@ namespace WindowsUpdateAndPackageManager.Data;
 public sealed class SqliteAuditStore : IAuditStore
 {
     private readonly string _connectionString;
-    private const string Schema = "CREATE TABLE IF NOT EXISTS AuditEntries (" +
+    private bool _initialized;
+    private static readonly string Schema = "CREATE TABLE IF NOT EXISTS AuditEntries (" +
         "Id TEXT PRIMARY KEY, Timestamp TEXT NOT NULL, Action TEXT NOT NULL, " +
         "PackageId TEXT, Version TEXT, ComputerName TEXT, UserName TEXT, " +
         "Success INTEGER NOT NULL, Message TEXT" +
@@ -24,15 +25,23 @@ public sealed class SqliteAuditStore : IAuditStore
 
     public async Task InitializeAsync(CancellationToken cancellationToken = default)
     {
+        await EnsureInitializedAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    private async Task EnsureInitializedAsync(CancellationToken cancellationToken = default)
+    {
+        if (_initialized) return;
         await using var connection = new SqliteConnection(_connectionString);
         await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
         await using var cmd = connection.CreateCommand();
         cmd.CommandText = Schema;
         await cmd.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+        _initialized = true;
     }
 
     public async Task AppendAsync(AuditEntry entry, CancellationToken cancellationToken = default)
     {
+        await EnsureInitializedAsync(cancellationToken).ConfigureAwait(false);
         await using var connection = new SqliteConnection(_connectionString);
         await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
         await using var cmd = connection.CreateCommand();
@@ -51,6 +60,7 @@ public sealed class SqliteAuditStore : IAuditStore
 
     public async Task<IReadOnlyList<AuditEntry>> QueryAsync(DateTimeOffset? from = null, DateTimeOffset? to = null, string? action = null, CancellationToken cancellationToken = default)
     {
+        await EnsureInitializedAsync(cancellationToken).ConfigureAwait(false);
         await using var connection = new SqliteConnection(_connectionString);
         await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
         var where = new List<string>();
