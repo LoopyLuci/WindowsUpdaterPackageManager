@@ -1,4 +1,6 @@
 using System;
+using System.IO;
+using System.IO.Compression;
 using System.Threading.Tasks;
 using System.CommandLine;
 using System.CommandLine.Invocation;
@@ -54,7 +56,53 @@ public static class Cli
             try
             {
                 var repoUrl = string.IsNullOrWhiteSpace(url) ? "https://github.com/LoopyLuci/WindowsUpdateAndPackageManager" : url;
-                Console.WriteLine($"Install requested: {id} from {repoUrl}");
+                var repoClient = services.GetService(typeof(IRepoClient)) as IRepoClient;
+                var packageManager = services.GetService(typeof(IPackageManager)) as IPackageManager;
+                if (repoClient is null || packageManager is null)
+                {
+                    Console.WriteLine("Install is not fully configured.");
+                    return;
+                }
+
+                var indexJsonTask = repoClient.DownloadIndexAsync(repoUrl);
+                var indexJson = indexJsonTask.GetAwaiter().GetResult();
+                if (string.IsNullOrWhiteSpace(indexJson))
+                {
+                    Console.WriteLine("Repository index is empty.");
+                    return;
+                }
+
+                var validator = services.GetService(typeof(IManifestValidator)) as IManifestValidator;
+                if (validator is null)
+                {
+                    Console.WriteLine("Manifest validator is not configured.");
+                    return;
+                }
+
+                var valid = validator.ValidateAsync(indexJson).GetAwaiter().GetResult();
+                if (!valid)
+                {
+                    Console.WriteLine("Repository manifest is invalid.");
+                    return;
+                }
+
+                var index = validator.ParseAsync(indexJson).GetAwaiter().GetResult();
+                if (index is null || index.Packages is null || index.Packages.Count == 0)
+                {
+                    Console.WriteLine("Repository manifest is empty.");
+                    return;
+                }
+
+                var package = index.Packages.FirstOrDefault(p => p.Id.Equals(id, StringComparison.OrdinalIgnoreCase));
+                if (package is null)
+                {
+                    Console.WriteLine($"Package '{id}' was not found in the repository.");
+                    return;
+                }
+
+                Console.WriteLine($"Installing {package.Id}@{package.Version}...");
+                var result = packageManager.InstallAsync(package).GetAwaiter().GetResult();
+                Console.WriteLine($"Install result: success={result.Success}; version={result.InstalledVersion}; message={result.Message}");
             }
             catch (Exception ex)
             {
@@ -62,6 +110,143 @@ public static class Cli
             }
         }, new Argument<string>("id"), repoOption);
         root.AddCommand(install);
+
+        var search = new Command("search", "Search repository packages")
+        {
+            new Argument<string?>("query") { Description = "Search query" },
+            repoOption
+        };
+        search.SetHandler<string?, string?>((query, url) =>
+        {
+            try
+            {
+                var repoUrl = string.IsNullOrWhiteSpace(url) ? "https://github.com/LoopyLuci/WindowsUpdateAndPackageManager" : url;
+                var repoClient = services.GetService(typeof(IRepoClient)) as IRepoClient;
+                var repoSync = services.GetService(typeof(IRepoSync)) as IRepoSync;
+                if (repoClient is null || repoSync is null)
+                {
+                    Console.WriteLine("Search is not fully configured.");
+                    return;
+                }
+
+                var packages = repoSync.ListAsync(repoUrl).GetAwaiter().GetResult();
+                var effective = string.IsNullOrWhiteSpace(query) ? string.Empty : query.Trim();
+                foreach (var p in packages)
+                {
+                    if (!string.IsNullOrWhiteSpace(effective) &&
+                        !(p.Id.Contains(effective, StringComparison.OrdinalIgnoreCase) ||
+                          (p.DisplayName ?? string.Empty).Contains(effective, StringComparison.OrdinalIgnoreCase)))
+                    {
+                        continue;
+                    }
+
+                    Console.WriteLine($"{p.Id}@{p.Version} | {p.DisplayName} | driver={p.IsDriver} | min={p.MinWindowsVersion} | max={p.MaxWindowsVersion}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Search failed: {ex.Message}");
+            }
+        }, new Argument<string?>("query") { Arity = ArgumentArity.ZeroOrOne }, repoOption);
+        root.AddCommand(search);
+
+        var listAvailable = new Command("list-available", "List available repository packages");
+        listAvailable.SetHandler(() =>
+        {
+            try
+            {
+                var repoSync = services.GetService(typeof(IRepoSync)) as IRepoSync;
+                if (repoSync is null)
+                {
+                    Console.WriteLine("IRepoSync is not registered.");
+                    return;
+                }
+
+                var packages = repoSync.ListAsync("https://github.com/LoopyLuci/WindowsUpdateAndPackageManager").GetAwaiter().GetResult();
+                foreach (var p in packages)
+                {
+                    Console.WriteLine($"{p.Id}@{p.Version} | {p.DisplayName} | driver={p.IsDriver}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"List available failed: {ex.Message}");
+            }
+        });
+        root.AddCommand(listAvailable);
+
+        var policyAllow = new Command("policy-allow", "Allow a package in policy");
+        policyAllow.SetHandler<string>((id) =>
+        {
+            try
+            {
+                var policy = services.GetService(typeof(IPolicyEngine)) as IPolicyEngine;
+                if (policy is null)
+                {
+                    Console.WriteLine("Policy engine is not configured.");
+                    return;
+                }
+
+                var allowlist = policy as Infrastructure.AllowlistPolicyEngine;
+                if (allowlist is null)
+                {
+                    Console.WriteLine("Current policy engine does not support dynamic allowlist changes.");
+                    return;
+                }
+
+                allowlist.Allow(id);
+                Console.WriteLine($"Policy updated: '{id}' is now allowed.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Policy update failed: {ex.Message}");
+            }
+        }, new Argument<string>("id"));
+        root.AddCommand(policyAllow);
+
+        var policyDeny = new Command("policy-deny", "Deny a package in policy");
+        policyDeny.SetHandler<string>((id) =>
+        {
+            try
+            {
+                var allowlist = services.GetService(typeof(IPolicyEngine)) as Infrastructure.AllowlistPolicyEngine;
+                if (allowlist is null)
+                {
+                    Console.WriteLine("Current policy engine does not support dynamic allowlist changes.");
+                    return;
+                }
+
+                allowlist.Deny(id);
+                Console.WriteLine($"Policy updated: '{id}' is now denied.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Policy update failed: {ex.Message}");
+            }
+        }, new Argument<string>("id"));
+        root.AddCommand(policyDeny);
+
+        var driverUpdate = new Command("driver-update", "Scan and install Windows driver updates only");
+        driverUpdate.SetHandler(() =>
+        {
+            try
+            {
+                var manager = services.GetService(typeof(IWindowsUpdateManager)) as IWindowsUpdateManager;
+                if (manager is null)
+                {
+                    Console.WriteLine("IWindowsUpdateManager is not registered.");
+                    return;
+                }
+
+                var result = manager.ScanAndInstallAsync(driversOnly: true).GetAwaiter().GetResult();
+                Console.WriteLine($"Success={result.Success}; found={result.UpdatesFound}; installed={result.UpdatesInstalled}; reboot={result.RebootRequired}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Driver update failed: {ex.Message}");
+            }
+        });
+        root.AddCommand(driverUpdate);
 
         var listInstalled = new Command("installed", "List installed packages");
         listInstalled.SetHandler(() =>
@@ -185,6 +370,80 @@ public static class Cli
             }
         });
         root.AddCommand(health);
+
+        var pack = new Command("pack", "Create a .wupkg package from a folder")
+        {
+            new Argument<string>("sourceDir") { Description = "Source directory" },
+            new Argument<string>("outputDir") { Description = "Output directory" }
+        };
+        pack.SetHandler<string, string>(async (sourceDir, outputDir) =>
+        {
+            try
+            {
+                var source = Path.GetFullPath(sourceDir);
+                var output = Path.GetFullPath(outputDir);
+                Directory.CreateDirectory(output);
+
+                var packageId = new DirectoryInfo(source).Name;
+                var manifestPath = Path.Combine(source, "manifest.json");
+                if (!File.Exists(manifestPath))
+                {
+                    Console.WriteLine("manifest.json is missing in the source directory.");
+                    return;
+                }
+
+                var zipPath = Path.Combine(output, $"{packageId}.wupkg");
+                if (File.Exists(zipPath)) File.Delete(zipPath);
+
+                ZipFile.CreateFromDirectory(source, zipPath);
+                using var sha = System.Security.Cryptography.SHA256.Create();
+                await using var stream = File.OpenRead(zipPath);
+                var hash = await sha.ComputeHashAsync(stream);
+                var sha256 = Convert.ToHexString(hash).ToLowerInvariant();
+
+                Console.WriteLine($"Created package: {zipPath}");
+                Console.WriteLine($"SHA256: {sha256}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Pack failed: {ex.Message}");
+            }
+        }, new Argument<string>("sourceDir"), new Argument<string>("outputDir"));
+        root.AddCommand(pack);
+
+        var selfUpdate = new Command("self-update", "Check for WUPM updates");
+        selfUpdate.SetHandler(() =>
+        {
+            try
+            {
+                var repoClient = services.GetService(typeof(IRepoClient)) as IRepoClient;
+                if (repoClient is null)
+                {
+                    Console.WriteLine("Repo client is not configured.");
+                    return;
+                }
+
+                var releaseJson = repoClient.GetLatestReleaseAsync("https://github.com/LoopyLuci/WindowsUpdateAndPackageManager").GetAwaiter().GetResult();
+                if (string.IsNullOrWhiteSpace(releaseJson))
+                {
+                    Console.WriteLine("Could not retrieve latest release.");
+                    return;
+                }
+
+                using var doc = System.Text.Json.JsonDocument.Parse(releaseJson);
+                var root = doc.RootElement;
+                var tag = root.GetProperty("tag_name").GetString();
+                var url = root.GetProperty("html_url").GetString();
+
+                Console.WriteLine($"Latest release: {tag}");
+                Console.WriteLine($"Release page: {url}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Self-update check failed: {ex.Message}");
+            }
+        });
+        root.AddCommand(selfUpdate);
 
         try
         {

@@ -4,7 +4,7 @@ namespace WindowsUpdateAndPackageManager.Core;
 
 public interface IWindowsUpdateManager
 {
-    Task<WindowsUpdateResult> ScanAndInstallAsync(CancellationToken cancellationToken = default);
+    Task<WindowsUpdateResult> ScanAndInstallAsync(bool driversOnly = false, CancellationToken cancellationToken = default);
 }
 
 public interface IPackageManager
@@ -23,6 +23,7 @@ public interface IDriverManager
 public interface IRepoSync
 {
     Task<SyncResult> SyncAsync(string repositoryUrl, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<PackageManifest>> ListAsync(string repositoryUrl, CancellationToken cancellationToken = default);
 }
 
 public interface IAuditor

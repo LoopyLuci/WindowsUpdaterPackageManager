@@ -26,13 +26,29 @@ public sealed class WindowsUpdateApi : IWindowsUpdateApi
             for (var i = 0; i < searchResult.Updates.Count; i++)
             {
                 dynamic update = searchResult.Updates.Item(i);
+                var categories = new List<string>();
+                try
+                {
+                    for (var c = 0; c < update.Categories.Count; c++)
+                    {
+                        dynamic cat = update.Categories.Item(c);
+                        var id = cat.CategoryID;
+                        if (!string.IsNullOrWhiteSpace(id))
+                        {
+                            categories.Add(id);
+                        }
+                    }
+                }
+                catch { }
+
                 updates.Add(new WindowsUpdate
                 {
                     Id = i,
                     Title = update.Title,
                     Description = update.Description,
                     SupportUrl = update.SupportUrl,
-                    SizeBytes = update.MaxDownloadSize
+                    SizeBytes = update.MaxDownloadSize,
+                    CategoryIds = categories
                 });
             }
 

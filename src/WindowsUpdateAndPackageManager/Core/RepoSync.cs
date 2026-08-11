@@ -85,6 +85,18 @@ public sealed class RepoSync : IRepoSync
         return result;
     }
 
+    public async Task<IReadOnlyList<PackageManifest>> ListAsync(string repositoryUrl, CancellationToken cancellationToken = default)
+    {
+        var json = await _client.DownloadIndexAsync(repositoryUrl, cancellationToken).ConfigureAwait(false);
+        if (json is null || !await _validator.ValidateAsync(json, cancellationToken).ConfigureAwait(false))
+        {
+            return Array.Empty<PackageManifest>();
+        }
+
+        var index = await _validator.ParseAsync(json, cancellationToken).ConfigureAwait(false);
+        return index?.Packages ?? Array.Empty<PackageManifest>();
+    }
+
     private static string BuildAssetUrl(string repositoryUrl, PackageManifest package)
     {
         var baseUrl = repositoryUrl.TrimEnd('/');

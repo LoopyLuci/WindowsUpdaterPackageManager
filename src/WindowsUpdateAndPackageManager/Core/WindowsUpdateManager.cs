@@ -21,12 +21,17 @@ public sealed class WindowsUpdateManager : IWindowsUpdateManager
         _windowsUpdateApi = windowsUpdateApi;
     }
 
-    public async Task<WindowsUpdateResult> ScanAndInstallAsync(CancellationToken cancellationToken = default)
+    public async Task<WindowsUpdateResult> ScanAndInstallAsync(bool driversOnly = false, CancellationToken cancellationToken = default)
     {
         var result = new WindowsUpdateResult();
         try
         {
             var updates = await _windowsUpdateApi.SearchAsync("IsInstalled=0", cancellationToken).ConfigureAwait(false);
+            if (driversOnly)
+            {
+                updates = updates.Where(u => u.IsDriver).ToList();
+            }
+
             result.UpdatesFound = updates.Count;
 
             if (result.UpdatesFound > 0)
