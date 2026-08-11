@@ -17,6 +17,7 @@ public static class PowerShellModule
     {
         var dataRoot = Path.Combine(rootPath, ".wupm");
         Directory.CreateDirectory(dataRoot);
+        var cacheRoot = Path.Combine(dataRoot, "cache");
         var services = new ServiceCollection();
         services.AddSingleton<IStateDatabase>(new SqliteStateDatabase(dataRoot));
         services.AddSingleton<IAuditStore>(new SqliteAuditStore(dataRoot));
@@ -33,9 +34,12 @@ public static class PowerShellModule
             return new GitHubRepoClient(http, repo);
         });
         services.AddSingleton<IManifestValidator>(sp => new DefaultManifestValidator());
-        services.AddSingleton<ICacheManager>(sp => new DefaultCacheManager(Path.Combine(dataRoot, "cache")));
+        services.AddSingleton<ICacheManager>(sp => new DefaultCacheManager(cacheRoot));
         services.AddSingleton<IPolicyEngine>(sp => new AllowlistPolicyEngine());
         services.AddSingleton<ISignatureVerifier, AuthenticodeVerifier>();
+        services.AddSingleton<IOfflineImageService, OfflineImageService>();
+        services.AddSingleton<IDeltaStore>(sp => new SqliteDeltaStore(cacheRoot));
+        services.AddSingleton<IPackageDeltaProvider, PackageDeltaProvider>();
         return services.BuildServiceProvider();
     }
 
@@ -114,5 +118,38 @@ public static class PowerShellModule
         var client = services.GetService(typeof(IRepoClient)) as IRepoClient;
         if (client is null) throw new InvalidOperationException("IRepoClient is not registered.");
         return await client.GetLatestReleaseAsync(repositoryUrl);
+    }
+
+    public static async Task InvokeDeltaUpdateAsync(IServiceProvider services, string id, string fromVersion, string repositoryUrl)
+    {
+        var provider = services.GetService(typeof(IPackageDeltaProvider)) as IPackageDeltaProvider;
+        if (provider is null) throw new InvalidOperationException("IPackageDeltaProvider is not registered.");
+
+        var delta = await provider.GetDeltaAsync(id, fromVersion, "latest");
+        if (delta is null) throw new InvalidOperationException($"No delta available for {id} from {fromVersion} to latest.");
+
+        var applied = await provider.ApplyDeltaAsync(id, fromVersion, "latest");
+        if (!applied) throw new InvalidOperationException("Delta update failed.");
+    }
+
+    public static async Task<OfflineImageResult> MountOfflineImageAsync(IServiceProvider services, string imagePath)
+    {
+        var offline = services.GetService(typeof(IOfflineImageService)) as IOfflineImageService;
+        if (offline is null) throw new InvalidOperationException("IOfflineImageService is not registered.");
+        return await offline.MountOrOpenAsync(imagePath);
+    }
+
+    public static async Task<OfflineImageResult> DismountOfflineImageAsync(IServiceProvider services, string mountPath, bool discard)
+    {
+        var offline = services.GetService(typeof(IOfflineImageService)) as IOfflineImageService;
+        if (offline is null) throw new InvalidOperationException("IOfflineImageService is not registered.");
+        return await offline.DismountAsync(mountPath, discard);
+    }
+
+    public static async Task<OfflineImageResult> ApplyPackageToImageAsync(IServiceProvider services, string mountPath, string packagePath)
+    {
+        var offline = services.GetService(typeof(IOfflineImageService)) as IOfflineImageService;
+        if (offline is null) throw new InvalidOperationException("IOfflineImageService is not registered.");
+        return await offline.ApplyPackageAsync(mountPath, packagePath);
     }
 }

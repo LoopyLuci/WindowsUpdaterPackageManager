@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Microsoft.Data.Sqlite;
 using WindowsUpdateAndPackageManager.Models;
 
 namespace WindowsUpdateAndPackageManager.Data;
@@ -13,15 +14,15 @@ public sealed class SqliteStateDatabase : IStateDatabase
 
     public SqliteStateDatabase(string rootPath)
     {
-        _connectionString = new System.Data.SQLite.SQLiteConnectionStringBuilder
+        _connectionString = new SqliteConnectionStringBuilder
         {
-            DataSource = System.IO.Path.Combine(rootPath, "wupm-state.db")
+            DataSource = Path.Combine(rootPath, "wupm-state.db")
         }.ToString();
     }
 
     public async Task InitializeAsync(CancellationToken cancellationToken = default)
     {
-        await using var connection = new System.Data.SQLite.SQLiteConnection(_connectionString);
+        await using var connection = new SqliteConnection(_connectionString);
         await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
         await using var cmd = connection.CreateCommand();
         cmd.CommandText = Schema;
@@ -30,7 +31,7 @@ public sealed class SqliteStateDatabase : IStateDatabase
 
     public async Task<IReadOnlyList<PackageManifest>> ListInstalledAsync(CancellationToken cancellationToken = default)
     {
-        await using var connection = new System.Data.SQLite.SQLiteConnection(_connectionString);
+        await using var connection = new SqliteConnection(_connectionString);
         await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
         await using var cmd = connection.CreateCommand();
         cmd.CommandText = "SELECT Id, Version, DisplayName, Architecture, InstalledAt, IsDriver FROM InstalledPackages";
@@ -53,7 +54,7 @@ public sealed class SqliteStateDatabase : IStateDatabase
 
     public async Task RecordInstallAsync(PackageManifest package, CancellationToken cancellationToken = default)
     {
-        await using var connection = new System.Data.SQLite.SQLiteConnection(_connectionString);
+        await using var connection = new SqliteConnection(_connectionString);
         await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
         await using var cmd = connection.CreateCommand();
         cmd.CommandText = "INSERT OR REPLACE INTO InstalledPackages (Id, Version, DisplayName, Architecture, InstalledAt, IsDriver) VALUES (@id, @version, @displayName, @arch, @installedAt, @isDriver)";
@@ -68,7 +69,7 @@ public sealed class SqliteStateDatabase : IStateDatabase
 
     public async Task RemoveInstallAsync(string packageId, CancellationToken cancellationToken = default)
     {
-        await using var connection = new System.Data.SQLite.SQLiteConnection(_connectionString);
+        await using var connection = new SqliteConnection(_connectionString);
         await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
         await using var cmd = connection.CreateCommand();
         cmd.CommandText = "DELETE FROM InstalledPackages WHERE Id = @id";
@@ -78,7 +79,7 @@ public sealed class SqliteStateDatabase : IStateDatabase
 
     public async Task<bool> IsInstalledAsync(string packageId, string? version = null, CancellationToken cancellationToken = default)
     {
-        await using var connection = new System.Data.SQLite.SQLiteConnection(_connectionString);
+        await using var connection = new SqliteConnection(_connectionString);
         await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
         await using var cmd = connection.CreateCommand();
         cmd.CommandText = version is null

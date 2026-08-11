@@ -475,6 +475,119 @@ public static class Cli
         });
         root.AddCommand(selfUpdate);
 
+        var deltaUpdate = new Command("delta-update", "Apply a delta update for a package")
+        {
+            new Argument<string>("id") { Description = "Package ID" },
+            new Argument<string>("fromVersion") { Description = "Current installed version" },
+            repoOption
+        };
+        deltaUpdate.SetHandler<string, string, string>(async (id, fromVersion, repositoryUrl) =>
+        {
+            try
+            {
+                var provider = services.GetService(typeof(IPackageDeltaProvider)) as IPackageDeltaProvider;
+                if (provider is null)
+                {
+                    Console.WriteLine("Delta provider is not configured.");
+                    return;
+                }
+
+                var delta = await provider.GetDeltaAsync(id, fromVersion, "latest");
+                if (delta is null)
+                {
+                    Console.WriteLine($"No delta available for {id} from {fromVersion} to latest.");
+                    return;
+                }
+
+                var applied = await provider.ApplyDeltaAsync(id, fromVersion, "latest");
+                Console.WriteLine(applied ? "Delta update applied successfully." : "Delta update failed.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Delta update failed: {ex.Message}");
+            }
+        }, new Argument<string>("id"), new Argument<string>("fromVersion"), repoOption);
+        root.AddCommand(deltaUpdate);
+
+        var offlineMount = new Command("offline", "Offline image servicing");
+        var offlineMountSub = new Command("mount", "Mount a WIM/ISO image")
+        {
+            new Argument<string>("imagePath") { Description = "Path to WIM/ISO" }
+        };
+        offlineMountSub.SetHandler<string>(imagePath =>
+        {
+            try
+            {
+                var offline = services.GetService(typeof(IOfflineImageService)) as IOfflineImageService;
+                if (offline is null)
+                {
+                    Console.WriteLine("Offline image service is not configured.");
+                    return;
+                }
+
+                var result = offline.MountOrOpenAsync(imagePath).GetAwaiter().GetResult();
+                Console.WriteLine(result.Success ? $"Mounted: {result.MountPath}" : $"Mount failed: {result.Message}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Offline mount failed: {ex.Message}");
+            }
+        }, new Argument<string>("imagePath"));
+        offlineMount.AddCommand(offlineMountSub);
+
+        var offlineApply = new Command("apply", "Apply a package to an offline image")
+        {
+            new Argument<string>("mountPath") { Description = "Mounted image path" },
+            new Argument<string>("packagePath") { Description = "Package path" }
+        };
+        offlineApply.SetHandler<string, string>((mountPath, packagePath) =>
+        {
+            try
+            {
+                var offline = services.GetService(typeof(IOfflineImageService)) as IOfflineImageService;
+                if (offline is null)
+                {
+                    Console.WriteLine("Offline image service is not configured.");
+                    return;
+                }
+
+                var result = offline.ApplyPackageAsync(mountPath, packagePath).GetAwaiter().GetResult();
+                Console.WriteLine(result.Success ? "Package applied to offline image." : $"Apply failed: {result.Message}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Offline apply failed: {ex.Message}");
+            }
+        }, new Argument<string>("mountPath"), new Argument<string>("packagePath"));
+        offlineMount.AddCommand(offlineApply);
+
+        var offlineDismount = new Command("dismount", "Dismount an offline image")
+        {
+            new Argument<string>("mountPath") { Description = "Mounted image path" },
+            new Option<bool>("--discard") { Description = "Discard changes" }
+        };
+        offlineDismount.SetHandler<string, bool>((mountPath, discard) =>
+        {
+            try
+            {
+                var offline = services.GetService(typeof(IOfflineImageService)) as IOfflineImageService;
+                if (offline is null)
+                {
+                    Console.WriteLine("Offline image service is not configured.");
+                    return;
+                }
+
+                var result = offline.DismountAsync(mountPath, discard).GetAwaiter().GetResult();
+                Console.WriteLine(result.Success ? "Image dismounted." : $"Dismount failed: {result.Message}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Offline dismount failed: {ex.Message}");
+            }
+        }, new Argument<string>("mountPath"), new Option<bool>("--discard"));
+        offlineMount.AddCommand(offlineDismount);
+        root.AddCommand(offlineMount);
+
         try
         {
             return root.InvokeAsync(args);

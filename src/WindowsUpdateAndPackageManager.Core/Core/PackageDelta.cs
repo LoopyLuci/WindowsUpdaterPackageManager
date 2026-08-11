@@ -3,6 +3,7 @@ namespace WindowsUpdateAndPackageManager.Core;
 public interface IPackageDeltaProvider
 {
     Task<DeltaManifest?> GetDeltaAsync(string packageId, string fromVersion, string toVersion, CancellationToken cancellationToken = default);
+    Task<bool> ApplyDeltaAsync(string packageId, string fromVersion, string toVersion, CancellationToken cancellationToken = default);
 }
 
 public sealed class DeltaManifest

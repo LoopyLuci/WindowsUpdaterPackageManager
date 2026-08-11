@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Microsoft.Data.Sqlite;
 using WindowsUpdateAndPackageManager.Models;
 
 namespace WindowsUpdateAndPackageManager.Data;
@@ -15,15 +16,15 @@ public sealed class SqliteAuditStore : IAuditStore
 
     public SqliteAuditStore(string rootPath)
     {
-        _connectionString = new System.Data.SQLite.SQLiteConnectionStringBuilder
+        _connectionString = new SqliteConnectionStringBuilder
         {
-            DataSource = System.IO.Path.Combine(rootPath, "wupm-audit.db")
+            DataSource = Path.Combine(rootPath, "wupm-audit.db")
         }.ToString();
     }
 
     public async Task InitializeAsync(CancellationToken cancellationToken = default)
     {
-        await using var connection = new System.Data.SQLite.SQLiteConnection(_connectionString);
+        await using var connection = new SqliteConnection(_connectionString);
         await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
         await using var cmd = connection.CreateCommand();
         cmd.CommandText = Schema;
@@ -32,7 +33,7 @@ public sealed class SqliteAuditStore : IAuditStore
 
     public async Task AppendAsync(AuditEntry entry, CancellationToken cancellationToken = default)
     {
-        await using var connection = new System.Data.SQLite.SQLiteConnection(_connectionString);
+        await using var connection = new SqliteConnection(_connectionString);
         await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
         await using var cmd = connection.CreateCommand();
         cmd.CommandText = "INSERT INTO AuditEntries (Id, Timestamp, Action, PackageId, Version, ComputerName, UserName, Success, Message) VALUES (@id, @timestamp, @action, @packageId, @version, @computerName, @userName, @success, @message)";
@@ -50,7 +51,7 @@ public sealed class SqliteAuditStore : IAuditStore
 
     public async Task<IReadOnlyList<AuditEntry>> QueryAsync(DateTimeOffset? from = null, DateTimeOffset? to = null, string? action = null, CancellationToken cancellationToken = default)
     {
-        await using var connection = new System.Data.SQLite.SQLiteConnection(_connectionString);
+        await using var connection = new SqliteConnection(_connectionString);
         await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
         var where = new List<string>();
         if (from is not null) where.Add("Timestamp >= @from");
