@@ -791,6 +791,49 @@ public static class Cli
         service.AddCommand(serviceStatus);
         root.AddCommand(service);
 
+        var migrate = new Command("migrate", "Migrate a repository manifest to a target schema version");
+        var migrateInput = new Argument<string>("input") { Description = "Repository manifest JSON path" };
+        var migrateTarget = new Option<string>("--target") { Description = "Target schema version", IsRequired = true };
+        var migrateOutput = new Option<string?>("--output") { Description = "Output path, defaults to overwrite input" };
+        migrate.AddArgument(migrateInput);
+        migrate.AddOption(migrateTarget);
+        migrate.AddOption(migrateOutput);
+        migrate.SetHandler<string, string, string?>((input, target, output) =>
+        {
+            try
+            {
+                if (!File.Exists(input))
+                {
+                    Console.WriteLine("Input manifest file does not exist.");
+                    return;
+                }
+
+                var migrator = services.GetService(typeof(IManifestMigrator)) as IManifestMigrator;
+                if (migrator is null)
+                {
+                    Console.WriteLine("Manifest migrator is not configured.");
+                    return;
+                }
+
+                var json = File.ReadAllText(input);
+                var migrated = migrator.MigrateAsync(json, target).GetAwaiter().GetResult();
+                if (migrated is null)
+                {
+                    Console.WriteLine($"Migration to schema version '{target}' is not supported.");
+                    return;
+                }
+
+                var destination = string.IsNullOrWhiteSpace(output) ? input : output;
+                File.WriteAllText(destination, migrated);
+                Console.WriteLine($"Migrated manifest written to {destination}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Migration failed: {ex.Message}");
+            }
+        }, migrateInput, migrateTarget, migrateOutput);
+        root.AddCommand(migrate);
+
         try
         {
             return root.InvokeAsync(args);
