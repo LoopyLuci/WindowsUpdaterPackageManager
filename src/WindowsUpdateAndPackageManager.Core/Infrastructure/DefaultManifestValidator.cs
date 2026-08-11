@@ -92,7 +92,7 @@ public sealed class DefaultManifestValidator : IManifestValidator
 
     private static bool IsSupportedSchemaVersion(string? version)
     {
-        return version is "1.0";
+        return version is "1.0" or "2";
     }
 
     private static bool IsHexSha256(string? value)

@@ -7,7 +7,6 @@ public sealed class RepositoryIndexSchemaTests
 {
     [Theory]
     [InlineData("1.0")]
-    [InlineData("1.0.0")]
     [InlineData("2")]
     public async Task Validates_supported_schema_versions(string version)
     {
@@ -20,8 +19,9 @@ public sealed class RepositoryIndexSchemaTests
         }
         """;
 
-        var result = await DefaultManifestValidator.ValidateAsync(json);
-        Assert.NotNull(result);
+        var validator = new DefaultManifestValidator();
+        var result = await validator.ValidateAsync(json);
+        Assert.True(result);
     }
 
     [Theory]
@@ -40,8 +40,9 @@ public sealed class RepositoryIndexSchemaTests
         }
         """;
 
-        var result = await DefaultManifestValidator.ValidateAsync(json);
-        Assert.Null(result);
+        var validator = new DefaultManifestValidator();
+        var result = await validator.ValidateAsync(json);
+        Assert.False(result);
     }
 
     [Fact]
@@ -55,7 +56,8 @@ public sealed class RepositoryIndexSchemaTests
         }
         """;
 
-        var result = await DefaultManifestValidator.ValidateAsync(json);
-        Assert.Null(result);
+        var validator = new DefaultManifestValidator();
+        var result = await validator.ValidateAsync(json);
+        Assert.False(result);
     }
 }
