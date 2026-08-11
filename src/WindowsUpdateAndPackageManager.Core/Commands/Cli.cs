@@ -941,6 +941,10 @@ public static class Cli
                 {
                     Console.WriteLine($"- local API unreachable: {ex.Message}");
                 }
+                catch (TaskCanceledException)
+                {
+                    Console.WriteLine("- local API unreachable: request timed out.");
+                }
 
                 if (mtlsEnabled)
                 {
