@@ -593,18 +593,14 @@ public static class Cli
 
         var selfUpdate = new Command("self-update", "Update WUPM to the latest GitHub release");
         var selfUpdateTagOption = new Option<string>("--tag");
+        var selfUpdateTokenOption = new Option<string>("--token");
         selfUpdate.AddOption(selfUpdateTagOption);
-        selfUpdate.SetHandler<string?>(async tag =>
+        selfUpdate.AddOption(selfUpdateTokenOption);
+        selfUpdate.SetHandler<string?, string?>(async (tag, token) =>
         {
             try
             {
-                var updater = services.GetService(typeof(ISelfUpdater)) as ISelfUpdater;
-                if (updater is null)
-                {
-                    Console.WriteLine("Self-updater is not configured.");
-                    return;
-                }
-
+                var updater = new SelfUpdater(token: token);
                 var started = await updater.SelfUpdateAsync(tag);
                 Console.WriteLine(started ? "Self-update started. The new version will launch shortly." : "Self-update failed.");
             }
@@ -612,7 +608,7 @@ public static class Cli
             {
                 Console.WriteLine($"Self-update failed: {ex.Message}");
             }
-        }, selfUpdateTagOption);
+        }, selfUpdateTagOption, selfUpdateTokenOption);
         root.AddCommand(selfUpdate);
 
         var deltaUpdate = new Command("delta-update", "Apply a delta update for a package");

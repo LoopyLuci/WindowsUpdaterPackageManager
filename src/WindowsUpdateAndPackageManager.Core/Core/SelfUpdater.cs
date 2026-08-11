@@ -14,6 +14,7 @@ public sealed class SelfUpdater : ISelfUpdater
     private readonly string _githubOwner;
     private readonly string _githubRepo;
     private readonly string _assetName;
+    private readonly string? _githubToken;
     private readonly Func<ProcessStartInfo, Task<bool>> _processStartAsync;
     private readonly Func<string, CancellationToken, Task<string?>> _fetchReleaseAsync;
     private readonly Func<string, string, CancellationToken, Task> _downloadAssetAsync;
@@ -23,6 +24,7 @@ public sealed class SelfUpdater : ISelfUpdater
         string? githubOwner = null,
         string? githubRepo = null,
         string? assetName = null,
+        string? githubToken = null,
         Func<ProcessStartInfo, Task<bool>>? processStartAsync = null,
         Func<string, CancellationToken, Task<string?>>? fetchReleaseAsync = null,
         Func<string, string, CancellationToken, Task>? downloadAssetAsync = null)
@@ -31,6 +33,7 @@ public sealed class SelfUpdater : ISelfUpdater
         _githubOwner = githubOwner ?? "LoopyLuci";
         _githubRepo = githubRepo ?? "WindowsUpdateAndPackageManager";
         _assetName = assetName ?? "wupm-cli.zip";
+        _githubToken = githubToken ?? Environment.GetEnvironmentVariable("GITHUB_TOKEN");
         _processStartAsync = processStartAsync ?? DefaultProcessStartAsync;
         _fetchReleaseAsync = fetchReleaseAsync ?? DefaultFetchReleaseAsync;
         _downloadAssetAsync = downloadAssetAsync ?? DefaultDownloadAssetAsync;
@@ -106,6 +109,10 @@ Remove-Item $backup -Force
     private static async Task<string?> DefaultFetchReleaseAsync(string url, CancellationToken cancellationToken)
     {
         using var client = new HttpClient();
+        if (!string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("GITHUB_TOKEN")))
+        {
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", Environment.GetEnvironmentVariable("GITHUB_TOKEN"));
+        }
         using var response = await client.GetAsync(url, cancellationToken).ConfigureAwait(false);
         if (!response.IsSuccessStatusCode) return null;
         return await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
@@ -117,6 +124,11 @@ Remove-Item $backup -Force
         var root = doc.RootElement;
         if (!root.TryGetProperty("assets", out var assets)) throw new InvalidOperationException("Release has no assets.");
 
+        using var client = new HttpClient();
+        if (!string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("GITHUB_TOKEN")))
+        {
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", Environment.GetEnvironmentVariable("GITHUB_TOKEN"));
+        }
         foreach (var asset in assets.EnumerateArray())
         {
             if (!asset.TryGetProperty("name", out var nameElement)) continue;
@@ -128,7 +140,7 @@ Remove-Item $backup -Force
             var url = urlElement.GetString();
             if (string.IsNullOrWhiteSpace(url)) continue;
 
-            using var response = await new HttpClient().GetAsync(url, cancellationToken).ConfigureAwait(false);
+            using var response = await client.GetAsync(url, cancellationToken).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
             await using var target = File.Open(destinationPath, FileMode.Create, FileAccess.Write, FileShare.None);
             await response.Content.CopyToAsync(target, cancellationToken).ConfigureAwait(false);
