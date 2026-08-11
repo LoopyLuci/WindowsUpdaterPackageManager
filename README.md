@@ -87,7 +87,7 @@ Recommended production deployment pattern:
 
 ## Releases
 
-Pushing a tag like `v0.2.0` triggers the publish workflow, which builds and publishes `wupm-cli.zip` and `wupm-api.zip` as GitHub Release assets.
+Pushing a tag like `v0.2.0` triggers the release workflow, which builds and publishes `wupm-cli.zip` and `wupm-api.zip` as GitHub Release assets.
 
 ### Delta packaging
 
@@ -111,7 +111,7 @@ Output includes `deltaAvailable` and `previousSha256` in `.delta.json`. Apply de
    git tag -a v0.2.0 -m "Release v0.2.0"
    git push origin v0.2.0
    ```
-3. The `.github/workflows/publish.yml` workflow runs automatically on tag push. It produces two artifacts:
+3. The `.github/workflows/release.yml` workflow runs automatically on tag push. It produces two artifacts:
    - `wupm-cli.zip` - standalone CLI
    - `wupm-api.zip` - standalone API host
 

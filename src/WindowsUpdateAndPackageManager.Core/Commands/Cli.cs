@@ -600,7 +600,7 @@ public static class Cli
         {
             try
             {
-                var updater = new SelfUpdater(token: token);
+                var updater = new SelfUpdater(githubToken: token);
                 var started = await updater.SelfUpdateAsync(tag);
                 Console.WriteLine(started ? "Self-update started. The new version will launch shortly." : "Self-update failed.");
             }
@@ -896,7 +896,7 @@ public static class Cli
         root.AddCommand(migrate);
 
         var doctor = new Command("doctor", "Run environment and connectivity diagnostics");
-        doctor.SetHandler(() =>
+        doctor.SetHandler(async () =>
         {
             try
             {
@@ -916,7 +916,36 @@ public static class Cli
                 Console.WriteLine($"GITHUB_TOKEN: {(string.IsNullOrWhiteSpace(githubToken) ? "not set" : "set")}");
 
                 Console.WriteLine();
-                Console.WriteLine("Rate limiter state: reset if needed via test hook.");
+                Console.WriteLine("API connectivity:");
+
+                using var http = new HttpClient();
+                try
+                {
+                    var unauthed = await http.GetAsync("http://localhost:5000/");
+                    Console.WriteLine($"- / unauthenticated: {(int)unauthed.StatusCode} {unauthed.StatusCode}");
+
+                    if (!string.IsNullOrWhiteSpace(apiKey))
+                    {
+                        http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", apiKey);
+                        var authed = await http.GetAsync("http://localhost:5000/");
+                        Console.WriteLine($"- / bearer: {(int)authed.StatusCode} {authed.StatusCode}");
+                        http.DefaultRequestHeaders.Authorization = null;
+
+                        var xapikey = new HttpRequestMessage(HttpMethod.Get, "http://localhost:5000/");
+                        xapikey.Headers.Add("X-Api-Key", apiKey);
+                        var xapikeyResponse = await http.SendAsync(xapikey);
+                        Console.WriteLine($"- / X-Api-Key: {(int)xapikeyResponse.StatusCode} {xapikeyResponse.StatusCode}");
+                    }
+                }
+                catch (HttpRequestException ex)
+                {
+                    Console.WriteLine($"- local API unreachable: {ex.Message}");
+                }
+
+                if (mtlsEnabled)
+                {
+                    Console.WriteLine("- mTLS: enabled; operator client certificate validation is active.");
+                }
             }
             catch (Exception ex)
             {
