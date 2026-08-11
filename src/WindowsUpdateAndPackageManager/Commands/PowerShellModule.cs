@@ -23,7 +23,12 @@ public static class PowerShellModule
         services.AddSingleton<IRepoSync>(sp => new RepoSync(sp.GetRequiredService<IRepoClient>(), sp.GetRequiredService<IManifestValidator>(), sp.GetRequiredService<IStateDatabase>(), sp.GetRequiredService<IAuditStore>(), sp.GetRequiredService<ICacheManager>()));
         services.AddSingleton<RollbackManager>();
         services.AddSingleton<IAuditor>(sp => new Auditor(sp.GetRequiredService<IAuditStore>()));
-        services.AddSingleton<IRepoClient>(sp => new GitHubRepoClient());
+        services.AddSingleton<IRepoClient>(sp =>
+        {
+            var http = new HttpClient();
+            var repo = "https://github.com/LoopyLuci/WindowsUpdateAndPackageManager";
+            return new GitHubRepoClient(http, repo);
+        });
         services.AddSingleton<IManifestValidator>(sp => new DefaultManifestValidator());
         services.AddSingleton<ICacheManager>(sp => new DefaultCacheManager(Path.Combine(dataRoot, "cache")));
         services.AddSingleton<IPolicyEngine>(sp => new AllowlistPolicyEngine());

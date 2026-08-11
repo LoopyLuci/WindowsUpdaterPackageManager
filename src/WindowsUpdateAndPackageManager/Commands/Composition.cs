@@ -23,7 +23,12 @@ public static class Composition
         services.AddSingleton<IRepoSync>(sp => new RepoSync(sp.GetRequiredService<IRepoClient>(), sp.GetRequiredService<IManifestValidator>(), sp.GetRequiredService<IStateDatabase>(), sp.GetRequiredService<IAuditStore>(), sp.GetRequiredService<ICacheManager>()));
         services.AddSingleton<RollbackManager>();
         services.AddSingleton<IAuditor>(sp => new Auditor(sp.GetRequiredService<IAuditStore>()));
-        services.AddSingleton<IRepoClient>(sp => new GitHubRepoClient());
+        services.AddSingleton<IRepoClient>(sp =>
+        {
+            var http = new HttpClient();
+            var repo = string.IsNullOrWhiteSpace(repositoryUrl) ? "https://github.com/LoopyLuci/WindowsUpdateAndPackageManager" : repositoryUrl!;
+            return new GitHubRepoClient(http, repo);
+        });
         services.AddSingleton<IManifestValidator>(sp => new DefaultManifestValidator());
         services.AddSingleton<ICacheManager>(sp => new DefaultCacheManager(cacheRoot));
         services.AddSingleton<IPolicyEngine>(sp => new AllowlistPolicyEngine());

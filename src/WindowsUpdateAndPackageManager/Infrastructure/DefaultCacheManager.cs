@@ -21,13 +21,18 @@ public sealed class DefaultCacheManager : ICacheManager
     {
         var dir = Path.Combine(_root, $"{packageId}@{version}");
         Directory.CreateDirectory(dir);
+        try
+        {
+            File.WriteAllText(Path.Combine(dir, "package.cache"), string.Empty);
+        }
+        catch { }
         return Task.FromResult(dir);
     }
 
     public Task<bool> IsCachedAsync(string packageId, string version, CancellationToken cancellationToken = default)
     {
-        var dir = Path.Combine(_root, $"{packageId}@{version}");
-        return Task.FromResult(Directory.Exists(dir));
+        var file = Path.Combine(_root, $"{packageId}@{version}", "package.cache");
+        return Task.FromResult(File.Exists(file));
     }
 
     public Task PruneAsync(CancellationToken cancellationToken = default)
