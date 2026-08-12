@@ -15,7 +15,7 @@ public class ReleaseDeploymentTests
         var manifestDir = Path.Combine(repoRoot, "scripts", "deploy", "winget", "winget-pkgs", "LoopyLuci.WindowsUpdatePackageManager");
         if (Directory.Exists(manifestDir)) Directory.Delete(manifestDir, true);
 
-        RunPowerShell(script, "-Tag v0.4.1-test -DryRun -SkipSign -SkipTests -DeployTarget winget", repoRoot);
+        RunPowerShell(script, "-Tag v0.4.1-test -DryRun -SkipSign -SkipTests -SkipCI -DeployTarget winget", repoRoot);
 
         var manifest = Directory.GetFiles(manifestDir, "*.yaml");
         Assert.Single(manifest);
@@ -26,7 +26,7 @@ public class ReleaseDeploymentTests
     {
         var repoRoot = FindRepoRoot();
         var script = Path.Combine(repoRoot, "scripts", "release.ps1");
-        var output = RunPowerShellCapture(script, "-Tag v0.4.1-test -DryRun -SkipSign -SkipTests -DeployTarget chocolatey", repoRoot);
+        var output = RunPowerShellCapture(script, "-Tag v0.4.1-test -DryRun -SkipSign -SkipTests -SkipCI -DeployTarget chocolatey", repoRoot);
         Assert.Contains("choco CLI not found", output);
     }
 
@@ -35,7 +35,7 @@ public class ReleaseDeploymentTests
     {
         var repoRoot = FindRepoRoot();
         var script = Path.Combine(repoRoot, "scripts", "release.ps1");
-        var output = RunPowerShellCapture(script, "-Tag v0.4.1-test -DryRun -SkipSign -SkipTests -DeployTarget feed", repoRoot);
+        var output = RunPowerShellCapture(script, "-Tag v0.4.1-test -DryRun -SkipSign -SkipTests -SkipCI -DeployTarget feed", repoRoot);
         Assert.Contains("WUPM_FEED_URL", output);
     }
 

@@ -72,8 +72,13 @@ function Deploy-Chocolatey {
 
 Push-Location 'D:\Projects\WindowsUpdatePackageManager'
 try {
-  & '.\scripts\ci.ps1' -Configuration $Configuration -SkipTests:$SkipTests -SkipSign:$SkipSign `
-    -SigningClientId $SigningClientId -SigningTenantId $SigningTenantId -SigningSecret $SigningSecret -KeyVaultUrl $KeyVaultUrl
+  if (-not $SkipCI) {
+    & '.\\scripts\\ci.ps1' -Configuration $Configuration -SkipTests:$SkipTests -SkipSign:$SkipSign `
+      -SigningClientId $SigningClientId -SigningTenantId $SigningTenantId -SigningSecret $SigningSecret -KeyVaultUrl $KeyVaultUrl
+  }
+  else {
+    Write-Host 'Skipping CI because -SkipCI was set.'
+  }
 
   Write-Host '--- GitHub Release ---'
   $assets = @('wupm-cli.zip','wupm-api.zip','sbom.json')
