@@ -14,7 +14,9 @@ param(
   [string]$SigningSecret,
   [string]$KeyVaultUrl,
   [string]$Repo = 'LoopyLuci/WindowsUpdatePackageManager',
-  [string]$DeployConfig
+  [string]$DeployConfig,
+  [ValidateSet('winget','chocolatey','feed')]
+  [string]$DeployTarget
 )
 
 Set-StrictMode -Version Latest
@@ -25,43 +27,47 @@ if (-not (Get-Command gh -ErrorAction SilentlyContinue)) { throw 'gh CLI is requ
 function Deploy-Chocolatey {
   param([string]$Tag, [string]$Repo)
   $version = $Tag.TrimStart('v')
-  $nuspec = Join-Path $PWD.Path "wupm.cli.$version.nuspec"
-  $nupkg = Join-Path $PWD.Path "wupm.cli.$version.nupkg"
-  $zip = Join-Path $PWD.Path "wupm-cli.zip"
-  if (-not (Test-Path $zip)) { throw "wupm-cli.zip not found for Chocolatey packaging." }
+  $zip = Join-Path $PWD.Path 'wupm-cli.zip'
+  if (-not (Test-Path $zip)) { throw 'wupm-cli.zip not found for Chocolatey packaging.' }
 
-  $nuspecContent = @"
-<?xml version="1.0" encoding="utf-8"?>
-<package xmlns="http://schemas.microsoft.com/packaging/2015/06/nuspec.xsd">
-  <metadata>
-    <id>wupm.cli</id>
-    <version>$version</version>
-    <authors>LoopyLuci</authors>
-    <owners>LoopyLuci</owners>
-    <requireLicenseAcceptance>false</requireLicenseAcceptance>
-    <description>Windows Update Package Manager CLI</description>
-    <tags>windows update package manager wupm</tags>
-  </metadata>
-  <files>
-    <file src="$zip" target="tools\wupm-cli.zip" />
-  </files>
-</package>
-"@
-  Set-Content -Path $nuspec -Value $nuspecContent -Encoding UTF8
+  $packDir = Join-Path $PWD.Path 'choco-pack'
+  $toolsDir = Join-Path $packDir 'tools'
+  if (Test-Path $packDir) { Remove-Item $packDir -Recurse -Force }
+  New-Item -ItemType Directory -Path $toolsDir | Out-Null
+  Expand-Archive -Path $zip -DestinationPath $toolsDir -Force
+  Copy-Item (Join-Path $PWD.Path 'scripts\deploy\chocolatey\tools\install.ps1') (Join-Path $toolsDir 'install.ps1') -Force
+
+  $nuspec = Join-Path $packDir 'wupm-cli.nuspec'
+  $nuspecTemplate = Join-Path $PWD.Path 'scripts\deploy\chocolatey\tools\wupm-cli.nuspec'
+  if (-not (Test-Path $nuspecTemplate)) { throw 'Chocolatey nuspec template not found.' }
+  (Get-Content $nuspecTemplate) -replace '__VERSION__', $version | Set-Content -Path $nuspec -Encoding UTF8
+
   if (Get-Command choco -ErrorAction SilentlyContinue) {
-    choco pack $nuspec --out $PWD.Path
-    if ($LASTEXITCODE -ne 0) { throw 'choco pack failed.' }
-    if ($env:CHOCO_API_KEY) {
-      choco push $nupkg --source https://push.chocolatey.org/ --api-key $env:CHOCO_API_KEY --force
-      if ($LASTEXITCODE -ne 0) { Write-Warning 'choco push failed; check CHOCO_API_KEY.' }
+    Push-Location $packDir
+    try {
+      choco pack 'wupm-cli.nuspec' --out $packDir
+      if ($LASTEXITCODE -ne 0) { throw 'choco pack failed.' }
+      $nupkg = Get-ChildItem $packDir -Filter '*.nupkg' | Select-Object -First 1
+      if ($nupkg) {
+        Write-Host "Created Chocolatey package: $($nupkg.FullName)"
+        if ($env:CHOCO_API_KEY) {
+          choco push $nupkg.FullName --source 'https://push.chocolatey.org/' --api-key $env:CHOCO_API_KEY --force
+          if ($LASTEXITCODE -ne 0) { Write-Warning 'choco push failed; check CHOCO_API_KEY.' }
+        }
+        else {
+          Write-Host 'CHOCO_API_KEY not set; skipping choco push.'
+        }
+      }
     }
-    else {
-      Write-Host 'CHOCO_API_KEY not set; skipping choco push.'
+    finally {
+      Pop-Location
     }
   }
   else {
     Write-Warning 'choco CLI not found; skipping Chocolatey packaging.'
   }
+
+  if (Test-Path $packDir) { Remove-Item $packDir -Recurse -Force }
 }
 
 Push-Location 'D:\Projects\WindowsUpdatePackageManager'
@@ -121,8 +127,11 @@ $changes
       Write-Warning "Failed to parse deployment config: $_"
     }
   }
+  if (-not [string]::IsNullOrWhiteSpace($DeployTarget)) {
+    $deployTarget = $DeployTarget
+  }
   if ([string]::IsNullOrWhiteSpace($deployTarget)) {
-    Write-Host 'No deployment target configured. Set WUPM_DEPLOY_TARGET or pass -DeployConfig.'
+    Write-Host 'No deployment target configured. Set WUPM_DEPLOY_TARGET or pass -DeployTarget.'
   }
   else {
     switch ($deployTarget.ToLowerInvariant()) {
@@ -135,7 +144,17 @@ $changes
       }
       'feed' {
         Write-Host "Deploying to internal feed for tag $Tag ..."
-        # TODO: implement internal artifact feed upload
+        $feedUrl = $env:WUPM_FEED_URL
+        $feedApiKey = $env:WUPM_FEED_API_KEY
+        if ([string]::IsNullOrWhiteSpace($feedUrl) -or [string]::IsNullOrWhiteSpace($feedApiKey)) {
+          Write-Warning 'WUPM_FEED_URL and WUPM_FEED_API_KEY must be set for internal feed deployment.'
+          return
+        }
+        $zip = Join-Path $PWD.Path 'wupm-cli.zip'
+        if (-not (Test-Path $zip)) { throw 'wupm-cli.zip not found for feed deployment.' }
+        # Generic NuGet v3 push placeholder
+        $response = Invoke-RestMethod -Uri $feedUrl -Method Put -InFile $zip -ContentType 'application/octet-stream' -Headers @{ 'X-Api-Key' = $feedApiKey } -ErrorAction Stop
+        Write-Host "Internal feed upload response: $($response | ConvertTo-Json -Compress)"
       }
       default {
         Write-Host "Unknown deployment target: $deployTarget"

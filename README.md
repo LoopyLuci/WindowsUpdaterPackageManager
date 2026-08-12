@@ -146,23 +146,38 @@ If no certificate is configured, the script skips signing with a warning.
 
 ### Deployment automation
 
-`scripts/release.ps1` includes an optional deployment hook after release creation. Currently this prints a placeholder; to enable a real target, add one of:
+`scripts/release.ps1` includes an optional deployment hook after release creation.
 
-- Winget manifest submission
-- Chocolatey package push
-- Internal artifact feed upload
+Supported targets:
+- `chocolatey`: builds `wupm-cli.nupkg` from `wupm-cli.zip` with an install script, then optionally pushes to Chocolatey.org when `CHOCO_API_KEY` is set.
+- `feed`: uploads `wupm-cli.zip` to an internal artifact feed when `WUPM_FEED_URL` and `WUPM_FEED_API_KEY` are set.
+- `winget`: placeholder for future manifest submission.
 
-Example hook target location: `scripts/release.ps1` under `--- Optional deployment ---`.
+Example usage:
+```powershell
+pwsh ./scripts/release.ps1 -Tag v0.2.0 -DeployTarget chocolatey
+pwsh ./scripts/release.ps1 -Tag v0.2.0 -DeployTarget feed
+```
+
+### Chocolatey quick-install
+
+Once published to Chocolatey.org:
+```powershell
+choco install wupm-cli
+```
 
 ### Scheduled-task CI runner
 
 On Windows, you can run CI on a schedule without GitHub Actions by creating a Scheduled Task that runs:
-
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File D:\Projects\WindowsUpdatePackageManager\scripts\ci.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File D:\Projects\WindowsUpdatePackageManager\scripts\ci.ps1 -AsHook
 ```
 
 Set it to run on your desired cadence, e.g., daily at 09:00. Capture output to a log file for audit.
+
+### Post-commit hook status output
+
+When installed via `scripts/install-hook.ps1`, the post-commit hook writes CI results to `.git/hooks/output/` so commit status is visible without GitHub Actions.
 
 ### Authenticode signing
 

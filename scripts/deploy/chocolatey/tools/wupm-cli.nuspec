@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2015/06/nuspec.xsd">
+  <metadata>
+    <id>wupm-cli</id>
+    <version>__VERSION__</version>
+    <authors>LoopyLuci</authors>
+    <owners>LoopyLuci</owners>
+    <description>Windows Update Package Manager (WUPM) CLI</description>
+    <tags>windows update package manager wupm cli</tags>
+    <license type="expression">MIT</license>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <projectUrl>https://github.com/LoopyLuci/WindowsUpdateAndPackageManager</projectUrl>
+    <copyright>Copyright (c) 2026 LoopyLuci</copyright>
+    <releaseNotes>Automated release via release.ps1</releaseNotes>
+  </metadata>
+  <files>
+    <file src="tools\**\*" target="tools" />
+  </files>
+</package>
