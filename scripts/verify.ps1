@@ -3,7 +3,8 @@ $ErrorActionPreference = 'Stop'
 
 param(
     [ValidateSet('Debug', 'Release')]
-    [string]$Configuration = 'Release'
+    [string]$Configuration = 'Release',
+    [switch]$SkipTests
 )
 
 $repoRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
@@ -12,41 +13,21 @@ Push-Location $repoRoot
 function Write-Step([string]$text) {
     Write-Host "`n[STEP] $text" -ForegroundColor Cyan
 }
-
 function Write-Ok([string]$text) {
     Write-Host "[OK] $text" -ForegroundColor Green
 }
-
 function Write-Fail([string]$text) {
     Write-Host "[FAIL] $text" -ForegroundColor Red
 }
 
 try {
-    Write-Step 'Verifying dotnet CLI'
-    $dotnet = dotnet --version
-    Write-Ok "dotnet $dotnet"
-
-    Write-Step 'Restoring NuGet packages'
-    dotnet restore
-    Write-Ok 'Restore attempted'
-
-    Write-Step 'Building solution'
-    $buildOutput = dotnet build --configuration $Configuration --no-restore 2>&1
-    $buildOutput | ForEach-Object { Write-Host $_ }
+    Write-Step 'Running local CI'
+    powershell -NoProfile -ExecutionPolicy Bypass -File '.\scripts\ci.ps1' -Configuration $Configuration -SkipTests:$SkipTests
     if ($LASTEXITCODE -ne 0) {
-        Write-Fail "Build failed with exit code $LASTEXITCODE"
+        Write-Fail "CI failed with exit code $LASTEXITCODE"
         exit $LASTEXITCODE
     }
-    Write-Ok 'Build succeeded'
-
-    Write-Step 'Running xUnit tests'
-    $testOutput = dotnet test --configuration $Configuration --no-build --verbosity normal 2>&1
-    $testOutput | ForEach-Object { Write-Host $_ }
-    if ($LASTEXITCODE -ne 0) {
-        Write-Fail "Tests failed with exit code $LASTEXITCODE"
-        exit $LASTEXITCODE
-    }
-    Write-Ok 'Tests passed'
+    Write-Ok 'CI passed'
 
     Write-Step 'Validating repo manifest'
     $manifestPath = Join-Path $repoRoot 'repo/index.json'

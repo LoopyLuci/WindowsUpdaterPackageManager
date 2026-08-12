@@ -96,11 +96,24 @@ pwsh ./scripts/ci.ps1
 # Run CI without tests
 pwsh ./scripts/ci.ps1 -SkipTests
 
+# Install post-commit hook to run CI automatically after each commit
+pwsh ./scripts/install-hook.ps1
+
 # Create/update a GitHub release for a tag
 pwsh ./scripts/release.ps1 -Tag v0.4.0
 ```
 
 `scripts/ci.ps1` performs restore, build, test, publish, zip, SBOM generation, and optional signing. `scripts/release.ps1` runs CI, then creates or updates the GitHub Release assets with `wupm-cli.zip`, `wupm-api.zip`, and `sbom.json`.
+
+### Local publish workflow
+
+```bash
+# Build and package locally
+pwsh ./scripts/ci.ps1
+
+# Or run the release script directly
+pwsh ./scripts/release.ps1 -Tag v0.2.0-test --dry-run
+```
 
 ## Releases
 

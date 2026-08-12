@@ -8,6 +8,7 @@ param(
   [switch]$SkipTests,
   [switch]$SkipPublish,
   [switch]$SkipSign,
+  [switch]$AsHook,
   [string]$SigningClientId,
   [string]$SigningTenantId,
   [string]$SigningSecret,
@@ -16,6 +17,15 @@ param(
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
+
+function Fail-Fast([string]$message) {
+  Write-Host "CI ABORT: $message"
+  exit 1
+}
+
+if (-not (Get-Command dotnet -ErrorAction SilentlyContinue)) { Fail-Fast "dotnet SDK not found." }
+if (-not (Get-Command gh -ErrorAction SilentlyContinue)) { Fail-Fast "gh CLI not found." }
+
 Push-Location 'D:\Projects\WindowsUpdatePackageManager'
 try {
   Write-Host '--- Restore ---'
@@ -23,13 +33,15 @@ try {
 
   Write-Host '--- Build ---'
   dotnet build WindowsUpdateAndPackageManager.sln --no-restore --configuration $Configuration
+  if ($LASTEXITCODE -ne 0) { Fail-Fast "Build failed." }
 
   if (-not $SkipTests) {
     Write-Host '--- Test ---'
     dotnet test tests/WindowsUpdateAndPackageManager.Tests/WindowsUpdateAndPackageManager.Tests.csproj --no-build --configuration $Configuration --verbosity normal
+    if ($LASTEXITCODE -ne 0) { Fail-Fast "Tests failed." }
   }
 
-  if (-not $SkipPublish) {
+  if (-not $SkipPublish -and -not $AsHook) {
     Write-Host '--- Publish ---'
     $cliOut = Join-Path $OutputDir 'cli'
     $apiOut = Join-Path $OutputDir 'api'
