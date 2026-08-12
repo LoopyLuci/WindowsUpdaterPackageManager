@@ -40,7 +40,13 @@ Artifacts:
     Write-Host 'DryRun enabled; skipping gh release create/upload.'
   }
   else {
-    if (-not (gh release view $Tag --repo $Repo --json url 2>$null | Select-String -Pattern 'url')) {
+    $releaseJson = ''
+    try {
+      $releaseJson = gh release view $Tag --repo $Repo --json url 2>&1 | Out-String
+    } catch {
+      # ignore missing release
+    }
+    if ($releaseJson -notmatch 'url') {
       gh release create $Tag --repo $Repo --title "WUPM $Tag" --notes $notes @assets
     }
     else {
