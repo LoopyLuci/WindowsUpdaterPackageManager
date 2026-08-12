@@ -113,7 +113,10 @@ $changes
   }
 
   Write-Host '--- Optional deployment ---'
-  $deployTarget = $env:WUPM_DEPLOY_TARGET
+  $deployTarget = $DeployTarget
+  if ([string]::IsNullOrWhiteSpace($deployTarget)) {
+    $deployTarget = $env:WUPM_DEPLOY_TARGET
+  }
   $deployConfigPath = $env:WUPM_DEPLOY_CONFIG
   if (-not [string]::IsNullOrWhiteSpace($DeployConfig) -and (Test-Path $DeployConfig)) {
     $deployConfigPath = $DeployConfig
@@ -125,9 +128,6 @@ $changes
     } catch {
       Write-Warning "Failed to parse deployment config: $_"
     }
-  }
-  if (-not [string]::IsNullOrWhiteSpace($DeployTarget)) {
-    $deployTarget = $DeployTarget
   }
   if ([string]::IsNullOrWhiteSpace($deployTarget)) {
     Write-Host 'No deployment target configured. Set WUPM_DEPLOY_TARGET or pass -DeployTarget.'
