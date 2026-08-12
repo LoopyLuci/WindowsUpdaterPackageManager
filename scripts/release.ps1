@@ -53,6 +53,9 @@ Artifacts:
       foreach ($a in $assets) { if (Test-Path $a) { gh release upload $Tag --repo $Repo $a --clobber } }
     }
   }
+
+  Write-Host '--- Optional deployment ---'
+  Write-Host 'No deployment target configured. Hook Winget/Chocolatey/internal feed here if needed.'
 }
 finally {
   Pop-Location
