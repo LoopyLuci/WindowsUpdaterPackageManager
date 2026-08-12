@@ -71,6 +71,9 @@ try {
 
   Write-Host '--- GitHub Release ---'
   $assets = @('wupm-cli.zip','wupm-api.zip','sbom.json')
+  $parent = git rev-parse --verify -q $Tag^ 2>$null
+  $range = if ($parent) { "$parent..$Tag" } else { $Tag }
+  $changes = git log --date=short --pretty=format:'- %ad %s' $range 2>$null
   $notes = @"
 Release $Tag
 
@@ -80,7 +83,7 @@ Artifacts:
 - sbom.json
 
 Changes:
-$(git log --date=short --pretty=format:'- %ad %s' $(git rev-parse --verify -q $Tag^ 2>$null)..$Tag 2>$null)
+$changes
 "@
   if ($DryRun) {
     Write-Host 'DryRun enabled; skipping gh release create/upload.'
