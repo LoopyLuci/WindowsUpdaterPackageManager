@@ -254,3 +254,4 @@ wupm-cli.zip
 wupm-api.zip
 sbom.json
 **/obj/
+scripts/deploy/winget/winget-pkgs/**/*.yaml
