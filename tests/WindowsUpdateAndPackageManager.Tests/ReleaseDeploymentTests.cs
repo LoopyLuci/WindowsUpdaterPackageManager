@@ -88,6 +88,11 @@ public class ReleaseDeploymentTests
         var stdout = p.StandardOutput.ReadToEnd();
         var stderr = p.StandardError.ReadToEnd();
         p.WaitForExit();
+        if (p.ExitCode != 0)
+        {
+            Console.WriteLine("STDOUT:\n" + stdout);
+            Console.WriteLine("STDERR:\n" + stderr);
+        }
         Assert.Equal(0, p.ExitCode);
     }
 
