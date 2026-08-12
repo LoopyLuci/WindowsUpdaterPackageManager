@@ -16,8 +16,14 @@ $ErrorActionPreference = 'Stop'
 $taskName = $Tag
 
 if ($Uninstall) {
-  Unregister-ScheduledTask -TaskName $taskName -Confirm:$false
-  Write-Host "Uninstalled scheduled task '$taskName'."
+  $existing = Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
+  if ($existing) {
+    Unregister-ScheduledTask -TaskName $taskName -Confirm:$false
+    Write-Host "Uninstalled scheduled task '$taskName'."
+  }
+  else {
+    Write-Host "Scheduled task '$taskName' not found; nothing to uninstall."
+  }
   return
 }
 
@@ -27,6 +33,12 @@ $action = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument @(
   '-File','D:\Projects\WindowsUpdatePackageManager\scripts\ci.ps1',
   '-AsHook'
 ) -WorkingDirectory 'D:\Projects\WindowsUpdatePackageManager'
+
+if (-not (Test-Path (Split-Path $LogPath))) {
+  New-Item -ItemType Directory -Path (Split-Path $LogPath) -Force | Out-Null
+}
+$logArg = "> '$LogPath' 2>&1"
+$action.Arguments = ($action.Arguments -join ' ') + ' ' + $logArg
 
 if ($Frequency -eq 'Daily') {
   $trigger = New-ScheduledTaskTrigger -Daily -At $At

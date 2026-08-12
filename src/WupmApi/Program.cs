@@ -4,21 +4,16 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Hosting.WindowsServices;
 using Serilog;
 using WindowsUpdateAndPackageManager.Commands;
 using WindowsUpdateAndPackageManager.Core;
 using WindowsUpdateAndPackageManager.Models;
 
-var logger = new LoggerConfiguration()
-    .Enrich.FromLogContext()
-    .WriteTo.Console()
-    .WriteTo.File("logs/wupm-api-.log", rollingInterval: RollingInterval.Day)
-    .CreateLogger();
-
-Log.Logger = logger;
-
 var builder = WebApplication.CreateBuilder(args);
 builder.Host.UseSerilog();
+builder.Host.UseWindowsService();
 Composition.RegisterInto(builder.Services, builder.Environment.ContentRootPath);
 
 var app = builder.Build();

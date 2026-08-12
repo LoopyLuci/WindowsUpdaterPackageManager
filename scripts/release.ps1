@@ -13,7 +13,8 @@ param(
   [string]$SigningTenantId,
   [string]$SigningSecret,
   [string]$KeyVaultUrl,
-  [string]$Repo = 'LoopyLuci/WindowsUpdateAndPackageManager'
+  [string]$Repo = 'LoopyLuci/WindowsUpdatePackageManager',
+  [string]$DeployConfig
 )
 
 Set-StrictMode -Version Latest
@@ -56,8 +57,20 @@ Artifacts:
 
   Write-Host '--- Optional deployment ---'
   $deployTarget = $env:WUPM_DEPLOY_TARGET
+  $deployConfigPath = $env:WUPM_DEPLOY_CONFIG
+  if (-not [string]::IsNullOrWhiteSpace($DeployConfig) -and (Test-Path $DeployConfig)) {
+    $deployConfigPath = $DeployConfig
+  }
+  if (-not [string]::IsNullOrWhiteSpace($deployConfigPath) -and (Test-Path $deployConfigPath)) {
+    try {
+      $deployConfig = Get-Content -Raw -Path $deployConfigPath | ConvertFrom-Json
+      if ($deployConfig.target) { $deployTarget = $deployConfig.target }
+    } catch {
+      Write-Warning "Failed to parse deployment config: $_"
+    }
+  }
   if ([string]::IsNullOrWhiteSpace($deployTarget)) {
-    Write-Host 'No deployment target configured. Set WUPM_DEPLOY_TARGET to enable deployment.'
+    Write-Host 'No deployment target configured. Set WUPM_DEPLOY_TARGET or pass -DeployConfig.'
   }
   else {
     switch ($deployTarget.ToLowerInvariant()) {
