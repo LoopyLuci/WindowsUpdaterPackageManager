@@ -13,7 +13,7 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
-if (-not (Test-Path $BinaryPath)) {
+if ($Action -ne 'status' -and -not (Test-Path $BinaryPath)) {
   throw "WupmApi executable not found at $BinaryPath. Run .\scripts\ci.ps1 to publish first."
 }
 
