@@ -78,7 +78,7 @@ public class ReleaseDeploymentTests
         {
             FileName = "powershell",
             Arguments = $"-NoProfile -ExecutionPolicy Bypass -File \"{scriptPath}\" {args}",
-            WorkingDirectory = workingDirectory,
+            WorkingDirectory = "D:\\Projects\\WindowsUpdatePackageManager",
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             UseShellExecute = false
@@ -102,7 +102,7 @@ public class ReleaseDeploymentTests
         {
             FileName = "powershell",
             Arguments = $"-NoProfile -ExecutionPolicy Bypass -File \"{scriptPath}\" {args}",
-            WorkingDirectory = workingDirectory,
+            WorkingDirectory = "D:\\Projects\\WindowsUpdatePackageManager",
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             UseShellExecute = false
