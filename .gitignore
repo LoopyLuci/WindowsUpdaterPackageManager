@@ -248,3 +248,5 @@ $RECYCLE.BIN/
 
 # WUPM
 .wupm/
+tests/**/TestResults/
+test-results/
