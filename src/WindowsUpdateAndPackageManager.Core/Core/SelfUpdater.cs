@@ -63,7 +63,6 @@ public sealed class SelfUpdater : ISelfUpdater
             var newExe = FindExecutable(extractDir);
             if (newExe is null)
             {
-                Console.WriteLine("Self-update failed: no executable found in downloaded asset.");
                 return false;
             }
 
@@ -93,7 +92,6 @@ Remove-Item $backup -Force
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Self-update failed: {ex.Message}");
             return false;
         }
     }

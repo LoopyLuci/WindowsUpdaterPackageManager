@@ -104,7 +104,7 @@ pwsh ./scripts/release.ps1 -Tag v0.4.0
 
 ## Releases
 
-Pushing a tag like `v0.2.0` triggers the release workflow, which builds and publishes `wupm-cli.zip` and `wupm-api.zip` as GitHub Release assets.
+Pushing a tag like `v0.2.0` triggers the release script, which builds and publishes `wupm-cli.zip` and `wupm-api.zip` as GitHub Release assets.
 
 ### Delta packaging
 

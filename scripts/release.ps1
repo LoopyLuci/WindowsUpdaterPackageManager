@@ -8,6 +8,7 @@ param(
   [string]$Configuration = 'Release',
   [switch]$SkipTests,
   [switch]$SkipSign,
+  [switch]$DryRun,
   [string]$SigningClientId,
   [string]$SigningTenantId,
   [string]$SigningSecret,
@@ -35,11 +36,16 @@ Artifacts:
 - wupm-api.zip
 - sbom.json
 "@
-  if (-not (gh release view $Tag --repo $Repo --json url 2>$null | Select-String -Pattern 'url')) {
-    gh release create $Tag --repo $Repo --title "WUPM $Tag" --notes $notes @assets
+  if ($DryRun) {
+    Write-Host 'DryRun enabled; skipping gh release create/upload.'
   }
   else {
-    foreach ($a in $assets) { if (Test-Path $a) { gh release upload $Tag --repo $Repo $a --clobber } }
+    if (-not (gh release view $Tag --repo $Repo --json url 2>$null | Select-String -Pattern 'url')) {
+      gh release create $Tag --repo $Repo --title "WUPM $Tag" --notes $notes @assets
+    }
+    else {
+      foreach ($a in $assets) { if (Test-Path $a) { gh release upload $Tag --repo $Repo $a --clobber } }
+    }
   }
 }
 finally {
