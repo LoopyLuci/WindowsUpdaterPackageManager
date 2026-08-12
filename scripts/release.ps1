@@ -74,8 +74,8 @@ try {
   $parent = git rev-parse --verify -q $Tag^ 2>$null
   $range = if ($parent) { "$parent..$Tag" } else { $Tag }
   $changes = ''
-  if (git cat-file -t $Tag 2>$null) {
-    $changes = git log --date=short --pretty=format:'- %ad %s' $range 2>$null
+  if (git cat-file -t $Tag 2>&1 | Out-Null) {
+    $changes = git log --date=short --pretty=format:'- %ad %s' $range 2>&1 | Out-String
   }
   if (-not $changes) { $changes = '- Automated release via release.ps1' }
   $notes = @"
