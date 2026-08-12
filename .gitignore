@@ -253,3 +253,4 @@ test-results/
 wupm-cli.zip
 wupm-api.zip
 sbom.json
+**/obj/
