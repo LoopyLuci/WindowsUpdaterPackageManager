@@ -85,6 +85,8 @@ public class ReleaseDeploymentTests
         };
         using var p = Process.Start(psi);
         Assert.NotNull(p);
+        var stdout = p.StandardOutput.ReadToEnd();
+        var stderr = p.StandardError.ReadToEnd();
         p.WaitForExit();
         Assert.Equal(0, p.ExitCode);
     }
