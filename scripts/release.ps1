@@ -15,7 +15,6 @@ param(
   [string]$KeyVaultUrl,
   [string]$Repo = 'LoopyLuci/WindowsUpdatePackageManager',
   [string]$DeployConfig,
-  [ValidateSet('winget','chocolatey','feed')]
   [string]$DeployTarget
 )
 
