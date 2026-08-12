@@ -86,9 +86,29 @@ pwsh ./scripts/release.ps1 -Tag v0.4.0
 
 `wupm self-update` uses GitHub’s API and asset downloads. On this environment, unauthenticated requests may be blocked. To validate self-update on a Windows machine:
 
-1. Set `GITHUB_TOKEN` with `contents:read` and `packages:read` permissions.
-2. Run `wupm self-update --tag v0.4.0`.
-3. The updater replaces the current executable and relaunches.
+1. Ensure `gh` is authenticated: `gh auth status`
+2. Set `GITHUB_TOKEN` with `contents:read` and `packages:read` permissions:
+   ```powershell
+   $env:GITHUB_TOKEN = '<token>'
+   ```
+3. Publish a test release:
+   ```powershell
+   pwsh ./scripts/release.ps1 -Tag v0.4.0-test -DryRun:$false
+   ```
+4. Run self-update against the test tag:
+   ```powershell
+   dotnet run --project src/Wupm.Cli -- self-update --tag v0.4.0-test
+   ```
+   Or with explicit token:
+   ```powershell
+   dotnet run --project src/Wupm.Cli -- self-update --tag v0.4.0-test --token $env:GITHUB_TOKEN
+   ```
+5. Verify the updater replaced the executable and relaunched.
+
+If self-update fails:
+- Check `GITHUB_TOKEN` is set in the same session as the CLI
+- Ensure the test release has `wupm-cli.zip` attached
+- Review the updater PowerShell script in `%TEMP%\wupm-selfupdate-*\apply-update.ps1`
 
 ## Code-signing rehearsal
 

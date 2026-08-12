@@ -22,6 +22,48 @@ $ErrorActionPreference = 'Stop'
 if (-not $Tag -match '^v\d+\.\d+\.\d+') { throw "Tag must match semver, got '$Tag'." }
 if (-not (Get-Command gh -ErrorAction SilentlyContinue)) { throw 'gh CLI is required for release publishing.' }
 
+function Deploy-Chocolatey {
+  param([string]$Tag, [string]$Repo)
+  $version = $Tag.TrimStart('v')
+  $nuspec = Join-Path $PWD.Path "wupm.cli.$version.nuspec"
+  $nupkg = Join-Path $PWD.Path "wupm.cli.$version.nupkg"
+  $zip = Join-Path $PWD.Path "wupm-cli.zip"
+  if (-not (Test-Path $zip)) { throw "wupm-cli.zip not found for Chocolatey packaging." }
+
+  $nuspecContent = @"
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2015/06/nuspec.xsd">
+  <metadata>
+    <id>wupm.cli</id>
+    <version>$version</version>
+    <authors>LoopyLuci</authors>
+    <owners>LoopyLuci</owners>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>Windows Update Package Manager CLI</description>
+    <tags>windows update package manager wupm</tags>
+  </metadata>
+  <files>
+    <file src="$zip" target="tools\wupm-cli.zip" />
+  </files>
+</package>
+"@
+  Set-Content -Path $nuspec -Value $nuspecContent -Encoding UTF8
+  if (Get-Command choco -ErrorAction SilentlyContinue) {
+    choco pack $nuspec --out $PWD.Path
+    if ($LASTEXITCODE -ne 0) { throw 'choco pack failed.' }
+    if ($env:CHOCO_API_KEY) {
+      choco push $nupkg --source https://push.chocolatey.org/ --api-key $env:CHOCO_API_KEY --force
+      if ($LASTEXITCODE -ne 0) { Write-Warning 'choco push failed; check CHOCO_API_KEY.' }
+    }
+    else {
+      Write-Host 'CHOCO_API_KEY not set; skipping choco push.'
+    }
+  }
+  else {
+    Write-Warning 'choco CLI not found; skipping Chocolatey packaging.'
+  }
+}
+
 Push-Location 'D:\Projects\WindowsUpdatePackageManager'
 try {
   & '.\scripts\ci.ps1' -Configuration $Configuration -SkipTests:$SkipTests -SkipSign:$SkipSign `
@@ -36,6 +78,9 @@ Artifacts:
 - wupm-cli.zip
 - wupm-api.zip
 - sbom.json
+
+Changes:
+$(git log --date=short --pretty=format:'- %ad %s' $(git describe --tags --always $Tag^)..$Tag 2>$null)
 "@
   if ($DryRun) {
     Write-Host 'DryRun enabled; skipping gh release create/upload.'
@@ -79,8 +124,7 @@ Artifacts:
         # TODO: implement winget manifest submission
       }
       'chocolatey' {
-        Write-Host "Deploying to Chocolatey for tag $Tag ..."
-        # TODO: implement chocolatey package push
+        Deploy-Chocolatey -Tag $Tag -Repo $Repo
       }
       'feed' {
         Write-Host "Deploying to internal feed for tag $Tag ..."
