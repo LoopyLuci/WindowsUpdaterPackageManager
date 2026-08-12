@@ -223,6 +223,20 @@ Unsigned packages are blocked by default unless `AllowUntrusted` is explicitly e
 
 See `CONTRIBUTING.md`.
 
+## Windows Service wrapper validation
+
+`scripts/service-wupm-api.ps1` supports `install`, `start`, `stop`, `uninstall`, and `status` actions. `install`, `start`, `stop`, and `uninstall` require Administrator privileges. `status` works without admin rights.
+
+Validation steps:
+1. Publish API binaries: `pwsh ./scripts/ci.ps1 -SkipTests`
+2. Install service: `pwsh ./scripts/service-wupm-api.ps1 -Action install`
+3. Start service: `pwsh ./scripts/service-wupm-api.ps1 -Action start`
+4. Check status: `pwsh ./scripts/service-wupm-api.ps1 -Action status`
+5. Stop service: `pwsh ./scripts/service-wupm-api.ps1 -Action stop`
+6. Uninstall service: `pwsh ./scripts/service-wupm-api.ps1 -Action uninstall`
+
+If installation fails, verify `WUPM_API_KEY` and mTLS settings are configured before starting the service.
+
 ## Repository Setup
 
 Recommended `main` branch protection:
