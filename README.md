@@ -151,7 +151,7 @@ If no certificate is configured, the script skips signing with a warning.
 Supported targets:
 - `chocolatey`: builds `wupm-cli.nupkg` from `wupm-cli.zip` with an install script, then optionally pushes to Chocolatey.org when `CHOCO_API_KEY` is set.
 - `feed`: uploads `wupm-cli.zip` to an internal artifact feed when `WUPM_FEED_URL` and `WUPM_FEED_API_KEY` are set.
-- `winget`: placeholder for future manifest submission.
+- `winget`: generates a versioned manifest under `scripts/deploy/winget/winget-pkgs/LoopyLuci.WindowsUpdatePackageManager/`.
 
 Example usage:
 ```powershell
@@ -161,12 +161,37 @@ pwsh ./scripts/release.ps1 -Tag v0.2.0 -DeployTarget feed
 
 ### Chocolatey quick-install
 
-Once published to Chocolatey.org:
+If published to Chocolatey.org:
 ```powershell
 choco install wupm-cli
 ```
 
-### Scheduled-task CI runner
+Manual fallback:
+```powershell
+choco install wupm-cli -Source https://push.chocolatey.org/
+```
+
+If you maintain your own feed:
+```powershell
+choco install wupm-cli -Source https://your-feed.example.com/v3/index.json
+```
+
+### Winget manifest
+
+Generate a versioned manifest with:
+```powershell
+pwsh ./scripts/release.ps1 -Tag v0.2.0 -DryRun -DeployTarget winget
+```
+
+The manifest is written to:
+- `scripts/deploy/winget/winget-pkgs/LoopyLuci.WindowsUpdatePackageManager/<version>.yaml`
+
+Validate syntax with:
+```powershell
+winget validate <manifest>
+```
+
+Commit the manifest under `winget-pkgs/` for submission to the Winget repository.
 
 On Windows, you can run CI on a schedule without GitHub Actions by creating a Scheduled Task that runs:
 ```powershell

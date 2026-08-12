@@ -135,8 +135,39 @@ $changes
   else {
     switch ($deployTarget.ToLowerInvariant()) {
       'winget' {
-        Write-Host "Deploying to Winget manifest for tag $Tag ..."
-        # TODO: implement winget manifest submission
+        Write-Host "Generating Winget manifest for tag $Tag ..."
+        $version = $Tag.TrimStart('v')
+        $wingetDir = Join-Path $PWD.Path 'scripts/deploy/winget/winget-pkgs/LoopyLuci.WindowsUpdatePackageManager'
+        if (-not (Test-Path $wingetDir)) { New-Item -ItemType Directory -Path $wingetDir | Out-Null }
+        $manifest = Join-Path $wingetDir "$version.yaml"
+        $zip = Join-Path $PWD.Path 'wupm-cli.zip'
+        if (-not (Test-Path $zip)) { throw 'wupm-cli.zip not found for Winget manifest generation.' }
+        $sha = (Get-FileHash -Path $zip -Algorithm SHA256).Hash.ToLowerInvariant()
+        $manifestContent = @"
+PackageIdentifier: LoopyLuci.WindowsUpdatePackageManager
+PackageVersion: $version
+PackageName: Windows Update Package Manager
+Publisher: LoopyLuci
+License: MIT
+ShortDescription: Windows Update Package Manager CLI
+PackageUrl: https://github.com/LoopyLuci/WindowsUpdateAndPackageManager/releases/tag/$Tag
+Installers:
+  - Architecture: x64
+    InstallerType: zip
+    InstallerUrl: https://github.com/LoopyLuci/WindowsUpdateAndPackageManager/releases/download/$Tag/wupm-cli.zip
+    InstallerSha256: $sha
+    NestedInstallerType: exe
+    NestedInstallerPath: Wupm.Cli.exe
+    NestedInstallerFiles:
+      - RelativeFilePath: Wupm.Cli.exe
+    Commands:
+      - wupm
+ManifestType: installer
+ManifestVersion: 1.6.0
+"@
+        Set-Content -Path $manifest -Value $manifestContent -Encoding UTF8
+        Write-Host "Wrote Winget manifest to $manifest"
+        Write-Host 'Run `winget validate <manifest>` to verify syntax, then commit under `winget-pkgs/`.'
       }
       'chocolatey' {
         Deploy-Chocolatey -Tag $Tag -Repo $Repo
