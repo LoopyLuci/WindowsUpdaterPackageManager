@@ -15,8 +15,7 @@ param(
   [string]$KeyVaultUrl,
   [string]$Repo = 'LoopyLuci/WindowsUpdatePackageManager',
   [string]$DeployConfig,
-  [string]$DeployTarget,
-  [switch]$SkipCI
+  [string]$DeployTarget
 )
 
 Set-StrictMode -Version Latest
@@ -72,13 +71,8 @@ function Deploy-Chocolatey {
 
 Push-Location 'D:\Projects\WindowsUpdatePackageManager'
 try {
-  if (-not $SkipCI) {
-    & '.\\scripts\\ci.ps1' -Configuration $Configuration -SkipTests:$SkipTests -SkipSign:$SkipSign `
-      -SigningClientId $SigningClientId -SigningTenantId $SigningTenantId -SigningSecret $SigningSecret -KeyVaultUrl $KeyVaultUrl
-  }
-  else {
-    Write-Host 'Skipping CI because -SkipCI was set.'
-  }
+  & '.\\scripts\\ci.ps1' -Configuration $Configuration -SkipTests:$SkipTests -SkipSign:$SkipSign `
+    -SigningClientId $SigningClientId -SigningTenantId $SigningTenantId -SigningSecret $SigningSecret -KeyVaultUrl $KeyVaultUrl
 
   Write-Host '--- GitHub Release ---'
   $assets = @('wupm-cli.zip','wupm-api.zip','sbom.json')
@@ -208,3 +202,5 @@ ManifestVersion: 1.6.0
 finally {
   Pop-Location
 }
+
+exit 0

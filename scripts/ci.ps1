@@ -58,6 +58,7 @@ try {
     if (Test-Path $cliZip) { Remove-Item $cliZip -Force }
     if (Test-Path $apiZip) { Remove-Item $apiZip -Force }
     Compress-Archive -Path (Join-Path $cliOut '*') -DestinationPath $cliZip
+    if ($LASTEXITCODE -ne 0) { Fail-Fast 'Failed to create CLI zip.' }
     Compress-Archive -Path (Join-Path $apiOut '*') -DestinationPath $apiZip
     Write-Host "Created $cliZip and $apiZip"
 
