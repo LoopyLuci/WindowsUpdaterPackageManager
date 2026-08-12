@@ -18,7 +18,7 @@ public class ReleaseDeploymentTests
         var dummyZip = Path.Combine(repoRoot, "wupm-cli.zip");
         File.WriteAllText(dummyZip, "dummy");
 
-        RunPowerShell(script, "-Tag v0.4.1-test -DryRun -SkipSign -SkipTests -DeployTarget winget", repoRoot);
+        RunPowerShell(script, "-Tag v0.4.1-test -DryRun -SkipSign -SkipTests -ManifestOnly -DeployTarget winget", repoRoot);
 
         var manifest = Directory.GetFiles(manifestDir, "*.yaml");
         Assert.Single(manifest);
