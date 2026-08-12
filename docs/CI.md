@@ -89,3 +89,35 @@ pwsh ./scripts/release.ps1 -Tag v0.4.0
 - Signing is optional. If no certificate is available, the scripts continue without signing.
 - If AzureSignTool is installed, it is used automatically when signing parameters are provided.
 - `gh auth status` must succeed before `scripts/release.ps1` can publish or update a release.
+
+## Git hook automation
+
+Install the post-commit hook to run local CI automatically after each commit:
+
+```powershell
+pwsh ./scripts/install-hook.ps1
+```
+
+Uninstall:
+
+```powershell
+pwsh ./scripts/install-hook.ps1 -Uninstall
+```
+
+The hook runs `scripts/ci.ps1 -SkipSign` from the repo root. If CI fails, the commit is not accepted.
+
+## Rollback and cleanup
+
+- Delete a test GitHub Release:
+  ```powershell
+  gh release delete v0.4.1-test --repo LoopyLuci/WindowsUpdatePackageManager --yes
+  ```
+- Delete a local tag:
+  ```powershell
+  git tag -d v0.4.1-test
+  ```
+- Clean local publish outputs:
+  ```powershell
+  Remove-Item -Force -Recurse publish, wupm-cli.zip, wupm-api.zip, sbom.json, 'C:\Users\limpi\AppData\Local\Temp\wupm-pack-output-*'
+  ```
+- If a signing certificate is compromised, remove it from the store and rotate `WUPM_API_KEY` and any deployment target credentials.
