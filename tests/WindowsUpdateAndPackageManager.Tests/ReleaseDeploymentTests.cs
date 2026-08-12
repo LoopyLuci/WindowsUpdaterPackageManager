@@ -39,6 +39,26 @@ public class ReleaseDeploymentTests
         Assert.Contains("WUPM_FEED_URL", output);
     }
 
+    [Fact]
+    public void ServiceWrapper_status_returns_nonzero_when_binary_missing()
+    {
+        var repoRoot = FindRepoRoot();
+        var script = Path.Combine(repoRoot, "scripts", "service-wupm-api.ps1");
+        var psi = new ProcessStartInfo
+        {
+            FileName = "powershell",
+            Arguments = $"-NoProfile -ExecutionPolicy Bypass -File \"{script}\" -Action install",
+            WorkingDirectory = repoRoot,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false
+        };
+        using var p = Process.Start(psi);
+        Assert.NotNull(p);
+        p.WaitForExit();
+        Assert.NotEqual(0, p.ExitCode);
+    }
+
     private static string FindRepoRoot()
     {
         var dir = Directory.GetCurrentDirectory();

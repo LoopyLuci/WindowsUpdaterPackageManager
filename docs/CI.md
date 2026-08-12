@@ -106,10 +106,12 @@ pwsh ./scripts/release.ps1 -Tag v0.4.0
    ```
 5. Verify the updater replaced the executable and relaunched.
 
-If self-update fails:
-- Check `GITHUB_TOKEN` is set in the same session as the CLI
-- Ensure the test release has `wupm-cli.zip` attached
-- Review the updater PowerShell script in `%TEMP%\wupm-selfupdate-*\apply-update.ps1`
+### Troubleshooting
+
+- **403 Forbidden**: `GITHUB_TOKEN` is missing or lacks `contents:read`. Re-run `gh auth login` with `contents:write` and `packages:read`.
+- **Asset missing**: Confirm `wupm-cli.zip` is attached to the test release. Re-run `release.ps1` without `-DryRun`.
+- **Relaunch failed**: Check `%TEMP%\wupm-selfupdate-*\apply-update.ps1` for execution-policy or path issues.
+- **Rate limit**: Authenticated requests have higher rate limits. If unauthenticated, use `--token` or set `$env:GITHUB_TOKEN`.
 
 ## Code-signing rehearsal
 

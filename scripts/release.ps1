@@ -15,7 +15,8 @@ param(
   [string]$KeyVaultUrl,
   [string]$Repo = 'LoopyLuci/WindowsUpdatePackageManager',
   [string]$DeployConfig,
-  [string]$DeployTarget
+  [string]$DeployTarget,
+  [switch]$SkipCI
 )
 
 Set-StrictMode -Version Latest
@@ -182,9 +183,16 @@ ManifestVersion: 1.6.0
         }
         $zip = Join-Path $PWD.Path 'wupm-cli.zip'
         if (-not (Test-Path $zip)) { throw 'wupm-cli.zip not found for feed deployment.' }
-        # Generic NuGet v3 push placeholder
-        $response = Invoke-RestMethod -Uri $feedUrl -Method Put -InFile $zip -ContentType 'application/octet-stream' -Headers @{ 'X-Api-Key' = $feedApiKey } -ErrorAction Stop
-        Write-Host "Internal feed upload response: $($response | ConvertTo-Json -Compress)"
+        $uri = $feedUrl
+        if (-not $uri.EndsWith('/')) { $uri = "$uri/" }
+        $uri = "$uri$($Tag.TrimStart('v'))/wupm-cli.zip"
+        try {
+          $response = Invoke-RestMethod -Uri $uri -Method Put -InFile $zip -ContentType 'application/octet-stream' -Headers @{ 'X-Api-Key' = $feedApiKey } -ErrorAction Stop
+          Write-Host "Internal feed upload response: $($response | ConvertTo-Json -Compress)"
+        }
+        catch {
+          Write-Warning "Internal feed upload failed: $_"
+        }
       }
       default {
         Write-Host "Unknown deployment target: $deployTarget"
