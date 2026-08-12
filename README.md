@@ -85,6 +85,23 @@ Recommended production deployment pattern:
 - `wupm publish` and `SelfUpdater` use `GITHUB_TOKEN` only as a Bearer token in `Authorization` headers; values are not logged or persisted by WUPM.
 - Package install verifies Authenticode signatures when a signature verifier is configured. By default, unsigned packages are blocked unless `AllowUntrusted` is explicitly enabled in policy. Maintainers should sign release artifacts with a trusted code-signing certificate before publishing.
 
+## CI/CD
+
+This repo uses local PowerShell CI/release scripts instead of GitHub Actions workflows.
+
+```bash
+# Run CI locally
+pwsh ./scripts/ci.ps1
+
+# Run CI without tests
+pwsh ./scripts/ci.ps1 -SkipTests
+
+# Create/update a GitHub release for a tag
+pwsh ./scripts/release.ps1 -Tag v0.4.0
+```
+
+`scripts/ci.ps1` performs restore, build, test, publish, zip, SBOM generation, and optional signing. `scripts/release.ps1` runs CI, then creates or updates the GitHub Release assets with `wupm-cli.zip`, `wupm-api.zip`, and `sbom.json`.
+
 ## Releases
 
 Pushing a tag like `v0.2.0` triggers the release workflow, which builds and publishes `wupm-cli.zip` and `wupm-api.zip` as GitHub Release assets.
@@ -105,13 +122,17 @@ Output includes `deltaAvailable` and `previousSha256` in `.delta.json`. Apply de
 
 ### Triggering a release
 
-1. Ensure your repo has the `GITHUB_TOKEN` with `contents: write` permission. The default token in GitHub Actions has this permission automatically.
+1. Ensure `gh` is installed and authenticated with repo access.
 2. Create and push an annotated tag:
    ```bash
    git tag -a v0.2.0 -m "Release v0.2.0"
    git push origin v0.2.0
    ```
-3. The `.github/workflows/release.yml` workflow runs automatically on tag push. It produces two artifacts:
+3. Run the local release script to build and publish release assets:
+   ```bash
+   pwsh ./scripts/release.ps1 -Tag v0.2.0
+   ```
+   This produces two artifacts:
    - `wupm-cli.zip` - standalone CLI
    - `wupm-api.zip` - standalone API host
 
