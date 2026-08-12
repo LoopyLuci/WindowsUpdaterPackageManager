@@ -1,13 +1,5 @@
-Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
-
-param(
-    [ValidateSet('Debug', 'Release')]
-    [string]$Configuration = 'Release',
-    [switch]$SkipTests
-)
-
-$repoRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
+$repoRoot = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
 Push-Location $repoRoot
 
 function Write-Step([string]$text) {
@@ -22,7 +14,8 @@ function Write-Fail([string]$text) {
 
 try {
     Write-Step 'Running local CI'
-    powershell -NoProfile -ExecutionPolicy Bypass -File '.\scripts\ci.ps1' -Configuration $Configuration -SkipTests:$SkipTests
+    $ciPath = Join-Path $repoRoot 'scripts\ci.ps1'
+    powershell -NoProfile -ExecutionPolicy Bypass -File $ciPath
     if ($LASTEXITCODE -ne 0) {
         Write-Fail "CI failed with exit code $LASTEXITCODE"
         exit $LASTEXITCODE
