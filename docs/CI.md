@@ -38,6 +38,16 @@ pwsh ./scripts/ci.ps1 `
   -KeyVaultUrl $env:AZURE_KEY_VAULT_URL
 ```
 
+## Fast CI script
+
+Run format/restore/build/test only, skipping publish, signing, and SBOM generation:
+
+```powershell
+pwsh ./scripts/ci-quick.ps1
+```
+
+Use this for fast pre-commit validation when you don't need release artifacts.
+
 Outputs in repo root:
 - `publish/cli/` - published CLI outputs
 - `publish/api/` - published API outputs
@@ -64,11 +74,14 @@ pwsh ./scripts/release.ps1 -Tag v0.4.0 -SkipTests
 
 # Skip signing during release
 pwsh ./scripts/release.ps1 -Tag v0.4.0 -SkipSign
+
+# Generate manifests only, skip CI and GitHub release
+pwsh ./scripts/release.ps1 -Tag v0.4.0 -ManifestOnly -DeployTarget winget
 ```
 
 The release script:
 1. Validates tag format
-2. Runs CI
+2. Runs CI unless `-ManifestOnly` is set
 3. Creates or updates the GitHub Release with `wupm-cli.zip`, `wupm-api.zip`, and `sbom.json`
 
 ## Typical workflow

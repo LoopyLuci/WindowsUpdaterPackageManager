@@ -9,6 +9,7 @@ param(
   [switch]$SkipTests,
   [switch]$SkipSign,
   [switch]$DryRun,
+  [switch]$ManifestOnly,
   [string]$SigningClientId,
   [string]$SigningTenantId,
   [string]$SigningSecret,
@@ -71,19 +72,23 @@ function Deploy-Chocolatey {
 
 Push-Location 'D:\Projects\WindowsUpdatePackageManager'
 try {
-  & '.\\scripts\\ci.ps1' -Configuration $Configuration -SkipTests:$SkipTests -SkipSign:$SkipSign `
-    -SigningClientId $SigningClientId -SigningTenantId $SigningTenantId -SigningSecret $SigningSecret -KeyVaultUrl $KeyVaultUrl
-
-  Write-Host '--- GitHub Release ---'
-  $assets = @('wupm-cli.zip','wupm-api.zip','sbom.json')
-  $parent = git rev-parse --verify -q $Tag^ 2>$null
-  $range = if ($parent) { "$parent..$Tag" } else { $Tag }
-  $changes = ''
-  if (git rev-parse --verify -q refs/tags/$Tag 2>$null) {
-    $changes = git log --date=short --pretty=format:'- %ad %s' $range 2>$null | Out-String
+  if ($ManifestOnly) {
+    Write-Host 'ManifestOnly enabled; skipping full CI and GitHub release.'
   }
-  if (-not $changes) { $changes = '- Automated release via release.ps1' }
-  $notes = @"
+  else {
+    & '.\\scripts\\ci.ps1' -Configuration $Configuration -SkipTests:$SkipTests -SkipSign:$SkipSign `
+      -SigningClientId $SigningClientId -SigningTenantId $SigningTenantId -SigningSecret $SigningSecret -KeyVaultUrl $KeyVaultUrl
+
+    Write-Host '--- GitHub Release ---'
+    $assets = @('wupm-cli.zip','wupm-api.zip','sbom.json')
+    $parent = git rev-parse --verify -q $Tag^ 2>$null
+    $range = if ($parent) { "$parent..$Tag" } else { $Tag }
+    $changes = ''
+    if (git rev-parse --verify -q refs/tags/$Tag 2>$null) {
+      $changes = git log --date=short --pretty=format:'- %ad %s' $range 2>$null | Out-String
+    }
+    if (-not $changes) { $changes = '- Automated release via release.ps1' }
+    $notes = @"
 Release $Tag
 
 Artifacts:
@@ -94,21 +99,22 @@ Artifacts:
 Changes:
 $changes
 "@
-  if ($DryRun) {
-    Write-Host 'DryRun enabled; skipping gh release create/upload.'
-  }
-  else {
-    $releaseJson = ''
-    try {
-      $releaseJson = gh release view $Tag --repo $Repo --json url 2>&1 | Out-String
-    } catch {
-      # ignore missing release
-    }
-    if ($releaseJson -notmatch 'url') {
-      gh release create $Tag --repo $Repo --title "WUPM $Tag" --notes $notes @assets
+    if ($DryRun) {
+      Write-Host 'DryRun enabled; skipping gh release create/upload.'
     }
     else {
-      foreach ($a in $assets) { if (Test-Path $a) { gh release upload $Tag --repo $Repo $a --clobber } }
+      $releaseJson = ''
+      try {
+        $releaseJson = gh release view $Tag --repo $Repo --json url 2>&1 | Out-String
+      } catch {
+        # ignore missing release
+      }
+      if ($releaseJson -notmatch 'url') {
+        gh release create $Tag --repo $Repo --title "WUPM $Tag" --notes $notes @assets
+      }
+      else {
+        foreach ($a in $assets) { if (Test-Path $a) { gh release upload $Tag --repo $Repo $a --clobber } }
+      }
     }
   }
 

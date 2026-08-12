@@ -133,6 +133,14 @@ pwsh ./scripts/release.ps1 -Tag v0.2.0
 ### Code signing
 
 `scripts/release.ps1` supports two signing paths:
+
+For faster local validation, use `scripts/ci-quick.ps1` to run format, restore, build, and test without publish/zip/signing.
+
+Generate manifests without running full CI:
+
+```powershell
+pwsh ./scripts/release.ps1 -Tag v0.2.0 -ManifestOnly -DeployTarget winget
+```
 - AzureSignTool with Key Vault client credentials (`-SigningClientId`, `-SigningTenantId`, `-SigningSecret`, `-KeyVaultUrl`)
 - Local code-signing certificate from `Cert:\CurrentUser\My`
 
