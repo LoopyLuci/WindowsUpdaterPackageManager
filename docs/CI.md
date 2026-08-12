@@ -73,16 +73,54 @@ The release script:
 ## Typical workflow
 
 ```powershell
-# 1. Run CI locally
-pwsh ./scripts/ci.ps1
+# 1. Validate release artifacts locally without publishing
+pwsh ./scripts/release.ps1 -Tag v0.4.0 -DryRun
 
-# 2. Create and push a tag
-git tag -a v0.4.0 -m "Release v0.4.0"
-git push origin v0.4.0
+# 2. Inspect wupm-cli.zip, wupm-api.zip, and sbom.json
 
-# 3. Build and publish release assets
+# 3. If everything looks good, create/update the GitHub release
 pwsh ./scripts/release.ps1 -Tag v0.4.0
 ```
+
+## Self-update validation
+
+`wupm self-update` uses GitHub’s API and asset downloads. On this environment, unauthenticated requests may be blocked. To validate self-update on a Windows machine:
+
+1. Set `GITHUB_TOKEN` with `contents:read` and `packages:read` permissions.
+2. Run `wupm self-update --tag v0.4.0`.
+3. The updater replaces the current executable and relaunches.
+
+## Code-signing rehearsal
+
+To exercise signing without publishing:
+
+```powershell
+pwsh ./scripts/release.ps1 -Tag v0.4.0-test -DryRun -SkipSign:$false
+```
+
+This builds artifacts and runs the signing step, but skips `gh release` upload. If no certificate is available, it logs a warning and continues.
+
+## Deployment automation
+
+`scripts/release.ps1` includes a deployment hook after release creation. Currently this is a placeholder. To enable a real target, edit the script and implement one of:
+
+- Winget manifest submission
+- Chocolatey package push
+- Internal artifact feed upload
+
+The hook receives the release tag and artifact paths.
+
+## Scheduled-task CI runner
+
+On Windows, you can run CI on a schedule without GitHub Actions by creating a Scheduled Task:
+
+```powershell
+$action = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument '-NoProfile -ExecutionPolicy Bypass -File D:\Projects\WindowsUpdatePackageManager\scripts\ci.ps1'
+$trigger = New-ScheduledTaskTrigger -Daily -At 09:00
+Register-ScheduledTask -TaskName 'WUPM CI' -Action $action -Trigger $trigger -Description 'Daily WUPM CI run'
+```
+
+Capture output to a log file for audit by appending `> C:\Logs\wupm-ci.log 2>&1` to the argument list.
 
 ## Notes
 

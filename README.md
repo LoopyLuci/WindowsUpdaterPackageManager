@@ -89,7 +89,7 @@ Recommended production deployment pattern:
 
 This repo uses local PowerShell CI/release scripts instead of GitHub Actions workflows.
 
-```bash
+```powershell
 # Run CI locally
 pwsh ./scripts/ci.ps1
 
@@ -99,39 +99,20 @@ pwsh ./scripts/ci.ps1 -SkipTests
 # Install post-commit hook to run CI automatically after each commit
 pwsh ./scripts/install-hook.ps1
 
+# Validate a release without publishing
+pwsh ./scripts/release.ps1 -Tag v0.2.0 -DryRun
+
 # Create/update a GitHub release for a tag
-pwsh ./scripts/release.ps1 -Tag v0.4.0
+pwsh ./scripts/release.ps1 -Tag v0.2.0
 ```
 
 `scripts/ci.ps1` performs restore, build, test, publish, zip, SBOM generation, and optional signing. `scripts/release.ps1` runs CI, then creates or updates the GitHub Release assets with `wupm-cli.zip`, `wupm-api.zip`, and `sbom.json`.
 
-### Local publish workflow
+### Recommended release flow
 
-```bash
-# Build and package locally
-pwsh ./scripts/ci.ps1
-
-# Or run the release script directly
-pwsh ./scripts/release.ps1 -Tag v0.2.0-test --dry-run
-```
-
-## Releases
-
-Pushing a tag like `v0.2.0` triggers the release script, which builds and publishes `wupm-cli.zip` and `wupm-api.zip` as GitHub Release assets.
-
-### Delta packaging
-
-Use `wupm pack` with a `manifest.json` that includes `previousSha256` to produce a `.delta.json`:
-
-```json
-{
-  "id": "windows-update-bundle",
-  "version": "2.0",
-  "previousSha256": "<sha256 of previous package>"
-}
-```
-
-Output includes `deltaAvailable` and `previousSha256` in `.delta.json`. Apply deltas with `wupm delta-update --id <id> --from <version>` or combine with offline servicing via `wupm delta-apply --id <id> --from <version> --mountPath <path>`.
+1. Run `pwsh ./scripts/release.ps1 -Tag v0.2.0 -DryRun`
+2. Inspect `wupm-cli.zip`, `wupm-api.zip`, and `sbom.json`
+3. If everything looks good, run `pwsh ./scripts/release.ps1 -Tag v0.2.0`
 
 ### Triggering a release
 
@@ -149,21 +130,39 @@ Output includes `deltaAvailable` and `previousSha256` in `.delta.json`. Apply de
    - `wupm-cli.zip` - standalone CLI
    - `wupm-api.zip` - standalone API host
 
-### Installing a release locally
+### Code signing
 
-```bash
-# Download from the GitHub Release page and extract
-Expand-Archive -Path wupm-cli.zip -DestinationPath C:\Tools\wupm
-# or for API host
-Expand-Archive -Path wupm-api.zip -DestinationPath C:\Tools\wupm-api
+`scripts/release.ps1` supports two signing paths:
+- AzureSignTool with Key Vault client credentials (`-SigningClientId`, `-SigningTenantId`, `-SigningSecret`, `-KeyVaultUrl`)
+- Local code-signing certificate from `Cert:\CurrentUser\My`
+
+To rehearse signing without publishing:
+
+```powershell
+pwsh ./scripts/release.ps1 -Tag v0.2.0-test -DryRun -SkipSign:$false
 ```
 
-### Local publish workflow
+If no certificate is configured, the script skips signing with a warning.
 
-```bash
-dotnet run --project src/Wupm.Cli -- publish --tag v0.2.0-test --dry-run
-dotnet run --project src/Wupm.Cli -- publish --tag v0.2.0-test --token $env:GITHUB_TOKEN
+### Deployment automation
+
+`scripts/release.ps1` includes an optional deployment hook after release creation. Currently this prints a placeholder; to enable a real target, add one of:
+
+- Winget manifest submission
+- Chocolatey package push
+- Internal artifact feed upload
+
+Example hook target location: `scripts/release.ps1` under `--- Optional deployment ---`.
+
+### Scheduled-task CI runner
+
+On Windows, you can run CI on a schedule without GitHub Actions by creating a Scheduled Task that runs:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File D:\Projects\WindowsUpdatePackageManager\scripts\ci.ps1
 ```
+
+Set it to run on your desired cadence, e.g., daily at 09:00. Capture output to a log file for audit.
 
 ### Authenticode signing
 

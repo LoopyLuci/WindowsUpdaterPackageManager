@@ -55,7 +55,29 @@ Artifacts:
   }
 
   Write-Host '--- Optional deployment ---'
-  Write-Host 'No deployment target configured. Hook Winget/Chocolatey/internal feed here if needed.'
+  $deployTarget = $env:WUPM_DEPLOY_TARGET
+  if ([string]::IsNullOrWhiteSpace($deployTarget)) {
+    Write-Host 'No deployment target configured. Set WUPM_DEPLOY_TARGET to enable deployment.'
+  }
+  else {
+    switch ($deployTarget.ToLowerInvariant()) {
+      'winget' {
+        Write-Host "Deploying to Winget manifest for tag $Tag ..."
+        # TODO: implement winget manifest submission
+      }
+      'chocolatey' {
+        Write-Host "Deploying to Chocolatey for tag $Tag ..."
+        # TODO: implement chocolatey package push
+      }
+      'feed' {
+        Write-Host "Deploying to internal feed for tag $Tag ..."
+        # TODO: implement internal artifact feed upload
+      }
+      default {
+        Write-Host "Unknown deployment target: $deployTarget"
+      }
+    }
+  }
 }
 finally {
   Pop-Location
