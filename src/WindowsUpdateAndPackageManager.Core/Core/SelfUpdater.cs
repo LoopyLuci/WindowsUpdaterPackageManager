@@ -90,7 +90,7 @@ Remove-Item $backup -Force
 
             return await _processStartAsync(psi).ConfigureAwait(false);
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             return false;
         }
