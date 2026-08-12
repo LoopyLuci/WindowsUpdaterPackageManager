@@ -14,7 +14,8 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
 if ($Action -ne 'status' -and -not (Test-Path $BinaryPath)) {
-  throw "WupmApi executable not found at $BinaryPath. Run .\scripts\ci.ps1 to publish first."
+  Write-Host "WupmApi executable not found at $BinaryPath. Run .\scripts\ci.ps1 to publish first."
+  exit 1
 }
 
 switch ($Action) {
