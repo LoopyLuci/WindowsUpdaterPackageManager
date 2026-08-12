@@ -73,7 +73,11 @@ try {
   $assets = @('wupm-cli.zip','wupm-api.zip','sbom.json')
   $parent = git rev-parse --verify -q $Tag^ 2>$null
   $range = if ($parent) { "$parent..$Tag" } else { $Tag }
-  $changes = git log --date=short --pretty=format:'- %ad %s' $range 2>$null
+  $changes = ''
+  if (git cat-file -t $Tag 2>$null) {
+    $changes = git log --date=short --pretty=format:'- %ad %s' $range 2>$null
+  }
+  if (-not $changes) { $changes = '- Automated release via release.ps1' }
   $notes = @"
 Release $Tag
 
