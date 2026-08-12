@@ -20,8 +20,14 @@ if ($Action -ne 'status' -and -not (Test-Path $BinaryPath)) {
 
 switch ($Action) {
   'install' {
-    New-Service -Name $ServiceName -DisplayName $DisplayName -BinaryPathName $BinaryPath -Description 'WUPM REST API host' -StartupType Automatic | Out-Null
-    Write-Host "Installed service '$ServiceName'."
+    try {
+      New-Service -Name $ServiceName -DisplayName $DisplayName -BinaryPathName $BinaryPath -Description 'WUPM REST API host' -StartupType Automatic | Out-Null
+      Write-Host "Installed service '$ServiceName'."
+    }
+    catch {
+      Write-Host "Service install failed: $_"
+      exit 1
+    }
   }
   'start' {
     Start-Service -Name $ServiceName
