@@ -80,7 +80,7 @@ Artifacts:
 - sbom.json
 
 Changes:
-$(git log --date=short --pretty=format:'- %ad %s' $(git describe --tags --always $Tag^)..$Tag 2>$null)
+$(git log --date=short --pretty=format:'- %ad %s' $(git rev-parse --verify -q $Tag^ 2>$null)..$Tag 2>$null)
 "@
   if ($DryRun) {
     Write-Host 'DryRun enabled; skipping gh release create/upload.'
