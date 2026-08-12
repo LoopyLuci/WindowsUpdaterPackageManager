@@ -1,0 +1,20 @@
+﻿PackageIdentifier: LoopyLuci.WindowsUpdatePackageManager
+PackageVersion: 0.4.1-test
+PackageName: Windows Update Package Manager
+Publisher: LoopyLuci
+License: MIT
+ShortDescription: Windows Update Package Manager CLI
+PackageUrl: https://github.com/LoopyLuci/WindowsUpdateAndPackageManager/releases/tag/v0.4.1-test
+Installers:
+  - Architecture: x64
+    InstallerType: zip
+    InstallerUrl: https://github.com/LoopyLuci/WindowsUpdateAndPackageManager/releases/download/v0.4.1-test/wupm-cli.zip
+    InstallerSha256: 95e2827878be93a4e21da09bb5241094aedf8e7a6c730180400fe3d737bca281
+    NestedInstallerType: exe
+    NestedInstallerPath: Wupm.Cli.exe
+    NestedInstallerFiles:
+      - RelativeFilePath: Wupm.Cli.exe
+    Commands:
+      - wupm
+ManifestType: installer
+ManifestVersion: 1.6.0
