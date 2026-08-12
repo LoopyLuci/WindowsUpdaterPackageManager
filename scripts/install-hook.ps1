@@ -10,6 +10,8 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 $hookDir = '.git/hooks'
 if (-not (Test-Path $hookDir)) { throw "Git hooks directory not found at $hookDir." }
+$outputDir = Join-Path $hookDir 'output'
+if (-not (Test-Path $outputDir)) { New-Item -ItemType Directory -Path $outputDir | Out-Null }
 
 if ($Uninstall) {
   Remove-Item (Join-Path $hookDir 'post-commit') -Force -ErrorAction SilentlyContinue
