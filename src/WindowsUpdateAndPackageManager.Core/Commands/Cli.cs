@@ -233,7 +233,9 @@ public static class Cli
         root.AddCommand(policyDeny);
 
         var driverUpdate = new Command("driver-update", "Scan and install Windows driver updates only");
-        driverUpdate.SetHandler(() =>
+        var offlineScanOption = new Option<bool>("--offline-scan", description: "Scan without downloading/installing updates");
+        driverUpdate.AddOption(offlineScanOption);
+        driverUpdate.SetHandler((bool offlineScan) =>
         {
             try
             {
@@ -244,14 +246,14 @@ public static class Cli
                     return;
                 }
 
-                var result = manager.ScanAndInstallAsync(driversOnly: true).GetAwaiter().GetResult();
+                var result = manager.ScanAndInstallAsync(driversOnly: true, offlineScan: offlineScan).GetAwaiter().GetResult();
                 Console.WriteLine($"Success={result.Success}; found={result.UpdatesFound}; installed={result.UpdatesInstalled}; reboot={result.RebootRequired}");
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Driver update failed: {ex.Message}");
             }
-        });
+        }, offlineScanOption);
         root.AddCommand(driverUpdate);
 
         var listInstalled = new Command("installed", "List installed packages");
@@ -324,7 +326,9 @@ public static class Cli
         root.AddCommand(rollback);
 
         var wu = new Command("windows-update", "Scan and apply Windows updates");
-        wu.SetHandler(() =>
+        var wuOfflineScanOption = new Option<bool>("--offline-scan", description: "Scan without downloading/installing updates");
+        wu.AddOption(wuOfflineScanOption);
+        wu.SetHandler((bool offlineScan) =>
         {
             try
             {
@@ -334,14 +338,14 @@ public static class Cli
                     Console.WriteLine("IWindowsUpdateManager is not registered.");
                     return;
                 }
-                var result = manager.ScanAndInstallAsync().GetAwaiter().GetResult();
+                var result = manager.ScanAndInstallAsync(offlineScan: offlineScan).GetAwaiter().GetResult();
                 Console.WriteLine($"Success={result.Success}; found={result.UpdatesFound}; installed={result.UpdatesInstalled}; reboot={result.RebootRequired}");
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Windows Update failed: {ex.Message}");
             }
-        });
+        }, wuOfflineScanOption);
         root.AddCommand(wu);
 
         var health = new Command("health", "Repo health summary");

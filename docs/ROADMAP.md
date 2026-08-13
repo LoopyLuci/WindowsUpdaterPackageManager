@@ -10,16 +10,18 @@
 - README badges and documentation
 
 ## Proposed for v0.2.0
-1. **Chocolatey live validation** — `choco pack` + `choco push` end-to-end on admin Windows
-2. **Winget live submission** — submit manifest to microsoft/winget-pkgs
-3. **Self-update E2E** — validate `wupm self-update` with `GITHUB_TOKEN`
-4. **Service wrapper hardening** — install/start/stop/uninstall with admin rights
-5. **Offline update support** — download updates to USB/local cache
-6. **Rollback support** — revert to previous version if update fails
-7. **Update scheduling** — Windows Task Scheduler integration
-8. **Telemetry opt-out** — respect user privacy by default
-9. **Error recovery** — retry failed downloads with exponential backoff
-10. **Logging** — structured logs for troubleshooting
+1. ~~Chocolatey live validation~~ — blocked by admin shell
+2. ~~Winget live submission~~ — manifests generated; blocked by client validation/PowerShell admin
+3. ~~Self-update E2E~~ — blocked by missing GITHUB_TOKEN
+4. ~~Service wrapper hardening~~ — blocked by admin shell
+5. ~~Offline update support~~ — `IOfflineImageService` and offline mount/apply/dismount implemented
+6. ~~Rollback support~~ — `RollbackManager` and rollback command implemented
+7. ~~Update scheduling~~ — scheduled task install/uninstall/status commands implemented
+8. ~~Telemetry opt-out~~ — `--no-telemetry` CLI option implemented
+9. ~~Error recovery~~ — DISM retry logic in `OfflineImageService`
+10. ~~Logging~~ — `FileLogger` and `--log-file` implemented
+11. ~~Delta updates~~ — `delta-update` and `delta-apply` commands implemented
+12. ~~Windows Update CLI~~ — `windows-update` and `driver-update` commands implemented
 
 ## Priority order
 1. Chocolatey live validation (unblocks package distribution)
