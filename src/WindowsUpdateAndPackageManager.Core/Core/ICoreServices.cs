@@ -4,7 +4,7 @@ namespace WindowsUpdateAndPackageManager.Core;
 
 public interface IWindowsUpdateManager
 {
-    Task<WindowsUpdateResult> ScanAndInstallAsync(bool driversOnly = false, CancellationToken cancellationToken = default);
+    Task<WindowsUpdateResult> ScanAndInstallAsync(bool driversOnly = false, bool offlineScan = false, CancellationToken cancellationToken = default);
 }
 
 public interface IPackageManager

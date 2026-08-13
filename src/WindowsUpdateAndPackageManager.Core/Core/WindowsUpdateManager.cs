@@ -21,7 +21,7 @@ public sealed class WindowsUpdateManager : IWindowsUpdateManager
         _windowsUpdateApi = windowsUpdateApi;
     }
 
-    public async Task<WindowsUpdateResult> ScanAndInstallAsync(bool driversOnly = false, CancellationToken cancellationToken = default)
+    public async Task<WindowsUpdateResult> ScanAndInstallAsync(bool driversOnly = false, bool offlineScan = false, CancellationToken cancellationToken = default)
     {
         var result = new WindowsUpdateResult();
         try
@@ -54,7 +54,7 @@ public sealed class WindowsUpdateManager : IWindowsUpdateManager
             {
                 Id = Guid.NewGuid(),
                 Timestamp = DateTimeOffset.UtcNow,
-                Action = "WindowsUpdate.Scan",
+                Action = offlineScan ? "WindowsUpdate.OfflineScan" : "WindowsUpdate.Scan",
                 Success = result.Success,
                 Message = result.Message
             }, cancellationToken).ConfigureAwait(false);
@@ -67,7 +67,7 @@ public sealed class WindowsUpdateManager : IWindowsUpdateManager
             {
                 Id = Guid.NewGuid(),
                 Timestamp = DateTimeOffset.UtcNow,
-                Action = "WindowsUpdate.Scan",
+                Action = offlineScan ? "WindowsUpdate.OfflineScan" : "WindowsUpdate.Scan",
                 Success = false,
                 Message = ex.Message
             }, cancellationToken).ConfigureAwait(false);
