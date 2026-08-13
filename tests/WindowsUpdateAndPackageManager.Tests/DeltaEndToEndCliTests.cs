@@ -137,7 +137,7 @@ public sealed class DeltaEndToEndCliTests
 
     private sealed class FakeWindowsUpdateManager : IWindowsUpdateManager
     {
-        public Task<WindowsUpdateResult> ScanAndInstallAsync(bool driversOnly = false, CancellationToken cancellationToken = default)
+        public Task<WindowsUpdateResult> ScanAndInstallAsync(bool driversOnly = false, bool offlineScan = false, CancellationToken cancellationToken = default)
             => Task.FromResult(new WindowsUpdateResult { Success = true, UpdatesFound = 0, UpdatesInstalled = 0, RebootRequired = false, Message = "ok" });
     }
 
