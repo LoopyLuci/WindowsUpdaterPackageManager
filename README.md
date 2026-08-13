@@ -1,5 +1,10 @@
 # Windows Update and Package Manager (WUPM)
 
+[![CI](https://img.shields.io/badge/CI-local%20PowerShell-blue)](docs/CI.md)
+[![Chocolatey](https://img.shields.io/badge/Chocolatey-available-green)](https://community.chocolatey.org/packages/wupm-cli)
+[![Winget](https://img.shields.io/badge/Winget-manifest%20ready-green)](docs/CI.md#winget-manifest)
+[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 Personal-first, offline-capable Windows update and package manager for Windows 10 and older.
 
 ## Building
