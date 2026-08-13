@@ -173,7 +173,16 @@ ManifestVersion: 1.6.0
 "@
         Set-Content -Path $manifest -Value $manifestContent -Encoding UTF8
         Write-Host "Wrote Winget manifest to $manifest"
-        Write-Host 'Run `winget validate <manifest>` to verify syntax, then commit under `winget-pkgs/`.'
+        if (Get-Command winget -ErrorAction SilentlyContinue) {
+          Write-Host 'Running `winget validate`...'
+          $validation = winget validate $manifest 2>&1 | Out-String
+          Write-Host $validation
+          if ($LASTEXITCODE -ne 0) {
+            Write-Warning 'Winget manifest validation failed. Review output above.'
+          }
+        } else {
+          Write-Host '`winget` not found; skipping manifest validation. Install winget to validate manifests.'
+        }
       }
       'chocolatey' {
         Deploy-Chocolatey -Tag $Tag -Repo $Repo

@@ -23,6 +23,7 @@ public static class Composition
 
         services.AddSingleton<IStateDatabase>(new SqliteStateDatabase(dataRoot));
         services.AddSingleton<IAuditStore>(new SqliteAuditStore(dataRoot));
+        services.AddSingleton<ILogger>(_ => NullLogger.Instance);
         services.AddSingleton<IWindowsUpdateApi, WindowsUpdateApi>();
         services.AddSingleton<IWindowsUpdateManager>(sp => new WindowsUpdateManager(sp.GetRequiredService<IAuditStore>(), sp.GetRequiredService<IWindowsUpdateApi>()));
         services.AddSingleton<IPackageManager>(sp => new PackageManager(sp.GetRequiredService<IStateDatabase>(), sp.GetRequiredService<IAuditStore>(), sp.GetRequiredService<ICacheManager>(), sp.GetRequiredService<IPolicyEngine>()));

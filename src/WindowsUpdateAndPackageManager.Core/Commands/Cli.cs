@@ -21,6 +21,11 @@ public static class Cli
         };
 
         var repoOption = new Option<string?>("--repo", description: "Repository URL");
+        var noTelemetryOption = new Option<bool>("--no-telemetry", description: "Disable diagnostic telemetry") { Arity = ArgumentArity.ZeroOrOne };
+        var logFileOption = new Option<string?>("--log-file", description: "Path to structured log file") { Arity = ArgumentArity.ZeroOrOne };
+
+        root.AddGlobalOption(noTelemetryOption);
+        root.AddGlobalOption(logFileOption);
 
         var sync = new Command("sync", "Sync packages from a repository")
         {
