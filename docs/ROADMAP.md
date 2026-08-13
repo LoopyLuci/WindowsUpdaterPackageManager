@@ -33,6 +33,20 @@
 9. Error recovery (robustness improvement)
 10. Logging (operational excellence)
 
-## Environment blockers
-- Chocolatey: needs admin shell
-- Winget submission: needs fork/microsof
+## Environment blockers and exact fixes
+
+1. Chocolatey live validation
+- Fix: open elevated PowerShell and run:
+  `Set-ExecutionPolicy Bypass -Scope Process -Force; iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1')); choco pack scripts/deploy/chocolatey/tools/wupm-cli.nuspec`
+
+2. Self-update E2E
+- Fix: set `GITHUB_TOKEN` and run:
+  `wupm self-update --tag v0.2.0`
+
+3. Service wrapper hardening
+- Fix: open elevated PowerShell and run:
+  `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/service-wupm-api.ps1 install`
+  `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/service-wupm-api.ps1 start`
+
+4. Winget live submission
+- Fix: fork https://github.com/microsoft/winget-pkgs, copy `scripts/deploy/winget/winget-pkgs/LoopyLuci.WindowsUpdatePackageManager/*.yaml` into `manifests/L/LoopyLuci/WindowsUpdatePackageManager/`, and open a PR.
