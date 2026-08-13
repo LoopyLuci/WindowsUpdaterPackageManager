@@ -6,9 +6,9 @@ This repo no longer uses GitHub Actions workflows. All build, test, publish, and
 
 - Windows with PowerShell 5.1 or PowerShell 7+
 - .NET 10 SDK
-- `gh` CLI authenticated with repo access for release publishing
+- `gh` CLI authenticated with repo access for release publishing. If release creation fails with `workflow` scope errors, run: `gh auth refresh -h github.com -s workflow`
 - Optional: code-signing certificate in the current user or machine store for artifact signing
-- Optional: Chocolatey CLI for `choco pack`/`choco push` packaging target. Install requires Administrative permissions; on non-admin shells use the non-admin install method from https://chocolatey.org/install. Note: Chocolatey may require elevated privileges or a clean install directory to function correctly.
+- Optional: Chocolatey CLI for `choco pack`/`choco push` packaging target. Install requires Administrative permissions; on non-admin shells use the non-admin install method from https://chocolatey.org/install. Current blocker: install script requires admin in this environment and aborts before creating `choco.exe`.. Note: Chocolatey may require elevated privileges or a clean install directory to function correctly.
 
 ## CI script
 
