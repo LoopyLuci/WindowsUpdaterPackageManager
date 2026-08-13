@@ -8,7 +8,7 @@ This repo no longer uses GitHub Actions workflows. All build, test, publish, and
 - .NET 10 SDK
 - `gh` CLI authenticated with repo access for release publishing
 - Optional: code-signing certificate in the current user or machine store for artifact signing
-- Optional: Chocolatey CLI for `choco pack`/`choco push` packaging target. Install requires Administrative permissions; on non-admin shells use the non-admin install method from https://chocolatey.org/install
+- Optional: Chocolatey CLI for `choco pack`/`choco push` packaging target. Install requires Administrative permissions; on non-admin shells use the non-admin install method from https://chocolatey.org/install. Note: Chocolatey may require elevated privileges or a clean install directory to function correctly.
 
 ## CI script
 
