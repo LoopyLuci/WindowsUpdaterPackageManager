@@ -14,7 +14,7 @@ param(
   [string]$SigningTenantId,
   [string]$SigningSecret,
   [string]$KeyVaultUrl,
-  [string]$Repo = 'LoopyLuci/WindowsUpdatePackageManager',
+  [string]$Repo = 'LoopyLuci/WindowsUpdateAndPackageManager',
   [string]$DeployConfig,
   [string]$DeployTarget
 )
