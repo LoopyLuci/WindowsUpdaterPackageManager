@@ -45,4 +45,15 @@ public sealed class DefaultCacheManager : ICacheManager
         }
         return Task.CompletedTask;
     }
+
+    public Task InvalidateAsync(string packageId, string version, CancellationToken cancellationToken = default)
+    {
+        var dir = Path.Combine(_root, $"{packageId}@{version}");
+        if (Directory.Exists(dir))
+        {
+            try { Directory.Delete(dir, true); }
+            catch { }
+        }
+        return Task.CompletedTask;
+    }
 }

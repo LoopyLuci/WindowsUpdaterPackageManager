@@ -18,8 +18,9 @@ public sealed class GitHubRegistrySyncService : IRegistrySyncService
         _token = token;
     }
 
-    public async Task SyncAsync(string ownerRepo, string branch, CancellationToken cancellationToken = default)
+    public async Task<RegistrySyncResult> SyncAsync(string ownerRepo, string branch, CancellationToken cancellationToken = default)
     {
+        var result = new RegistrySyncResult();
         var effective = string.IsNullOrWhiteSpace(ownerRepo) ? _ownerRepo : ownerRepo;
         if (string.IsNullOrWhiteSpace(effective))
         {
@@ -39,16 +40,27 @@ public sealed class GitHubRegistrySyncService : IRegistrySyncService
         http.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("WUPM", "1.0"));
         http.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.github.v3+json"));
 
-        var content = new ByteArrayContent(bytes);
-        content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
-
-        var url = $"https://api.github.com/repos/{effective}/contents/{path}";
-        using var response = await http.PutAsync(url, new StringContent(JsonSerializer.Serialize(new
+        var request = new
         {
             message = "Sync plugin registry",
             content = Convert.ToBase64String(bytes),
             branch = string.IsNullOrWhiteSpace(branch) ? "main" : branch
-        }), Encoding.UTF8, "application/json"), cancellationToken).ConfigureAwait(false);
+        };
+        var requestJson = JsonSerializer.Serialize(request);
+        using var content = new StringContent(requestJson, Encoding.UTF8, "application/json");
+
+        var url = $"https://api.github.com/repos/{effective}/contents/{path}";
+        using var response = await http.PutAsync(url, content, cancellationToken).ConfigureAwait(false);
+        if (response.IsSuccessStatusCode)
+        {
+            result.Added = entries.Count;
+        }
+        else if ((int)response.StatusCode == 409)
+        {
+            result.Skipped = entries.Count;
+            result.Conflicts.Add("GitHub reported a conflict; file may have been modified concurrently.");
+        }
         response.EnsureSuccessStatusCode();
+        return result;
     }
 }

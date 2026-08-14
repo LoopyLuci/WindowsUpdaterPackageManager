@@ -473,6 +473,32 @@ public static class Cli
         });
         cache.AddCommand(cachePrune);
 
+        var cacheInvalidate = new Command("invalidate", "Invalidate a specific cached package");
+        var cacheInvalidateId = new Argument<string>("packageId") { Description = "Package identifier" };
+        var cacheInvalidateVersion = new Argument<string>("version") { Description = "Package version" };
+        cacheInvalidate.AddArgument(cacheInvalidateId);
+        cacheInvalidate.AddArgument(cacheInvalidateVersion);
+        cacheInvalidate.SetHandler<string, string>((packageId, version) =>
+        {
+            try
+            {
+                var cacheManager = services.GetService(typeof(ICacheManager)) as ICacheManager;
+                if (cacheManager is null)
+                {
+                    Console.WriteLine("Cache manager is not configured.");
+                    return;
+                }
+
+                cacheManager.InvalidateAsync(packageId, version).GetAwaiter().GetResult();
+                Console.WriteLine($"Invalidated cache for {packageId}@{version}.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Cache invalidate failed: {ex.Message}");
+            }
+        }, cacheInvalidateId, cacheInvalidateVersion);
+        cache.AddCommand(cacheInvalidate);
+
         root.AddCommand(cache);
 
         var plugin = new Command("plugin", "Manage plugins");
@@ -941,9 +967,13 @@ public static class Cli
                     return;
                 }
 
-                var effectiveRepo = string.IsNullOrWhiteSpace(repo) ? "LoopyLuci/WindowsUpdateAndPackageManager" : repo;
-                registry.SyncAsync(effectiveRepo, branch).GetAwaiter().GetResult();
-                Console.WriteLine($"Synced registry to {effectiveRepo}.");
+                var effectiveRepo = string.IsNullOrWhiteSpace(repo) ? "LoopyLuci/WindowsUpdatePackageManager" : repo;
+                var result = registry.SyncAsync(effectiveRepo, branch).GetAwaiter().GetResult();
+                Console.WriteLine($"Synced registry to {effectiveRepo}: {result.Added} added, {result.Skipped} skipped.");
+                foreach (var conflict in result.Conflicts)
+                {
+                    Console.WriteLine($"Conflict: {conflict}");
+                }
             }
             catch (Exception ex)
             {
@@ -1249,8 +1279,10 @@ public static class Cli
 
         var marketplacePublish = new Command("publish", "Publish a plugin to marketplace");
         var marketplacePublishPath = new Option<string>("--path") { Description = "Path to plugin JSON manifest" };
+        var marketplacePublishAsset = new Option<string>("--asset") { Description = "Path to plugin asset ZIP/DLL" };
         marketplacePublish.AddOption(marketplacePublishPath);
-        marketplacePublish.SetHandler<string?>((path) =>
+        marketplacePublish.AddOption(marketplacePublishAsset);
+        marketplacePublish.SetHandler<string?, string?>((path, asset) =>
         {
             try
             {
@@ -1268,14 +1300,40 @@ public static class Cli
                     return;
                 }
 
-                Console.WriteLine($"Publish prepared for: {manifest.Id}@{manifest.Version}");
+                var assetPath = string.IsNullOrWhiteSpace(asset) ? path : asset;
+                if (!File.Exists(assetPath))
+                {
+                    Console.WriteLine("Asset path is required and must exist.");
+                    return;
+                }
+
+                var repoUrl = "https://github.com/LoopyLuci/WindowsUpdatePackageManager-plugins";
+                var tag = $"v{manifest.Version}";
+                var releaseBody = $"## {manifest.Id} {manifest.Version}\n\n{manifest.DisplayName}\n";
+                if (!string.IsNullOrWhiteSpace(manifest.Dependencies))
+                {
+                    releaseBody += $"\ndependencies:\n{manifest.Dependencies}\n";
+                }
+
+                var release = new
+                {
+                    tag_name = tag,
+                    name = $"{manifest.Id} {manifest.Version}",
+                    body = releaseBody,
+                    draft = false,
+                    prerelease = false
+                };
+
+                Console.WriteLine($"Publishing {manifest.Id}@{manifest.Version} to {repoUrl}...");
                 Console.WriteLine("To complete publishing, push a GitHub release with the plugin asset.");
+                Console.WriteLine($"Tag: {tag}");
+                Console.WriteLine($"Asset: {assetPath}");
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Marketplace publish failed: {ex.Message}");
             }
-        }, marketplacePublishPath);
+        }, marketplacePublishPath, marketplacePublishAsset);
         marketplace.AddCommand(marketplacePublish);
 
         root.AddCommand(marketplace);

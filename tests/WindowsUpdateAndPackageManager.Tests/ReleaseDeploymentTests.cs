@@ -18,7 +18,7 @@ public class ReleaseDeploymentTests
         var dummyZip = Path.Combine(repoRoot, "wupm-cli.zip");
         File.WriteAllText(dummyZip, "dummy");
 
-        RunPowerShell(script, "-Tag v0.4.1-test -DryRun -SkipSign -SkipTests -ManifestOnly -DeployTarget winget", repoRoot);
+        RunPowerShell(script, "-Tag v0.4.1 -DryRun -SkipSign -SkipTests -ManifestOnly -DeployTarget winget", repoRoot);
 
         var manifest = Directory.GetFiles(manifestDir, "*.yaml");
         Assert.Equal(3, manifest.Length);
@@ -29,7 +29,7 @@ public class ReleaseDeploymentTests
     {
         var repoRoot = FindRepoRoot();
         var script = Path.Combine(repoRoot, "scripts", "release.ps1");
-        var output = RunPowerShellCapture(script, "-Tag v0.4.1-test -DryRun -SkipSign -SkipTests -DeployTarget chocolatey", repoRoot);
+        var output = RunPowerShellCapture(script, "-Tag v0.4.1 -DryRun -SkipSign -SkipTests -DeployTarget chocolatey", repoRoot);
         Assert.Contains("choco CLI not found", output);
     }
 
@@ -38,7 +38,7 @@ public class ReleaseDeploymentTests
     {
         var repoRoot = FindRepoRoot();
         var script = Path.Combine(repoRoot, "scripts", "release.ps1");
-        var output = RunPowerShellCapture(script, "-Tag v0.4.1-test -DryRun -SkipSign -SkipTests -DeployTarget feed", repoRoot);
+        var output = RunPowerShellCapture(script, "-Tag v0.4.1 -DryRun -SkipSign -SkipTests -DeployTarget feed", repoRoot);
         Assert.Contains("WUPM_FEED_URL", output);
     }
 

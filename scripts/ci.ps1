@@ -55,13 +55,11 @@ try {
     Write-Host '--- Zip ---'
     $cliZip = Join-Path (Get-Location) 'wupm-cli.zip'
     $apiZip = Join-Path (Get-Location) 'wupm-api.zip'
-    if (Test-Path $cliZip) { Remove-Item $cliZip -Force }
-    if (Test-Path $apiZip) { Remove-Item $apiZip -Force }
     $cliFiles = Get-ChildItem -Path $cliOut -File -Recurse | Select-Object -ExpandProperty FullName
     $apiFiles = Get-ChildItem -Path $apiOut -File -Recurse | Select-Object -ExpandProperty FullName
-    Compress-Archive -Path $cliFiles -DestinationPath $cliZip
+    Compress-Archive -Path $cliFiles -DestinationPath $cliZip -Force
     if ($LASTEXITCODE -ne 0) { Fail-Fast 'Failed to create CLI zip.' }
-    Compress-Archive -Path $apiFiles -DestinationPath $apiZip
+    Compress-Archive -Path $apiFiles -DestinationPath $apiZip -Force
     if ($LASTEXITCODE -ne 0) { Fail-Fast 'Failed to create API zip.' }
     Write-Host "Created $cliZip and $apiZip"
 

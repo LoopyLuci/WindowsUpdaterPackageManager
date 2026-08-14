@@ -91,6 +91,17 @@
 2. ~~Plugin registry restore conflict resolution~~ — merge behavior with add/replace/skip counts
 3. ~~Marketplace search result caching~~ — `IMarketplaceSearchCache` with `[cached]` marker
 
+## Proposed for v1.6.0
+1. ~~Plugin uninstall command~~ — `wupm plugin registry uninstall --name <plugin> --delete`
+2. ~~Marketplace publish UX~~ — `wupm marketplace publish --path <manifest> --asset <zip>`
+3. ~~Search cache TTL~~ — file-backed cache with configurable TTL
+4. ~~Plugin registry sync to GitHub~~ — `wupm plugin registry sync --repo <owner/repo> --branch <branch>`
+
+## Proposed for v1.7.0
+1. ~~Marketplace publish automation~~ — release metadata generation from plugin manifest
+2. ~~Registry sync conflict resolution UX~~ — `RegistrySyncResult` with added/replaced/skipped counts
+3. ~~Cache invalidation command~~ — `wupm cache invalidate <packageId> <version>`
+
 ## Environment blockers and exact fixes
 
 1. Chocolatey live validation
@@ -99,7 +110,7 @@
 
 2. Self-update E2E
 - Fix: set `GITHUB_TOKEN` and run:
-  `wupm self-update --tag v1.4.0`
+  `wupm self-update --tag v1.7.0`
 
 3. Service wrapper hardening
 - Fix: open elevated PowerShell and run:
@@ -109,6 +120,6 @@
 4. Winget live submission
 - Fix: fork https://github.com/microsoft/winget-pkgs, copy `scripts/deploy/winget/winget-pkgs/LoopyLuci.WindowsUpdatePackageManager/*.yaml` into `manifests/L/LoopyLuci/WindowsUpdatePackageManager/`, and open a PR.
 
-5. v1.4.0 release
+5. v1.7.0 release
 - Fix: run:
-  `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/release.ps1 -Tag v1.4.0 -DeployTarget winget`
+  `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/release.ps1 -Tag v1.7.0 -DeployTarget winget`

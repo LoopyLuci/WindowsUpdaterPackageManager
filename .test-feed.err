@@ -1,0 +1,7 @@
+Remove-Item : Cannot remove item D:\Projects\WindowsUpdatePackageManager\wupm-cli.zip: The process cannot access the 
+file 'D:\Projects\WindowsUpdatePackageManager\wupm-cli.zip' because it is being used by another process.
+At D:\Projects\WindowsUpdatePackageManager\scripts\ci.ps1:58 char:30
++     if (Test-Path $cliZip) { Remove-Item $cliZip -Force }
++                              ~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : WriteError: (D:\Projects\Win...er\wupm-cli.zip:FileInfo) [Remove-Item], IOException
+    + FullyQualifiedErrorId : RemoveFileSystemItemIOError,Microsoft.PowerShell.Commands.RemoveItemCommand
