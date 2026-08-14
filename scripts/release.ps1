@@ -148,37 +148,79 @@ $changes
         $zip = Join-Path $PWD.Path 'wupm-cli.zip'
         if (-not (Test-Path $zip)) { throw 'wupm-cli.zip not found for Winget manifest generation.' }
         $sha = (Get-FileHash -Path $zip -Algorithm SHA256).Hash.ToLowerInvariant()
-        $manifestContent = @"
+        $versionManifest = @"
 PackageIdentifier: LoopyLuci.WindowsUpdatePackageManager
 PackageVersion: $version
-PackageName: Windows Update Package Manager
+PackageLocale: en-US
 Publisher: LoopyLuci
+PublisherUrl: https://github.com/LoopyLuci/WindowsUpdateAndPackageManager
+PackageName: Windows Update Package Manager
+PackageUrl: https://github.com/LoopyLuci/WindowsUpdateAndPackageManager
 License: MIT
-ShortDescription: Windows Update Package Manager CLI
-PackageUrl: https://github.com/LoopyLuci/WindowsUpdateAndPackageManager/releases/tag/$Tag
+LicenseUrl: https://github.com/LoopyLuci/WindowsUpdateAndPackageManager/blob/main/LICENSE
+ShortDescription: Personal-first, offline-capable update and package manager for Windows.
+Description: |
+  WUPM provides Windows Update scanning, delta package updates, offline servicing, rollback, and caching.
+  It supports Chocolatey, Winget, and GitHub Releases.
+Moniker: wupm
+Tags: windows, update, package-manager, offline, delta
+ReleaseNotes: https://github.com/LoopyLuci/WindowsUpdateAndPackageManager/releases/tag/$Tag
+"@
+
+        $installerManifest = @"
+PackageIdentifier: LoopyLuci.WindowsUpdatePackageManager
+PackageVersion: $version
+PackageLocale: en-US
+Architecture: x64
+InstallerType: zip
 Installers:
   - Architecture: x64
+    InstallerUrl: https://github.com/LoopyLuci/WindowsUpdateAndPackageManager/releases/download/$Tag/wupm-cli.zip
+    InstallerSha256: $sha
     InstallerType: zip
-    Url: https://github.com/LoopyLuci/WindowsUpdateAndPackageManager/releases/download/$Tag/wupm-cli.zip
-    Sha256: $sha
-    NestedInstallerType: exe
-    NestedInstallerPath: Wupm.Cli.exe
-    NestedInstallerFiles:
-      - RelativeFilePath: Wupm.Cli.exe
-    Commands:
-      - wupm
 ManifestType: installer
 ManifestVersion: 1.6.0
 "@
-        $manifest = Join-Path $wingetDir "LoopyLuci.WindowsUpdatePackageManager.installer.yaml"
-        Set-Content -Path $manifest -Value $manifestContent -Encoding UTF8
-        Write-Host "Wrote Winget manifest to $manifest"
+
+        $defaultLocaleManifest = @"
+PackageIdentifier: LoopyLuci.WindowsUpdatePackageManager
+PackageVersion: $version
+PackageLocale: en-US
+PackageName: Windows Update Package Manager
+Publisher: LoopyLuci
+PublisherUrl: https://github.com/LoopyLuci/WindowsUpdateAndPackageManager
+PackageUrl: https://github.com/LoopyLuci/WindowsUpdateAndPackageManager
+License: MIT
+LicenseUrl: https://github.com/LoopyLuci/WindowsUpdateAndPackageManager/blob/main/LICENSE
+ShortDescription: Personal-first, offline-capable update and package manager for Windows.
+Description: |
+  WUPM provides Windows Update scanning, delta package updates, offline servicing, rollback, and caching.
+  It supports Chocolatey, Winget, and GitHub Releases.
+Moniker: wupm
+Tags: windows, update, package-manager, offline, delta
+ReleaseNotes: https://github.com/LoopyLuci/WindowsUpdateAndPackageManager/releases/tag/$Tag
+"@
+
+        Set-Content -Path (Join-Path $wingetDir "LoopyLuci.WindowsUpdatePackageManager.version.yaml") -Value $versionManifest -Encoding UTF8
+        Set-Content -Path (Join-Path $wingetDir "LoopyLuci.WindowsUpdatePackageManager.installer.yaml") -Value $installerManifest -Encoding UTF8
+        Set-Content -Path (Join-Path $wingetDir "LoopyLuci.WindowsUpdatePackageManager.defaultLocale.yaml") -Value $defaultLocaleManifest -Encoding UTF8
+        Write-Host "Wrote Winget manifests to $wingetDir"
         if (Get-Command winget -ErrorAction SilentlyContinue) {
-          Write-Host 'Running `winget validate`...'
-          $validation = winget validate --manifest $manifest 2>&1 | Out-String
-          Write-Host $validation
-          if ($LASTEXITCODE -ne 0) {
-            Write-Warning 'Winget manifest validation failed. Review output above.'
+          $wingetVersion = winget --version 2>&1 | Out-String
+          if ($wingetVersion -match '(\d+\.\d+\.\d+)') {
+            $v = [Version]$Matches[1]
+            if ($v -ge [Version]'1.9.0') {
+              Write-Host 'Running `winget validate`...'
+              $validation = winget validate $wingetDir 2>&1 | Out-String
+              Write-Host $validation
+              if ($LASTEXITCODE -ne 0) {
+                Write-Warning 'Winget manifest validation failed. Review output above.'
+              }
+            } else {
+              Write-Warning "Skipping `winget validate` on $wingetVersion; it does not support multi-file manifests. Upgrade to winget 1.9+ or submit to microsoft/winget-pkgs."
+            }
+          } else {
+            Write-Warning 'Unable to parse winget version; skipping validation.'
           }
         } else {
           Write-Host '`winget` not found; skipping manifest validation. Install winget to validate manifests.'
