@@ -80,7 +80,7 @@ try {
       -SigningClientId $SigningClientId -SigningTenantId $SigningTenantId -SigningSecret $SigningSecret -KeyVaultUrl $KeyVaultUrl
 
     Write-Host '--- GitHub Release ---'
-    $assets = @('wupm-cli.zip','wupm-api.zip','sbom.json')
+    $assets = @('wupm-cli.zip','wupm-api.zip','sbom.json') | Where-Object { Test-Path $_ }
     $parent = git rev-parse --verify -q $Tag^ 2>$null
     $range = if ($parent) { "$parent..$Tag" } else { $Tag }
     $changes = ''
