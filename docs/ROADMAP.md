@@ -102,10 +102,10 @@
 2. ~~Registry sync conflict resolution UX~~ — `RegistrySyncResult` with added/replaced/skipped counts
 3. ~~Cache invalidation command~~ — `wupm cache invalidate <packageId> <version>`
 
-## Proposed for v1.8.0
-1. ~~Marketplace publish automation via GitHub release creation~~ — `gh release create` from CLI
+## Proposed for v1.9.0
+1. ~~WPF GUI scaffold~~ — `WupmGui` project with dashboard, themes, and `WupmApiClient`
 2. ~~Plugin registry enable/disable lifecycle~~ — `wupm plugin registry enable|disable --name <plugin>`
-3. ~~Cache invalidation UX improvements~~ — human-readable output
+3. ~~Marketplace publish automation via GitHub release creation~~ — `gh release create` from CLI
 
 ## Environment blockers and exact fixes
 
