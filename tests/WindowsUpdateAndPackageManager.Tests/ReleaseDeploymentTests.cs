@@ -21,7 +21,7 @@ public class ReleaseDeploymentTests
         RunPowerShell(script, "-Tag v0.4.1-test -DryRun -SkipSign -SkipTests -ManifestOnly -DeployTarget winget", repoRoot);
 
         var manifest = Directory.GetFiles(manifestDir, "*.yaml");
-        Assert.Single(manifest);
+        Assert.Equal(3, manifest.Length);
     }
 
     [Fact]
