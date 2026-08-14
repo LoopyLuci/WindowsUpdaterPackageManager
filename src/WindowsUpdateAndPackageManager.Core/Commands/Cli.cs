@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -611,7 +612,17 @@ public static class Cli
 
                 registry.RemoveAsync(name).GetAwaiter().GetResult();
                 registry.AddAsync(name, version ?? existing.Version, effectivePath, dependencies ?? existing.Dependencies).GetAwaiter().GetResult();
-                Console.WriteLine($"Updated plugin: {name}@{version ?? existing.Version}");
+                Console.WriteLine($"Updated plugin: {name}");
+                Console.WriteLine($"  version: {existing.Version} -> {version ?? existing.Version}");
+                if (!string.Equals(existing.Path, effectivePath, StringComparison.OrdinalIgnoreCase))
+                {
+                    Console.WriteLine($"  path: {existing.Path} -> {effectivePath}");
+                }
+
+                if (!string.Equals(existing.Dependencies, dependencies ?? existing.Dependencies, StringComparison.OrdinalIgnoreCase))
+                {
+                    Console.WriteLine($"  dependencies: {existing.Dependencies} -> {dependencies ?? existing.Dependencies}");
+                }
             }
             catch (Exception ex)
             {
@@ -733,6 +744,38 @@ public static class Cli
         }, pluginDisableName);
         pluginRegistry.AddCommand(pluginRegistryDisable);
 
+        var pluginRegistryValidate = new Command("validate", "Validate plugin registry entries");
+        pluginRegistryValidate.SetHandler(() =>
+        {
+            try
+            {
+                var registry = services.GetService(typeof(IPluginRegistry)) as IPluginRegistry;
+                if (registry is null)
+                {
+                    Console.WriteLine("Plugin registry is not configured.");
+                    return;
+                }
+
+                var issues = registry.ValidateAsync().GetAwaiter().GetResult();
+                if (issues.Count == 0)
+                {
+                    Console.WriteLine("Plugin registry is valid.");
+                    return;
+                }
+
+                Console.WriteLine("Plugin registry issues:");
+                foreach (var issue in issues)
+                {
+                    Console.WriteLine($"- {issue}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Plugin registry validate failed: {ex.Message}");
+            }
+        });
+        pluginRegistry.AddCommand(pluginRegistryValidate);
+
         plugin.AddCommand(pluginRegistry);
 
         var pluginVerify = new Command("verify", "Verify a plugin package hash");
@@ -837,26 +880,21 @@ public static class Cli
         {
             try
             {
-                var repoSync = services.GetService(typeof(IRepoSync)) as IRepoSync;
-                if (repoSync is null)
+                var marketplaceClient = services.GetService(typeof(IMarketplaceClient)) as IMarketplaceClient;
+                if (marketplaceClient is null)
                 {
-                    Console.WriteLine("IRepoSync is not configured.");
+                    Console.WriteLine("Marketplace client is not configured.");
                     return;
                 }
 
-                var repoUrl = "https://github.com/LoopyLuci/WindowsUpdatePackageManager-plugins";
-                var results = repoSync.ListAsync(repoUrl).GetAwaiter().GetResult();
-                var filtered = string.IsNullOrWhiteSpace(term)
-                    ? results
-                    : results.Where(p => p.Id.Contains(term, StringComparison.OrdinalIgnoreCase) || p.DisplayName.Contains(term, StringComparison.OrdinalIgnoreCase)).ToList();
-
-                if (filtered.Count == 0)
+                var results = marketplaceClient.SearchAsync(term).GetAwaiter().GetResult();
+                if (results.Count == 0)
                 {
                     Console.WriteLine("No plugins found.");
                     return;
                 }
 
-                foreach (var p in filtered)
+                foreach (var p in results)
                 {
                     Console.WriteLine($"{p.Id}@{p.Version} | {p.DisplayName}");
                 }

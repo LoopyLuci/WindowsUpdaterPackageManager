@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Text.Json;
 
 namespace WindowsUpdateAndPackageManager.Core;
@@ -17,6 +18,7 @@ public interface IPluginRegistry
     Task AddAsync(string name, string version, string path, string dependencies = "", CancellationToken cancellationToken = default);
     Task RemoveAsync(string name, CancellationToken cancellationToken = default);
     Task<string?> ComputeSha256Async(string path, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<string>> ValidateAsync(CancellationToken cancellationToken = default);
 }
 
 public sealed class FilePluginRegistry : IPluginRegistry
@@ -56,6 +58,46 @@ public sealed class FilePluginRegistry : IPluginRegistry
         var entries = (await ListAsync(cancellationToken).ConfigureAwait(false)).ToList();
         entries.RemoveAll(e => e.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
         await WriteAsync(entries, cancellationToken).ConfigureAwait(false);
+    }
+
+    public async Task<IReadOnlyList<string>> ValidateAsync(CancellationToken cancellationToken = default)
+    {
+        var issues = new List<string>();
+        var entries = (await ListAsync(cancellationToken).ConfigureAwait(false)).ToList();
+        var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var entry in entries)
+        {
+            if (string.IsNullOrWhiteSpace(entry.Name))
+            {
+                issues.Add("Registry entry has an empty name.");
+                continue;
+            }
+
+            if (!names.Add(entry.Name))
+            {
+                issues.Add($"Duplicate plugin name: {entry.Name}");
+            }
+
+            if (!File.Exists(entry.Path))
+            {
+                issues.Add($"Plugin file missing: {entry.Path}");
+            }
+
+            if (!string.IsNullOrWhiteSpace(entry.Dependencies))
+            {
+                var deps = entry.Dependencies.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                foreach (var dep in deps)
+                {
+                    if (!entries.Any(e => e.Name.Equals(dep, StringComparison.OrdinalIgnoreCase)))
+                    {
+                        issues.Add($"Plugin '{entry.Name}' has missing dependency: {dep}");
+                    }
+                }
+            }
+        }
+
+        return issues;
     }
 
     private async Task WriteAsync(List<PluginRegistryEntry> entries, CancellationToken cancellationToken)
