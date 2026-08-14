@@ -982,6 +982,54 @@ public static class Cli
         }, pluginSyncRepo, pluginSyncBranch);
         pluginRegistry.AddCommand(pluginRegistrySync);
 
+        var pluginRegistryEnable = new Command("enable", "Enable a plugin in the registry");
+        var pluginEnableName = new Option<string>("--name") { Description = "Plugin name" };
+        pluginRegistryEnable.AddOption(pluginEnableName);
+        pluginRegistryEnable.SetHandler<string>((name) =>
+        {
+            try
+            {
+                var registry = services.GetService(typeof(IPluginRegistry)) as IPluginRegistry;
+                if (registry is null)
+                {
+                    Console.WriteLine("Plugin registry is not configured.");
+                    return;
+                }
+
+                registry.SetEnabledAsync(name, true).GetAwaiter().GetResult();
+                Console.WriteLine($"Enabled plugin: {name}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Plugin enable failed: {ex.Message}");
+            }
+        }, pluginEnableName);
+        pluginRegistry.AddCommand(pluginRegistryEnable);
+
+        var pluginRegistryDisable = new Command("disable", "Disable a plugin in the registry");
+        var pluginDisableName = new Option<string>("--name") { Description = "Plugin name" };
+        pluginRegistryDisable.AddOption(pluginDisableName);
+        pluginRegistryDisable.SetHandler<string>((name) =>
+        {
+            try
+            {
+                var registry = services.GetService(typeof(IPluginRegistry)) as IPluginRegistry;
+                if (registry is null)
+                {
+                    Console.WriteLine("Plugin registry is not configured.");
+                    return;
+                }
+
+                registry.SetEnabledAsync(name, false).GetAwaiter().GetResult();
+                Console.WriteLine($"Disabled plugin: {name}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Plugin disable failed: {ex.Message}");
+            }
+        }, pluginDisableName);
+        pluginRegistry.AddCommand(pluginRegistryDisable);
+
         plugin.AddCommand(pluginRegistry);
 
         var pluginVerify = new Command("verify", "Verify a plugin package hash");

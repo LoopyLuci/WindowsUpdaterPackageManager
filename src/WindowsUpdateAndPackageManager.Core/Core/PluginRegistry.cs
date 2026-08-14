@@ -19,6 +19,7 @@ public interface IPluginRegistry
     Task RemoveAsync(string name, CancellationToken cancellationToken = default);
     Task<string?> ComputeSha256Async(string path, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<string>> ValidateAsync(CancellationToken cancellationToken = default);
+    Task SetEnabledAsync(string name, bool enabled, CancellationToken cancellationToken = default);
 }
 
 public sealed class FilePluginRegistry : IPluginRegistry
@@ -98,6 +99,19 @@ public sealed class FilePluginRegistry : IPluginRegistry
         }
 
         return issues;
+    }
+
+    public async Task SetEnabledAsync(string name, bool enabled, CancellationToken cancellationToken = default)
+    {
+        var entries = (await ListAsync(cancellationToken).ConfigureAwait(false)).ToList();
+        var entry = entries.FirstOrDefault(e => e.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+        if (entry is null)
+        {
+            throw new InvalidOperationException($"Plugin '{name}' is not in the registry.");
+        }
+
+        entry.Enabled = enabled;
+        await WriteAsync(entries, cancellationToken).ConfigureAwait(false);
     }
 
     private async Task WriteAsync(List<PluginRegistryEntry> entries, CancellationToken cancellationToken)
