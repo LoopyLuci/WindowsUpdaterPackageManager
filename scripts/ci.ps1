@@ -53,8 +53,8 @@ try {
     dotnet publish src/WupmApi/WupmApi.csproj --no-build -c $Configuration -o $apiOut
 
     Write-Host '--- Zip ---'
-    $cliZip = Join-Path (Get-Location) 'wupm-cli.zip'
-    $apiZip = Join-Path (Get-Location) 'wupm-api.zip'
+    $cliZip = Join-Path (Get-Location) 'wupm-cli-publish.zip'
+    $apiZip = Join-Path (Get-Location) 'wupm-api-publish.zip'
     $cliFiles = Get-ChildItem -Path $cliOut -File -Recurse | Select-Object -ExpandProperty FullName
     $apiFiles = Get-ChildItem -Path $apiOut -File -Recurse | Select-Object -ExpandProperty FullName
     Compress-Archive -Path $cliFiles -DestinationPath $cliZip -Force

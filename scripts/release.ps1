@@ -27,8 +27,8 @@ if (-not (Get-Command gh -ErrorAction SilentlyContinue)) { throw 'gh CLI is requ
 function Deploy-Chocolatey {
   param([string]$Tag, [string]$Repo)
   $version = $Tag.TrimStart('v')
-  $zip = Join-Path $PWD.Path 'wupm-cli.zip'
-  if (-not (Test-Path $zip)) { throw 'wupm-cli.zip not found for Chocolatey packaging.' }
+  $zip = Join-Path $PWD.Path 'wupm-cli-publish.zip'
+  if (-not (Test-Path $zip)) { throw 'wupm-cli-publish.zip not found for Chocolatey packaging.' }
 
   $packDir = Join-Path $PWD.Path 'choco-pack'
   $toolsDir = Join-Path $packDir 'tools'
@@ -80,7 +80,7 @@ try {
       -SigningClientId $SigningClientId -SigningTenantId $SigningTenantId -SigningSecret $SigningSecret -KeyVaultUrl $KeyVaultUrl
 
     Write-Host '--- GitHub Release ---'
-    $assets = @('wupm-cli.zip','wupm-api.zip','sbom.json') | Where-Object { Test-Path $_ }
+    $assets = @('wupm-cli-publish.zip','wupm-api-publish.zip','sbom.json') | Where-Object { Test-Path $_ }
     $parent = git rev-parse --verify -q $Tag^ 2>$null
     $range = if ($parent) { "$parent..$Tag" } else { $Tag }
     $changes = ''
@@ -145,8 +145,8 @@ $changes
         $version = $Tag.TrimStart('v')
         $wingetDir = Join-Path $PWD.Path 'scripts/deploy/winget/winget-pkgs/LoopyLuci.WindowsUpdatePackageManager'
         if (-not (Test-Path $wingetDir)) { New-Item -ItemType Directory -Path $wingetDir | Out-Null }
-        $zip = Join-Path $PWD.Path 'wupm-cli.zip'
-        if (-not (Test-Path $zip)) { throw 'wupm-cli.zip not found for Winget manifest generation.' }
+        $zip = Join-Path $PWD.Path 'wupm-cli-publish.zip'
+        if (-not (Test-Path $zip)) { throw 'wupm-cli-publish.zip not found for Winget manifest generation.' }
         $sha = (Get-FileHash -Path $zip -Algorithm SHA256).Hash.ToLowerInvariant()
         $versionManifest = @"
 PackageIdentifier: LoopyLuci.WindowsUpdatePackageManager
