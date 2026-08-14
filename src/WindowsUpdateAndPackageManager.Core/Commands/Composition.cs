@@ -25,7 +25,7 @@ public static class Composition
         services.AddSingleton<IAuditStore>(new SqliteAuditStore(dataRoot));
         services.AddSingleton<ILogger>(_ => NullLogger.Instance);
         services.AddSingleton<IWindowsUpdateApi, WindowsUpdateApi>();
-        services.AddSingleton<IWindowsUpdateManager>(sp => new WindowsUpdateManager(sp.GetRequiredService<IAuditStore>(), sp.GetRequiredService<IWindowsUpdateApi>()));
+        services.AddSingleton<IWindowsUpdateManager>(sp => new WindowsUpdateManager(sp.GetRequiredService<IAuditStore>(), sp.GetRequiredService<IWindowsUpdateApi>(), Path.Combine(cacheRoot, "offline-scan-result.txt")));
         services.AddSingleton<IPackageManager>(sp => new PackageManager(sp.GetRequiredService<IStateDatabase>(), sp.GetRequiredService<IAuditStore>(), sp.GetRequiredService<ICacheManager>(), sp.GetRequiredService<IPolicyEngine>()));
         services.AddSingleton<IRepoSync>(sp => new RepoSync(sp.GetRequiredService<IRepoClient>(), sp.GetRequiredService<IManifestValidator>(), sp.GetRequiredService<IStateDatabase>(), sp.GetRequiredService<IAuditStore>(), sp.GetRequiredService<ICacheManager>()));
         services.AddSingleton<RollbackManager>();

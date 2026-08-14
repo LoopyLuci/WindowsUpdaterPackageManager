@@ -47,6 +47,7 @@ public sealed class DeltaEndToEndCliTests
             await using (var target = File.Create(targetPath)) await stream.CopyToAsync(target, cancellationToken);
             return true;
         }
+        public event Action<string>? Progress;
     }
 
     private sealed class FakeRepoClient : IRepoClient

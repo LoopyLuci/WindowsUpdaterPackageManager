@@ -637,15 +637,23 @@ public static class Cli
                     return;
                 }
 
-                var delta = await provider.GetDeltaAsync(id, fromVersion, "latest");
-                if (delta is null)
+                provider.Progress += msg => Console.WriteLine(msg);
+                try
                 {
-                    Console.WriteLine($"No delta available for {id} from {fromVersion} to latest.");
-                    return;
-                }
+                    var delta = await provider.GetDeltaAsync(id, fromVersion, "latest");
+                    if (delta is null)
+                    {
+                        Console.WriteLine($"No delta available for {id} from {fromVersion} to latest.");
+                        return;
+                    }
 
-                var applied = await provider.ApplyDeltaAsync(id, fromVersion, "latest");
-                Console.WriteLine(applied ? "Delta update applied successfully." : "Delta update failed.");
+                    var applied = await provider.ApplyDeltaAsync(id, fromVersion, "latest");
+                    Console.WriteLine(applied ? "Delta update applied successfully." : "Delta update failed.");
+                }
+                finally
+                {
+                    provider.Progress -= msg => Console.WriteLine(msg);
+                }
             }
             catch (Exception ex)
             {
@@ -672,34 +680,42 @@ public static class Cli
                     return;
                 }
 
-                var applied = provider.ApplyDeltaAsync(id, fromVersion, "latest").GetAwaiter().GetResult();
-                if (!applied)
+                provider.Progress += msg => Console.WriteLine(msg);
+                try
                 {
-                    Console.WriteLine("Delta apply failed.");
-                    return;
+                    var applied = provider.ApplyDeltaAsync(id, fromVersion, "latest").GetAwaiter().GetResult();
+                    if (!applied)
+                    {
+                        Console.WriteLine("Delta apply failed.");
+                        return;
+                    }
+
+                    Console.WriteLine("Delta applied successfully.");
+
+                    if (!string.IsNullOrWhiteSpace(mountPath))
+                    {
+                        var offline = services.GetService(typeof(IOfflineImageService)) as IOfflineImageService;
+                        if (offline is null)
+                        {
+                            Console.WriteLine("Offline image service is not configured.");
+                            return;
+                        }
+
+                        var cacheRoot = services.GetService(typeof(ICacheManager)) as ICacheManager;
+                        var packagePath = cacheRoot is null ? string.Empty : Path.Combine(cacheRoot.GetType().Name, id, "latest", $"{id}@latest.wupkg");
+                        if (string.IsNullOrWhiteSpace(packagePath) || !File.Exists(packagePath))
+                        {
+                            Console.WriteLine("Applied package path could not be resolved for offline apply.");
+                            return;
+                        }
+
+                        var result = offline.ApplyPackageAsync(mountPath, packagePath).GetAwaiter().GetResult();
+                        Console.WriteLine(result.Success ? "Package applied to offline image." : $"Offline apply failed: {result.Message}");
+                    }
                 }
-
-                Console.WriteLine("Delta applied successfully.");
-
-                if (!string.IsNullOrWhiteSpace(mountPath))
+                finally
                 {
-                    var offline = services.GetService(typeof(IOfflineImageService)) as IOfflineImageService;
-                    if (offline is null)
-                    {
-                        Console.WriteLine("Offline image service is not configured.");
-                        return;
-                    }
-
-                    var cacheRoot = services.GetService(typeof(ICacheManager)) as ICacheManager;
-                    var packagePath = cacheRoot is null ? string.Empty : Path.Combine(cacheRoot.GetType().Name, id, "latest", $"{id}@latest.wupkg");
-                    if (string.IsNullOrWhiteSpace(packagePath) || !File.Exists(packagePath))
-                    {
-                        Console.WriteLine("Applied package path could not be resolved for offline apply.");
-                        return;
-                    }
-
-                    var result = offline.ApplyPackageAsync(mountPath, packagePath).GetAwaiter().GetResult();
-                    Console.WriteLine(result.Success ? "Package applied to offline image." : $"Offline apply failed: {result.Message}");
+                    provider.Progress -= msg => Console.WriteLine(msg);
                 }
             }
             catch (Exception ex)

@@ -18,6 +18,8 @@ public sealed class PackageDeltaProvider : IPackageDeltaProvider
         _cacheManager = cacheManager;
     }
 
+    public event Action<string>? Progress;
+
     public async Task<DeltaManifest?> GetDeltaAsync(string packageId, string fromVersion, string toVersion, CancellationToken cancellationToken = default)
         => await _deltaStore.GetAsync(packageId, fromVersion, toVersion, cancellationToken).ConfigureAwait(false);
 
@@ -26,6 +28,7 @@ public sealed class PackageDeltaProvider : IPackageDeltaProvider
         var delta = await GetDeltaAsync(packageId, fromVersion, toVersion, cancellationToken).ConfigureAwait(false);
         if (delta is null) return false;
 
+        Progress?.Invoke($"Downloading delta for {packageId} {fromVersion} -> {toVersion} ...");
         using var stream = await _repoClient.DownloadPackageAsync(delta.DeltaUrl, cancellationToken).ConfigureAwait(false);
         var targetDir = await _cacheManager.EnsurePackageCacheAsync(packageId, toVersion, cancellationToken).ConfigureAwait(false);
         Directory.CreateDirectory(targetDir);
@@ -33,9 +36,11 @@ public sealed class PackageDeltaProvider : IPackageDeltaProvider
 
         await using (var target = File.Create(targetPath))
         {
+            Progress?.Invoke($"Applying delta for {packageId} ...");
             await stream.CopyToAsync(target, cancellationToken).ConfigureAwait(false);
         }
 
+        Progress?.Invoke($"Verifying {packageId} ...");
         using var sha = SHA256.Create();
         using (var hashStream = File.OpenRead(targetPath))
         {
@@ -48,6 +53,7 @@ public sealed class PackageDeltaProvider : IPackageDeltaProvider
             }
         }
 
+        Progress?.Invoke($"Delta applied for {packageId}.");
         return true;
     }
 }

@@ -9,31 +9,19 @@
 - Integration tests for release deployment
 - README badges and documentation
 
-## Proposed for v0.2.0
-1. ~~Chocolatey live validation~~ — blocked by admin shell
-2. ~~Winget live submission~~ — manifests generated; blocked by client validation/PowerShell admin
-3. ~~Self-update E2E~~ — blocked by missing GITHUB_TOKEN
-4. ~~Service wrapper hardening~~ — blocked by admin shell
-5. ~~Offline update support~~ — `IOfflineImageService` and offline mount/apply/dismount implemented
-6. ~~Rollback support~~ — `RollbackManager` and rollback command implemented
-7. ~~Update scheduling~~ — scheduled task install/uninstall/status commands implemented
-8. ~~Telemetry opt-out~~ — `--no-telemetry` CLI option implemented
-9. ~~Error recovery~~ — DISM retry logic in `OfflineImageService`
-10. ~~Logging~~ — `FileLogger` and `--log-file` implemented
-11. ~~Delta updates~~ — `delta-update` and `delta-apply` commands implemented
-12. ~~Windows Update CLI~~ — `windows-update` and `driver-update` commands implemented
+## Proposed for v0.3.0
+1. **Offline scan result caching** — `--offline-scan` saves results to `.wupm/cache/offline-scan-result.txt`
+2. **Delta update progress reporting** — `delta-update` and `delta-apply` show progress events
+3. **Offline cache management** — prune and inspect cached updates
+4. **Rollback UX improvements** — richer rollback output and dry-run
+5. **Self-update E2E** — blocked by missing `GITHUB_TOKEN`
 
 ## Priority order
-1. Chocolatey live validation (unblocks package distribution)
-2. Winget live submission (unblocks discoverability)
-3. Self-update E2E (unblocks user confidence)
-4. Service wrapper hardening (unblocks production use)
-5. Offline update support (differentiator feature)
-6. Rollback support (reliability improvement)
-7. Update scheduling (convenience feature)
-8. Telemetry opt-out (privacy requirement)
-9. Error recovery (robustness improvement)
-10. Logging (operational excellence)
+1. Offline scan result caching
+2. Delta update progress reporting
+3. Offline cache management
+4. Rollback UX improvements
+5. Self-update E2E
 
 ## Environment blockers and exact fixes
 

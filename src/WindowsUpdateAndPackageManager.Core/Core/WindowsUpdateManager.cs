@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -14,11 +15,13 @@ public sealed class WindowsUpdateManager : IWindowsUpdateManager
 {
     private readonly IAuditStore _auditStore;
     private readonly IWindowsUpdateApi _windowsUpdateApi;
+    private readonly string? _offlineScanCachePath;
 
-    public WindowsUpdateManager(IAuditStore auditStore, IWindowsUpdateApi windowsUpdateApi)
+    public WindowsUpdateManager(IAuditStore auditStore, IWindowsUpdateApi windowsUpdateApi, string? offlineScanCachePath = null)
     {
         _auditStore = auditStore;
         _windowsUpdateApi = windowsUpdateApi;
+        _offlineScanCachePath = offlineScanCachePath;
     }
 
     public async Task<WindowsUpdateResult> ScanAndInstallAsync(bool driversOnly = false, bool offlineScan = false, CancellationToken cancellationToken = default)
@@ -34,7 +37,7 @@ public sealed class WindowsUpdateManager : IWindowsUpdateManager
 
             result.UpdatesFound = updates.Count;
 
-            if (result.UpdatesFound > 0)
+            if (result.UpdatesFound > 0 && !offlineScan)
             {
                 await _windowsUpdateApi.DownloadAsync(updates, cancellationToken).ConfigureAwait(false);
                 var installResult = await _windowsUpdateApi.InstallAsync(updates, cancellationToken).ConfigureAwait(false);
@@ -47,7 +50,12 @@ public sealed class WindowsUpdateManager : IWindowsUpdateManager
             else
             {
                 result.Success = true;
-                result.Message = "No updates were found.";
+                result.Message = offlineScan ? $"Found {result.UpdatesFound} updates available." : "No updates were found.";
+            }
+
+            if (offlineScan && !string.IsNullOrWhiteSpace(_offlineScanCachePath))
+            {
+                await CacheOfflineScanResultAsync(updates, _offlineScanCachePath, cancellationToken).ConfigureAwait(false);
             }
 
             await _auditStore.AppendAsync(new AuditEntry
@@ -73,5 +81,36 @@ public sealed class WindowsUpdateManager : IWindowsUpdateManager
             }, cancellationToken).ConfigureAwait(false);
         }
         return result;
+    }
+
+    private static async Task CacheOfflineScanResultAsync(IReadOnlyList<WindowsUpdate> updates, string cachePath, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var cacheDir = Path.GetDirectoryName(cachePath);
+            if (!string.IsNullOrWhiteSpace(cacheDir))
+            {
+                Directory.CreateDirectory(cacheDir);
+            }
+
+            var lines = new List<string>
+            {
+                $"# Offline scan result: {DateTimeOffset.UtcNow:u}",
+                $"# Updates found: {updates.Count}",
+                $"# Title|SizeBytes|IsDriver"
+            };
+
+            foreach (var u in updates)
+            {
+                var size = u.SizeBytes.HasValue ? u.SizeBytes.Value.ToString() : "Unknown";
+                lines.Add($"{u.Title}|{size}|{u.IsDriver}");
+            }
+
+            await File.WriteAllLinesAsync(cachePath, lines, cancellationToken).ConfigureAwait(false);
+        }
+        catch
+        {
+            // Cache write failures should not fail the scan.
+        }
     }
 }

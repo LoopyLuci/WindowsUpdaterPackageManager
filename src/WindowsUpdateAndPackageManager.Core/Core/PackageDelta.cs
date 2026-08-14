@@ -6,6 +6,7 @@ public interface IPackageDeltaProvider
 {
     Task<DeltaManifest?> GetDeltaAsync(string packageId, string fromVersion, string toVersion, CancellationToken cancellationToken = default);
     Task<bool> ApplyDeltaAsync(string packageId, string fromVersion, string toVersion, CancellationToken cancellationToken = default);
+    event Action<string>? Progress;
 }
 
 public sealed class DeltaManifest
