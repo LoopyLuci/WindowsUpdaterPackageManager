@@ -28,29 +28,31 @@ public sealed class PackageDeltaProvider : IPackageDeltaProvider
         var delta = await GetDeltaAsync(packageId, fromVersion, toVersion, cancellationToken).ConfigureAwait(false);
         if (delta is null) return false;
 
-        Progress?.Invoke($"Downloading delta for {packageId} {fromVersion} -> {toVersion} ...");
-        using var stream = await _repoClient.DownloadPackageAsync(delta.DeltaUrl, cancellationToken).ConfigureAwait(false);
         var targetDir = await _cacheManager.EnsurePackageCacheAsync(packageId, toVersion, cancellationToken).ConfigureAwait(false);
         Directory.CreateDirectory(targetDir);
         var targetPath = Path.Combine(targetDir, $"{packageId}@{toVersion}.wupkg");
+        var partialPath = targetPath + ".partial";
 
-        await using (var target = File.Create(targetPath))
-        {
-            Progress?.Invoke($"Applying delta for {packageId} ...");
-            await stream.CopyToAsync(target, cancellationToken).ConfigureAwait(false);
-        }
+        Progress?.Invoke($"Downloading delta for {packageId} {fromVersion} -> {toVersion} ...");
+        using var sourceStream = await _repoClient.DownloadPackageAsync(delta.DeltaUrl, cancellationToken).ConfigureAwait(false);
+        await using var target = File.Exists(partialPath)
+            ? new FileStream(partialPath, FileMode.Append, FileAccess.Write, FileShare.None, 8192, useAsync: true)
+            : File.Create(partialPath);
+        await sourceStream.CopyToAsync(target, cancellationToken).ConfigureAwait(false);
+        await target.FlushAsync().ConfigureAwait(false);
+
+        Progress?.Invoke($"Applying delta for {packageId} ...");
+        File.Move(partialPath, targetPath, overwrite: true);
 
         Progress?.Invoke($"Verifying {packageId} ...");
         using var sha = SHA256.Create();
-        using (var hashStream = File.OpenRead(targetPath))
+        await using var hashStream = File.OpenRead(targetPath);
+        var hash = sha.ComputeHash(hashStream);
+        var actualHash = Convert.ToHexString(hash).ToLowerInvariant();
+        if (!string.Equals(actualHash, delta.DeltaHash, StringComparison.OrdinalIgnoreCase))
         {
-            var hash = sha.ComputeHash(hashStream);
-            var actualHash = Convert.ToHexString(hash).ToLowerInvariant();
-            if (!string.Equals(actualHash, delta.DeltaHash, StringComparison.OrdinalIgnoreCase))
-            {
-                File.Delete(targetPath);
-                return false;
-            }
+            File.Delete(targetPath);
+            return false;
         }
 
         Progress?.Invoke($"Delta applied for {packageId}.");

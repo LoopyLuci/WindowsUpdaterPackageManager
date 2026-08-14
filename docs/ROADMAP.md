@@ -38,7 +38,7 @@
 
 2. Self-update E2E
 - Fix: set `GITHUB_TOKEN` and run:
-  `wupm self-update --tag v0.2.0`
+  `wupm self-update --tag v0.3.0`
 
 3. Service wrapper hardening
 - Fix: open elevated PowerShell and run:
@@ -47,3 +47,7 @@
 
 4. Winget live submission
 - Fix: fork https://github.com/microsoft/winget-pkgs, copy `scripts/deploy/winget/winget-pkgs/LoopyLuci.WindowsUpdatePackageManager/*.yaml` into `manifests/L/LoopyLuci/WindowsUpdatePackageManager/`, and open a PR.
+
+5. v0.4.0 release
+- Fix: run:
+  `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/release.ps1 -Tag v0.4.0 -DeployTarget winget`
