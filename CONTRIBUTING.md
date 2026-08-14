@@ -21,37 +21,44 @@ WUPM supports plugins through the `IPlugin` interface located in `src/WindowsUpd
 
 ### Creating a plugin
 
-1. Create a new .NET class library project targeting `net10.0-windows`
+1. Create a new .NET class library project targeting `net10.0`
 2. Reference `WindowsUpdateAndPackageManager.Core`
 3. Implement `IPlugin`:
 
 ```csharp
-using WindowsUpdateAndPackageManager.Core;
+using System.Threading;
 using System.Threading.Tasks;
+using WindowsUpdateAndPackageManager.Core;
 
 namespace MyPlugin;
 
-public class MyPlugin : IPlugin
+public sealed class MyPlugin : IPlugin
 {
-    public string Name => "my-plugin";
+    public string Name => "MyPlugin";
     public string Version => "1.0.0";
 
     public Task InitializeAsync(CancellationToken cancellationToken = default)
     {
-        // Plugin initialization logic
         return Task.CompletedTask;
     }
 
     public Task<IReadOnlyList<string>> GetCommandsAsync(CancellationToken cancellationToken = default)
     {
-        // Return custom CLI commands
-        return Task.FromResult<IReadOnlyList<string>>(new List<string>());
+        return Task.FromResult<IReadOnlyList<string>>(Array.Empty<string>());
     }
 }
 ```
 
-4. Build the plugin as a `.dll` and place it in `.wupm/plugins/` or `.wupm/data/plugins/`
+4. Build the plugin as a `.dll` and place it in `.wupm/plugins/` or register it with `wupm plugin registry add`
 5. Run `wupm plugin list` to verify loading
+
+### Plugin verification
+
+Use `wupm plugin verify --path <dll>` to compute the SHA256 hash of a plugin assembly before registration. Administrators should verify hashes against trusted sources before installing plugins.
+
+### Plugin marketplace
+
+Use `wupm marketplace search <term>` to discover community plugins from a remote index. Review plugins carefully before installing.
 
 ## Branching
 

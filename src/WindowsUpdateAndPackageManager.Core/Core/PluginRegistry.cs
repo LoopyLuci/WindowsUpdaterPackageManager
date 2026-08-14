@@ -15,6 +15,7 @@ public interface IPluginRegistry
     Task<IReadOnlyList<PluginRegistryEntry>> ListAsync(CancellationToken cancellationToken = default);
     Task AddAsync(string name, string version, string path, CancellationToken cancellationToken = default);
     Task RemoveAsync(string name, CancellationToken cancellationToken = default);
+    Task<string?> ComputeSha256Async(string path, CancellationToken cancellationToken = default);
 }
 
 public sealed class FilePluginRegistry : IPluginRegistry
@@ -38,6 +39,15 @@ public sealed class FilePluginRegistry : IPluginRegistry
         var entries = (await ListAsync(cancellationToken).ConfigureAwait(false)).ToList();
         entries.Add(new PluginRegistryEntry { Name = name, Version = version, Path = path, Enabled = true });
         await WriteAsync(entries, cancellationToken).ConfigureAwait(false);
+    }
+
+    public async Task<string?> ComputeSha256Async(string path, CancellationToken cancellationToken = default)
+    {
+        if (!File.Exists(path)) return null;
+        await using var stream = File.OpenRead(path);
+        using var sha = System.Security.Cryptography.SHA256.Create();
+        var hash = sha.ComputeHash(stream);
+        return Convert.ToHexString(hash).ToLowerInvariant();
     }
 
     public async Task RemoveAsync(string name, CancellationToken cancellationToken = default)

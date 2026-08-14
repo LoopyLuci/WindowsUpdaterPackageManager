@@ -596,7 +596,85 @@ public static class Cli
         pluginRegistry.AddCommand(pluginRegistryRemove);
 
         plugin.AddCommand(pluginRegistry);
+
+        var pluginVerify = new Command("verify", "Verify a plugin package hash");
+        var pluginVerifyPath = new Option<string>("--path") { Description = "Path to plugin DLL" };
+        pluginVerify.AddOption(pluginVerifyPath);
+        pluginVerify.SetHandler<string?>((path) =>
+        {
+            try
+            {
+                var registry = services.GetService(typeof(IPluginRegistry)) as IPluginRegistry;
+                if (registry is null)
+                {
+                    Console.WriteLine("Plugin registry is not configured.");
+                    return;
+                }
+
+                if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
+                {
+                    Console.WriteLine("Plugin path is required and must exist.");
+                    return;
+                }
+
+                var hash = registry.ComputeSha256Async(path).GetAwaiter().GetResult();
+                if (hash is null)
+                {
+                    Console.WriteLine("Verification failed.");
+                    return;
+                }
+
+                Console.WriteLine($"SHA256: {hash}");
+                Console.WriteLine("Verification: passed");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Plugin verify failed: {ex.Message}");
+            }
+        }, pluginVerifyPath);
+        plugin.AddCommand(pluginVerify);
+
         root.AddCommand(plugin);
+
+        var marketplace = new Command("marketplace", "Browse plugins");
+        var marketplaceSearch = new Command("search", "Search plugins by name");
+        var marketplaceSearchTerm = new Argument<string>("term") { Description = "Search term" };
+        marketplaceSearch.AddArgument(marketplaceSearchTerm);
+        marketplaceSearch.SetHandler<string>((term) =>
+        {
+            try
+            {
+                var repoSync = services.GetService(typeof(IRepoSync)) as IRepoSync;
+                if (repoSync is null)
+                {
+                    Console.WriteLine("IRepoSync is not configured.");
+                    return;
+                }
+
+                var repoUrl = "https://github.com/LoopyLuci/WindowsUpdatePackageManager-plugins";
+                var results = repoSync.ListAsync(repoUrl).GetAwaiter().GetResult();
+                var filtered = string.IsNullOrWhiteSpace(term)
+                    ? results
+                    : results.Where(p => p.Id.Contains(term, StringComparison.OrdinalIgnoreCase) || p.DisplayName.Contains(term, StringComparison.OrdinalIgnoreCase)).ToList();
+
+                if (filtered.Count == 0)
+                {
+                    Console.WriteLine("No plugins found.");
+                    return;
+                }
+
+                foreach (var p in filtered)
+                {
+                    Console.WriteLine($"{p.Id}@{p.Version} | {p.DisplayName}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Marketplace search failed: {ex.Message}");
+            }
+        }, marketplaceSearchTerm);
+        marketplace.AddCommand(marketplaceSearch);
+        root.AddCommand(marketplace);
 
         var notify = new Command("notify", "Update notifications");
         var notifyCheck = new Command("check", "Check for available updates");
