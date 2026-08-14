@@ -776,6 +776,75 @@ public static class Cli
         });
         pluginRegistry.AddCommand(pluginRegistryValidate);
 
+        var pluginRegistryBackup = new Command("backup", "Backup plugin registry to a JSON file");
+        var pluginBackupPath = new Option<string>("--path") { Description = "Output JSON path" };
+        pluginRegistryBackup.AddOption(pluginBackupPath);
+        pluginRegistryBackup.SetHandler<string?>((path) =>
+        {
+            try
+            {
+                var registry = services.GetService(typeof(IPluginRegistry)) as IPluginRegistry;
+                if (registry is null)
+                {
+                    Console.WriteLine("Plugin registry is not configured.");
+                    return;
+                }
+
+                var entries = registry.ListAsync().GetAwaiter().GetResult();
+                var effectivePath = string.IsNullOrWhiteSpace(path) ? "plugin-registry-backup.json" : path;
+                var json = System.Text.Json.JsonSerializer.Serialize(entries, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+                File.WriteAllText(effectivePath, json);
+                Console.WriteLine($"Backed up {entries.Count} plugin(s) to {effectivePath}.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Plugin registry backup failed: {ex.Message}");
+            }
+        }, pluginBackupPath);
+        pluginRegistry.AddCommand(pluginRegistryBackup);
+
+        var pluginRegistryRestore = new Command("restore", "Restore plugin registry from a JSON backup");
+        var pluginRestorePath = new Option<string>("--path") { Description = "Input JSON path" };
+        pluginRegistryRestore.AddOption(pluginRestorePath);
+        pluginRegistryRestore.SetHandler<string?>((path) =>
+        {
+            try
+            {
+                var registry = services.GetService(typeof(IPluginRegistry)) as IPluginRegistry;
+                if (registry is null)
+                {
+                    Console.WriteLine("Plugin registry is not configured.");
+                    return;
+                }
+
+                if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
+                {
+                    Console.WriteLine("Backup path is required and must exist.");
+                    return;
+                }
+
+                var json = File.ReadAllText(path);
+                var entries = System.Text.Json.JsonSerializer.Deserialize<List<PluginRegistryEntry>>(json);
+                if (entries is null || entries.Count == 0)
+                {
+                    Console.WriteLine("No entries found in backup.");
+                    return;
+                }
+
+                foreach (var entry in entries)
+                {
+                    registry.AddAsync(entry.Name, entry.Version, entry.Path, entry.Dependencies).GetAwaiter().GetResult();
+                }
+
+                Console.WriteLine($"Restored {entries.Count} plugin(s) from {path}.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Plugin registry restore failed: {ex.Message}");
+            }
+        }, pluginRestorePath);
+        pluginRegistry.AddCommand(pluginRegistryRestore);
+
         plugin.AddCommand(pluginRegistry);
 
         var pluginVerify = new Command("verify", "Verify a plugin package hash");
@@ -840,8 +909,10 @@ public static class Cli
 
         var pluginInstall = new Command("install", "Install a plugin from a path");
         var pluginInstallPath = new Option<string>("--path") { Description = "Path to plugin DLL" };
+        var pluginInstallDeps = new Option<string>("--dependencies") { Description = "Comma-separated plugin dependencies" };
         pluginInstall.AddOption(pluginInstallPath);
-        pluginInstall.SetHandler<string?>((path) =>
+        pluginInstall.AddOption(pluginInstallDeps);
+        pluginInstall.SetHandler<string?, string?>((path, dependencies) =>
         {
             try
             {
@@ -860,14 +931,35 @@ public static class Cli
 
                 var name = Path.GetFileNameWithoutExtension(path);
                 var version = "1.0.0";
-                registry.AddAsync(name, version, path, dependencies: string.Empty).GetAwaiter().GetResult();
+                var deps = dependencies ?? string.Empty;
+                var missing = new List<string>();
+                if (!string.IsNullOrWhiteSpace(deps))
+                {
+                    var installed = registry.ListAsync().GetAwaiter().GetResult();
+                    var installedNames = new HashSet<string>(installed.Select(e => e.Name), StringComparer.OrdinalIgnoreCase);
+                    foreach (var dep in deps.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                    {
+                        if (!installedNames.Contains(dep))
+                        {
+                            missing.Add(dep);
+                        }
+                    }
+                }
+
+                if (missing.Count > 0)
+                {
+                    Console.WriteLine($"Missing dependencies: {string.Join(", ", missing)}");
+                    return;
+                }
+
+                registry.AddAsync(name, version, path, deps).GetAwaiter().GetResult();
                 Console.WriteLine($"Installed plugin: {name}@{version}");
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Plugin install failed: {ex.Message}");
             }
-        }, pluginInstallPath);
+        }, pluginInstallPath, pluginInstallDeps);
         plugin.AddCommand(pluginInstall);
 
         root.AddCommand(plugin);
@@ -913,16 +1005,15 @@ public static class Cli
         {
             try
             {
-                var repoSync = services.GetService(typeof(IRepoSync)) as IRepoSync;
+                var marketplaceClient = services.GetService(typeof(IMarketplaceClient)) as IMarketplaceClient;
                 var registry = services.GetService(typeof(IPluginRegistry)) as IPluginRegistry;
-                if (repoSync is null || registry is null)
+                if (marketplaceClient is null || registry is null)
                 {
                     Console.WriteLine("Services are not configured.");
                     return;
                 }
 
-                var repoUrl = "https://github.com/LoopyLuci/WindowsUpdatePackageManager-plugins";
-                var results = repoSync.ListAsync(repoUrl).GetAwaiter().GetResult();
+                var results = marketplaceClient.SearchAsync(name).GetAwaiter().GetResult();
                 var match = results.FirstOrDefault(p => p.Id.Equals(name, StringComparison.OrdinalIgnoreCase) || p.DisplayName.Equals(name, StringComparison.OrdinalIgnoreCase));
                 if (match is null)
                 {
@@ -930,6 +1021,8 @@ public static class Cli
                     return;
                 }
 
+                var localPath = Path.Combine(AppContext.BaseDirectory, "plugins", $"{match.Id}.dll");
+                registry.AddAsync(match.Id, match.Version, localPath, dependencies: string.Empty).GetAwaiter().GetResult();
                 Console.WriteLine($"Installed plugin: {match.Id}@{match.Version}");
             }
             catch (Exception ex)

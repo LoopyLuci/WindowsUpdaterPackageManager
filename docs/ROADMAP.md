@@ -75,10 +75,16 @@
 2. ~~Plugin enable/disable UX~~ — `wupm plugin registry enable|disable --name <plugin>`
 3. ~~Marketplace auth~~ — persistent auth token and logout
 
-## Proposed for v1.2.0
-1. Plugin update command UX — richer output for registry updates
-2. Plugin enable/disable UX — runtime visibility of enabled/disabled plugins
-3. Marketplace search with auth headers — authenticated marketplace queries
+## Proposed for v1.3.0
+1. ~~Plugin update command UX~~ — richer before/after update output
+2. ~~Plugin enable/disable UX~~ — `wupm plugin registry enable|disable --name <plugin>`
+3. ~~Plugin registry validation~~ — `wupm plugin registry validate`
+4. ~~Marketplace auth hardening~~ — dedicated `IMarketplaceClient` with auth headers
+
+## Proposed for v1.4.0
+1. Marketplace install with auth headers — authenticated marketplace queries during install
+2. Plugin dependency resolution at install time — fail fast when dependencies are missing
+3. Plugin registry backup/restore UX — `wupm plugin registry backup|restore --path <json>`
 
 ## Environment blockers and exact fixes
 
@@ -88,7 +94,7 @@
 
 2. Self-update E2E
 - Fix: set `GITHUB_TOKEN` and run:
-  `wupm self-update --tag v1.2.0`
+  `wupm self-update --tag v1.4.0`
 
 3. Service wrapper hardening
 - Fix: open elevated PowerShell and run:
@@ -98,6 +104,6 @@
 4. Winget live submission
 - Fix: fork https://github.com/microsoft/winget-pkgs, copy `scripts/deploy/winget/winget-pkgs/LoopyLuci.WindowsUpdatePackageManager/*.yaml` into `manifests/L/LoopyLuci/WindowsUpdatePackageManager/`, and open a PR.
 
-5. v1.2.0 release
+5. v1.4.0 release
 - Fix: run:
-  `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/release.ps1 -Tag v1.2.0 -DeployTarget winget`
+  `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/release.ps1 -Tag v1.4.0 -DeployTarget winget`
