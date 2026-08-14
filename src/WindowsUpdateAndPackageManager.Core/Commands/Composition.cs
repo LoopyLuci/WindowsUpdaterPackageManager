@@ -57,6 +57,7 @@ public static class Composition
         services.AddSingleton<IPluginVerifier>(sp => new DefaultPluginVerifier(sp.GetRequiredService<IPluginRegistry>()));
         services.AddSingleton<IMarketplaceAuthService>(sp => new FileMarketplaceAuthService(dataRoot));
         services.AddSingleton<IMarketplaceClient>(sp => new GitHubMarketplaceClient(new HttpClient(), "https://github.com/LoopyLuci/WindowsUpdatePackageManager-plugins", sp.GetRequiredService<IMarketplaceAuthService>().GetTokenAsync().GetAwaiter().GetResult()));
+        services.AddSingleton<IMarketplaceSearchCache>(sp => new FileMarketplaceSearchCache(cacheRoot));
         services.AddSingleton<IUpdateNotificationService>(sp => new UpdateNotificationService(sp.GetRequiredService<IRepoSync>()));
 
         if (!string.IsNullOrWhiteSpace(repositoryUrl))

@@ -824,19 +824,57 @@ public static class Cli
                 }
 
                 var json = File.ReadAllText(path);
-                var entries = System.Text.Json.JsonSerializer.Deserialize<List<PluginRegistryEntry>>(json);
-                if (entries is null || entries.Count == 0)
+                var incoming = System.Text.Json.JsonSerializer.Deserialize<List<PluginRegistryEntry>>(json);
+                if (incoming is null || incoming.Count == 0)
                 {
                     Console.WriteLine("No entries found in backup.");
                     return;
                 }
 
-                foreach (var entry in entries)
+                var current = registry.ListAsync().GetAwaiter().GetResult().ToList();
+                var currentByName = current.ToDictionary(e => e.Name, e => e, StringComparer.OrdinalIgnoreCase);
+                var merged = new Dictionary<string, PluginRegistryEntry>(StringComparer.OrdinalIgnoreCase);
+                foreach (var entry in current)
                 {
-                    registry.AddAsync(entry.Name, entry.Version, entry.Path, entry.Dependencies).GetAwaiter().GetResult();
+                    merged[entry.Name] = entry;
                 }
 
-                Console.WriteLine($"Restored {entries.Count} plugin(s) from {path}.");
+                var added = 0;
+                var skipped = 0;
+                var replaced = 0;
+                foreach (var entry in incoming)
+                {
+                    if (!merged.ContainsKey(entry.Name))
+                    {
+                        merged[entry.Name] = entry;
+                        added++;
+                    }
+                    else
+                    {
+                        var existing = merged[entry.Name];
+                        if (!string.Equals(existing.Version, entry.Version, StringComparison.Ordinal))
+                        {
+                            merged[entry.Name] = entry;
+                            replaced++;
+                        }
+                        else if (!string.Equals(existing.Path, entry.Path, StringComparison.OrdinalIgnoreCase))
+                        {
+                            Console.WriteLine($"Conflict for {entry.Name}: keeping existing path.");
+                            skipped++;
+                        }
+                        else
+                        {
+                            skipped++;
+                        }
+                    }
+                }
+
+                foreach (var kvp in merged)
+                {
+                    registry.AddAsync(kvp.Value.Name, kvp.Value.Version, kvp.Value.Path, kvp.Value.Dependencies).GetAwaiter().GetResult();
+                }
+
+                Console.WriteLine($"Restored {added} new, replaced {replaced}, skipped {skipped} from {path}.");
             }
             catch (Exception ex)
             {
@@ -973,10 +1011,24 @@ public static class Cli
             try
             {
                 var marketplaceClient = services.GetService(typeof(IMarketplaceClient)) as IMarketplaceClient;
+                var cache = services.GetService(typeof(IMarketplaceSearchCache)) as IMarketplaceSearchCache;
                 if (marketplaceClient is null)
                 {
                     Console.WriteLine("Marketplace client is not configured.");
                     return;
+                }
+
+                if (cache is not null)
+                {
+                    var cached = cache.GetAsync(term).GetAwaiter().GetResult();
+                    if (cached.Count > 0)
+                    {
+                        foreach (var p in cached)
+                        {
+                            Console.WriteLine($"{p.Id}@{p.Version} | {p.DisplayName} [cached]");
+                        }
+                        return;
+                    }
                 }
 
                 var results = marketplaceClient.SearchAsync(term).GetAwaiter().GetResult();
@@ -986,6 +1038,7 @@ public static class Cli
                     return;
                 }
 
+                cache?.SetAsync(term, results).GetAwaiter().GetResult();
                 foreach (var p in results)
                 {
                     Console.WriteLine($"{p.Id}@{p.Version} | {p.DisplayName}");
@@ -1000,8 +1053,10 @@ public static class Cli
 
         var marketplaceInstall = new Command("install", "Install a plugin by name");
         var marketplaceInstallName = new Argument<string>("name") { Description = "Plugin name" };
+        var marketplaceInstallResolve = new Option<bool>("--resolve-dependencies") { Description = "Auto-resolve missing dependencies from marketplace" };
         marketplaceInstall.AddArgument(marketplaceInstallName);
-        marketplaceInstall.SetHandler<string>((name) =>
+        marketplaceInstall.AddOption(marketplaceInstallResolve);
+        marketplaceInstall.SetHandler<string, bool>((name, resolveDeps) =>
         {
             try
             {
@@ -1021,15 +1076,54 @@ public static class Cli
                     return;
                 }
 
+                var missing = new List<string>();
+                if (!string.IsNullOrWhiteSpace(match.Dependencies))
+                {
+                    var installed = registry.ListAsync().GetAwaiter().GetResult();
+                    var installedNames = new HashSet<string>(installed.Select(e => e.Name), StringComparer.OrdinalIgnoreCase);
+                    foreach (var dep in match.Dependencies.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                    {
+                        if (!installedNames.Contains(dep))
+                        {
+                            missing.Add(dep);
+                        }
+                    }
+                }
+
+                if (missing.Count > 0)
+                {
+                    if (!resolveDeps)
+                    {
+                        Console.WriteLine($"Missing dependencies: {string.Join(", ", missing)}");
+                        Console.WriteLine("Re-run with --resolve-dependencies to attempt marketplace resolution.");
+                        return;
+                    }
+
+                    foreach (var dep in missing)
+                    {
+                        var depResults = marketplaceClient.SearchAsync(dep).GetAwaiter().GetResult();
+                        var depMatch = depResults.FirstOrDefault(p => p.Id.Equals(dep, StringComparison.OrdinalIgnoreCase) || p.DisplayName.Equals(dep, StringComparison.OrdinalIgnoreCase));
+                        if (depMatch is null)
+                        {
+                            Console.WriteLine($"Dependency not found in marketplace: {dep}");
+                            return;
+                        }
+
+                        var depLocalPath = Path.Combine(AppContext.BaseDirectory, "plugins", $"{depMatch.Id}.dll");
+                        registry.AddAsync(depMatch.Id, depMatch.Version, depLocalPath, dependencies: string.Empty).GetAwaiter().GetResult();
+                        Console.WriteLine($"Installed dependency: {depMatch.Id}@{depMatch.Version}");
+                    }
+                }
+
                 var localPath = Path.Combine(AppContext.BaseDirectory, "plugins", $"{match.Id}.dll");
-                registry.AddAsync(match.Id, match.Version, localPath, dependencies: string.Empty).GetAwaiter().GetResult();
+                registry.AddAsync(match.Id, match.Version, localPath, dependencies: match.Dependencies ?? string.Empty).GetAwaiter().GetResult();
                 Console.WriteLine($"Installed plugin: {match.Id}@{match.Version}");
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Marketplace install failed: {ex.Message}");
             }
-        }, marketplaceInstallName);
+        }, marketplaceInstallName, marketplaceInstallResolve);
         marketplace.AddCommand(marketplaceInstall);
 
         var marketplaceAuth = new Command("auth", "Set marketplace authentication token");

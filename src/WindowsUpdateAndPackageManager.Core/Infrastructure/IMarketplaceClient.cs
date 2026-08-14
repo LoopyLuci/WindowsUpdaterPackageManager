@@ -16,6 +16,7 @@ public sealed class MarketplacePlugin
     public string Id { get; set; } = string.Empty;
     public string DisplayName { get; set; } = string.Empty;
     public string Version { get; set; } = string.Empty;
+    public string? Dependencies { get; set; }
 }
 
 public sealed class GitHubMarketplaceClient : IMarketplaceClient, IAsyncDisposable
@@ -77,7 +78,8 @@ public sealed class GitHubMarketplaceClient : IMarketplaceClient, IAsyncDisposab
                 {
                     Id = id,
                     DisplayName = name,
-                    Version = tag.TrimStart('v')
+                    Version = tag.TrimStart('v'),
+                    Dependencies = ParseDependencies(release)
                 });
             }
         }
@@ -107,5 +109,26 @@ public sealed class GitHubMarketplaceClient : IMarketplaceClient, IAsyncDisposab
         }
 
         return trimmed;
+    }
+
+    private static string? ParseDependencies(JsonElement release)
+    {
+        if (!release.TryGetProperty("body", out var body) || body.ValueKind != JsonValueKind.String)
+        {
+            return null;
+        }
+
+        var text = body.GetString() ?? string.Empty;
+        var marker = "dependencies:";
+        var idx = text.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
+        if (idx < 0)
+        {
+            return null;
+        }
+
+        var after = text[(idx + marker.Length)..].Trim();
+        var end = after.IndexOf('\n');
+        var deps = end >= 0 ? after[..end].Trim() : after.Trim();
+        return string.IsNullOrWhiteSpace(deps) ? null : deps;
     }
 }

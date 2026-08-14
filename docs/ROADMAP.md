@@ -82,9 +82,14 @@
 4. ~~Marketplace auth hardening~~ — dedicated `IMarketplaceClient` with auth headers
 
 ## Proposed for v1.4.0
-1. Marketplace install with auth headers — authenticated marketplace queries during install
-2. Plugin dependency resolution at install time — fail fast when dependencies are missing
-3. Plugin registry backup/restore UX — `wupm plugin registry backup|restore --path <json>`
+1. ~~Marketplace install with auth headers~~ — authenticated marketplace queries during install
+2. ~~Plugin dependency resolution at install time~~ — fail fast when dependencies are missing
+3. ~~Plugin registry backup/restore UX~~ — `wupm plugin registry backup|restore --path <json>`
+
+## Proposed for v1.5.0
+1. ~~Marketplace install dependency auto-resolution~~ — `--resolve-dependencies` installs missing plugins automatically
+2. ~~Plugin registry restore conflict resolution~~ — merge behavior with add/replace/skip counts
+3. ~~Marketplace search result caching~~ — `IMarketplaceSearchCache` with `[cached]` marker
 
 ## Environment blockers and exact fixes
 
