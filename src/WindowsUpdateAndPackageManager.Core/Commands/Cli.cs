@@ -541,10 +541,12 @@ public static class Cli
         var pluginAddName = new Option<string>("--name") { Description = "Plugin name" };
         var pluginAddVersion = new Option<string>("--version") { Description = "Plugin version" };
         var pluginAddPath = new Option<string>("--path") { Description = "Path to plugin DLL" };
+        var pluginAddDeps = new Option<string>("--dependencies") { Description = "Comma-separated plugin dependencies" };
         pluginRegistryAdd.AddOption(pluginAddName);
         pluginRegistryAdd.AddOption(pluginAddVersion);
         pluginRegistryAdd.AddOption(pluginAddPath);
-        pluginRegistryAdd.SetHandler<string, string, string?>((name, version, path) =>
+        pluginRegistryAdd.AddOption(pluginAddDeps);
+        pluginRegistryAdd.SetHandler<string, string, string?, string?>((name, version, path, dependencies) =>
         {
             try
             {
@@ -561,23 +563,82 @@ public static class Cli
                     return;
                 }
 
-                registry.AddAsync(name, version, path).GetAwaiter().GetResult();
+                registry.AddAsync(name, version, path, dependencies ?? string.Empty).GetAwaiter().GetResult();
                 Console.WriteLine($"Registered plugin: {name}@{version}");
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Plugin registry add failed: {ex.Message}");
             }
-        }, pluginAddName, pluginAddVersion, pluginAddPath);
+        }, pluginAddName, pluginAddVersion, pluginAddPath, pluginAddDeps);
         pluginRegistry.AddCommand(pluginRegistryAdd);
 
-        var pluginRegistryRemove = new Command("remove", "Remove a plugin from registry");
-        var pluginRemoveName = new Option<string>("--name") { Description = "Plugin name" };
-        pluginRegistryRemove.AddOption(pluginRemoveName);
-        pluginRegistryRemove.SetHandler<string>((name) =>
+        var pluginRegistryUpdate = new Command("update", "Update a plugin in registry");
+        var pluginUpdateName = new Option<string>("--name") { Description = "Plugin name" };
+        var pluginUpdateVersion = new Option<string>("--version") { Description = "Plugin version" };
+        var pluginUpdatePath = new Option<string>("--path") { Description = "Path to plugin DLL" };
+        var pluginUpdateDeps = new Option<string>("--dependencies") { Description = "Comma-separated plugin dependencies" };
+        pluginRegistryUpdate.AddOption(pluginUpdateName);
+        pluginRegistryUpdate.AddOption(pluginUpdateVersion);
+        pluginRegistryUpdate.AddOption(pluginUpdatePath);
+        pluginRegistryUpdate.AddOption(pluginUpdateDeps);
+        pluginRegistryUpdate.SetHandler<string, string, string?, string?>((name, version, path, dependencies) =>
         {
             try
             {
+                var registry = services.GetService(typeof(IPluginRegistry)) as IPluginRegistry;
+                if (registry is null)
+                {
+                    Console.WriteLine("Plugin registry is not configured.");
+                    return;
+                }
+
+                var entries = registry.ListAsync().GetAwaiter().GetResult();
+                var existing = entries.FirstOrDefault(e => e.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+                if (existing is null)
+                {
+                    Console.WriteLine("Plugin not found in registry.");
+                    return;
+                }
+
+                var effectivePath = string.IsNullOrWhiteSpace(path) ? existing.Path : path;
+                if (!string.IsNullOrWhiteSpace(path) && !File.Exists(effectivePath))
+                {
+                    Console.WriteLine("Plugin path is required and must exist.");
+                    return;
+                }
+
+                registry.RemoveAsync(name).GetAwaiter().GetResult();
+                registry.AddAsync(name, version ?? existing.Version, effectivePath, dependencies ?? existing.Dependencies).GetAwaiter().GetResult();
+                Console.WriteLine($"Updated plugin: {name}@{version ?? existing.Version}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Plugin registry update failed: {ex.Message}");
+            }
+        }, pluginUpdateName, pluginUpdateVersion, pluginUpdatePath, pluginUpdateDeps);
+        pluginRegistry.AddCommand(pluginRegistryUpdate);
+
+        var pluginRegistryRemove = new Command("remove", "Remove a plugin from registry");
+        var pluginRemoveName = new Option<string>("--name") { Description = "Plugin name" };
+        var pluginRemoveConfirm = new Option<bool>("--confirm", description: "Skip confirmation prompt") { Arity = ArgumentArity.ZeroOrOne };
+        pluginRegistryRemove.AddOption(pluginRemoveName);
+        pluginRegistryRemove.AddOption(pluginRemoveConfirm);
+        pluginRegistryRemove.SetHandler<string, bool>((name, confirm) =>
+        {
+            try
+            {
+                if (!confirm)
+                {
+                    Console.Write($"Remove plugin '{name}'? (y/N): ");
+                    var answer = Console.ReadLine();
+                    if (string.IsNullOrWhiteSpace(answer) || !answer.StartsWith("y", StringComparison.OrdinalIgnoreCase))
+                    {
+                        Console.WriteLine("Cancelled.");
+                        return;
+                    }
+                }
+
                 var registry = services.GetService(typeof(IPluginRegistry)) as IPluginRegistry;
                 if (registry is null)
                 {
@@ -592,7 +653,7 @@ public static class Cli
             {
                 Console.WriteLine($"Plugin registry remove failed: {ex.Message}");
             }
-        }, pluginRemoveName);
+        }, pluginRemoveName, pluginRemoveConfirm);
         pluginRegistry.AddCommand(pluginRegistryRemove);
 
         plugin.AddCommand(pluginRegistry);
@@ -658,7 +719,7 @@ public static class Cli
 
                 var name = Path.GetFileNameWithoutExtension(path);
                 var version = "1.0.0";
-                registry.AddAsync(name, version, path).GetAwaiter().GetResult();
+                registry.AddAsync(name, version, path, dependencies: string.Empty).GetAwaiter().GetResult();
                 Console.WriteLine($"Installed plugin: {name}@{version}");
             }
             catch (Exception ex)

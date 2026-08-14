@@ -8,12 +8,13 @@ public sealed class PluginRegistryEntry
     public string Version { get; set; } = string.Empty;
     public string Path { get; set; } = string.Empty;
     public bool Enabled { get; set; }
+    public string Dependencies { get; set; } = string.Empty;
 }
 
 public interface IPluginRegistry
 {
     Task<IReadOnlyList<PluginRegistryEntry>> ListAsync(CancellationToken cancellationToken = default);
-    Task AddAsync(string name, string version, string path, CancellationToken cancellationToken = default);
+    Task AddAsync(string name, string version, string path, string dependencies = "", CancellationToken cancellationToken = default);
     Task RemoveAsync(string name, CancellationToken cancellationToken = default);
     Task<string?> ComputeSha256Async(string path, CancellationToken cancellationToken = default);
 }
@@ -34,10 +35,10 @@ public sealed class FilePluginRegistry : IPluginRegistry
         return System.Text.Json.JsonSerializer.Deserialize<List<PluginRegistryEntry>>(json) ?? new List<PluginRegistryEntry>();
     }
 
-    public async Task AddAsync(string name, string version, string path, CancellationToken cancellationToken = default)
+    public async Task AddAsync(string name, string version, string path, string dependencies, CancellationToken cancellationToken = default)
     {
         var entries = (await ListAsync(cancellationToken).ConfigureAwait(false)).ToList();
-        entries.Add(new PluginRegistryEntry { Name = name, Version = version, Path = path, Enabled = true });
+        entries.Add(new PluginRegistryEntry { Name = name, Version = version, Path = path, Enabled = true, Dependencies = dependencies });
         await WriteAsync(entries, cancellationToken).ConfigureAwait(false);
     }
 

@@ -43,6 +43,11 @@
 2. ~~Marketplace UX improvements~~ — `wupm marketplace install <name>` and richer search results
 3. ~~Signing policy enforcement~~ — `IPluginVerifier` with trusted/untrusted status
 
+## Proposed for v0.9.0
+1. ~~Plugin update/remove UX~~ — `wupm plugin registry update` and confirmation prompts
+2. ~~Marketplace auth~~ — basic marketplace CLI controls
+3. ~~Plugin dependency management~~ — dependency metadata in registry entries
+
 ## Priority order
 1. Offline scan result caching
 2. Delta update progress reporting
@@ -56,6 +61,9 @@
 10. Plugin marketplace UX
 11. Plugin install/update commands
 12. Signing policy enforcement
+13. Plugin update/remove UX
+14. Marketplace auth
+15. Plugin dependency management
 
 ## Environment blockers and exact fixes
 
@@ -65,7 +73,7 @@
 
 2. Self-update E2E
 - Fix: set `GITHUB_TOKEN` and run:
-  `wupm self-update --tag v0.7.0`
+  `wupm self-update --tag v0.8.0`
 
 3. Service wrapper hardening
 - Fix: open elevated PowerShell and run:
@@ -75,6 +83,6 @@
 4. Winget live submission
 - Fix: fork https://github.com/microsoft/winget-pkgs, copy `scripts/deploy/winget/winget-pkgs/LoopyLuci.WindowsUpdatePackageManager/*.yaml` into `manifests/L/LoopyLuci/WindowsUpdatePackageManager/`, and open a PR.
 
-5. v0.8.0 release
+5. v0.9.0 release
 - Fix: run:
-  `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/release.ps1 -Tag v0.8.0 -DeployTarget winget`
+  `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/release.ps1 -Tag v0.9.0 -DeployTarget winget`
