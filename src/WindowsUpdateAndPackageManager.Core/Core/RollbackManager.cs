@@ -16,6 +16,9 @@ public sealed class RollbackManager
         _processRunner = processRunner ?? new DefaultProcessRunner();
     }
 
+    public async Task<List<PackageManifest>> GetInstalledAsync(CancellationToken cancellationToken = default)
+        => (await _state.ListInstalledAsync(cancellationToken).ConfigureAwait(false)).ToList();
+
     public async Task<bool> RollbackAsync(string? packageId = null, CancellationToken cancellationToken = default)
     {
         var installed = await _state.ListInstalledAsync(cancellationToken).ConfigureAwait(false);

@@ -305,7 +305,11 @@ public static class Cli
         root.AddCommand(audit);
 
         var rollback = new Command("rollback", "Rollback installed package");
-        rollback.SetHandler(() =>
+        var rollbackDryRunOption = new Option<bool>("--dry-run", description: "Show what would be rolled back without making changes");
+        rollback.AddOption(rollbackDryRunOption);
+        var rollbackIdOption = new Option<string?>("--id", description: "Package ID to rollback");
+        rollback.AddOption(rollbackIdOption);
+        rollback.SetHandler((bool dryRun, string? packageId) =>
         {
             try
             {
@@ -315,14 +319,36 @@ public static class Cli
                     Console.WriteLine("RollbackManager is not registered.");
                     return;
                 }
-                rollbackManager.RollbackAsync().GetAwaiter().GetResult();
+
+                if (dryRun)
+                {
+                    var installed = rollbackManager.GetInstalledAsync().GetAwaiter().GetResult();
+                    var targets = packageId is null
+                        ? installed.ToList()
+                        : installed.Where(x => x.Id.Equals(packageId, StringComparison.OrdinalIgnoreCase)).ToList();
+
+                    if (targets.Count == 0)
+                    {
+                        Console.WriteLine("No matching installed packages.");
+                        return;
+                    }
+
+                    Console.WriteLine($"Would rollback {targets.Count} package(s):");
+                    foreach (var pkg in targets)
+                    {
+                        Console.WriteLine($" - {pkg.Id}@{pkg.Version} -> {pkg.UninstallCommand}");
+                    }
+                    return;
+                }
+
+                rollbackManager.RollbackAsync(packageId).GetAwaiter().GetResult();
                 Console.WriteLine("Rollback attempted.");
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Rollback failed: {ex.Message}");
             }
-        });
+        }, rollbackDryRunOption, rollbackIdOption);
         root.AddCommand(rollback);
 
         var wu = new Command("windows-update", "Scan and apply Windows updates");
@@ -380,6 +406,72 @@ public static class Cli
             }
         });
         root.AddCommand(health);
+
+        var cache = new Command("cache", "Manage offline cache");
+        var cacheList = new Command("list", "List cached packages");
+        cacheList.SetHandler(() =>
+        {
+            try
+            {
+                var cacheManager = services.GetService(typeof(ICacheManager)) as ICacheManager;
+                if (cacheManager is null)
+                {
+                    Console.WriteLine("Cache manager is not configured.");
+                    return;
+                }
+
+                var rootDir = cacheManager.GetCacheRootAsync().GetAwaiter().GetResult();
+                if (!Directory.Exists(rootDir))
+                {
+                    Console.WriteLine("Cache is empty.");
+                    return;
+                }
+
+                var dirs = Directory.EnumerateDirectories(rootDir);
+                if (!dirs.Any())
+                {
+                    Console.WriteLine("Cache is empty.");
+                    return;
+                }
+
+                foreach (var dir in dirs)
+                {
+                    var name = Path.GetFileName(dir);
+                    var files = Directory.EnumerateFiles(dir);
+                    var size = files.Sum(f => new FileInfo(f).Length);
+                    Console.WriteLine($"{name} | files={files.Count()} | bytes={size}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Cache list failed: {ex.Message}");
+            }
+        });
+        cache.AddCommand(cacheList);
+
+        var cachePrune = new Command("prune", "Prune all cached packages");
+        cachePrune.SetHandler(() =>
+        {
+            try
+            {
+                var cacheManager = services.GetService(typeof(ICacheManager)) as ICacheManager;
+                if (cacheManager is null)
+                {
+                    Console.WriteLine("Cache manager is not configured.");
+                    return;
+                }
+
+                cacheManager.PruneAsync().GetAwaiter().GetResult();
+                Console.WriteLine("Cache pruned.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Cache prune failed: {ex.Message}");
+            }
+        });
+        cache.AddCommand(cachePrune);
+
+        root.AddCommand(cache);
 
         var verify = new Command("verify", "Verify a package file by SHA256 and optional Authenticode signature");
         var verifyPackageArg = new Argument<string>("packagePath") { Description = "Path to package file" };
