@@ -19,6 +19,7 @@ Composition.RegisterInto(builder.Services, builder.Environment.ContentRootPath);
 var app = builder.Build();
 
 app.MapGet("/", () => Results.Ok(new { status = "ok", name = "wupm-api" }));
+app.MapGet("/health", () => Results.Ok(new { status = "ok", name = "wupm-api" }));
 
 var apiKey = Environment.GetEnvironmentVariable("WUPM_API_KEY");
 if (!string.IsNullOrWhiteSpace(apiKey))
