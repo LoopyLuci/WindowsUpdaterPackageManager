@@ -12,8 +12,10 @@ public interface IWupmApiClient
 {
     Task<HealthResponse> GetHealthAsync(CancellationToken cancellationToken = default);
     Task<IReadOnlyList<PackageManifest>> GetPackagesAsync(CancellationToken cancellationToken = default);
-    Task<ScanResult> ScanAsync(bool offlineScan, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<PackageManifest>> GetInstalledAsync(CancellationToken cancellationToken = default);
     Task<InstallResult> InstallAsync(PackageManifest manifest, CancellationToken cancellationToken = default);
+    Task<ScanResult> ScanAsync(bool offlineScan, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<AuditEntry>> GetAuditAsync(DateTimeOffset? from, DateTimeOffset? to, string? action, CancellationToken cancellationToken = default);
 }
 
 public sealed class WupmApiClient : IWupmApiClient, IDisposable
@@ -40,6 +42,13 @@ public sealed class WupmApiClient : IWupmApiClient, IDisposable
         return (await response.Content.ReadFromJsonAsync<List<PackageManifest>>(cancellationToken).ConfigureAwait(false))!;
     }
 
+    public async Task<IReadOnlyList<PackageManifest>> GetInstalledAsync(CancellationToken cancellationToken = default)
+    {
+        using var response = await _http.GetAsync("/installed", cancellationToken).ConfigureAwait(false);
+        response.EnsureSuccessStatusCode();
+        return (await response.Content.ReadFromJsonAsync<List<PackageManifest>>(cancellationToken).ConfigureAwait(false))!;
+    }
+
     public async Task<InstallResult> InstallAsync(PackageManifest manifest, CancellationToken cancellationToken = default)
     {
         using var response = await _http.PostAsJsonAsync("/install", manifest, cancellationToken).ConfigureAwait(false);
@@ -52,6 +61,21 @@ public sealed class WupmApiClient : IWupmApiClient, IDisposable
         using var response = await _http.PostAsync($"/windows-update?offlineScan={offlineScan}", null, cancellationToken).ConfigureAwait(false);
         response.EnsureSuccessStatusCode();
         return (await response.Content.ReadFromJsonAsync<ScanResult>(cancellationToken).ConfigureAwait(false))!;
+    }
+
+    public async Task<IReadOnlyList<AuditEntry>> GetAuditAsync(DateTimeOffset? from, DateTimeOffset? to, string? action, CancellationToken cancellationToken = default)
+    {
+        var query = new List<string>();
+        if (from is not null) query.Add($"from={Uri.EscapeDataString(from.Value.ToString("o"))}");
+        if (to is not null) query.Add($"to={Uri.EscapeDataString(to.Value.ToString("o"))}");
+        if (!string.IsNullOrWhiteSpace(action)) query.Add($"action={Uri.EscapeDataString(action!)}");
+
+        var url = "/audit";
+        if (query.Count > 0) url += "?" + string.Join("&", query);
+
+        using var response = await _http.GetAsync(url, cancellationToken).ConfigureAwait(false);
+        response.EnsureSuccessStatusCode();
+        return (await response.Content.ReadFromJsonAsync<List<AuditEntry>>(cancellationToken).ConfigureAwait(false))!;
     }
 
     public void Dispose()

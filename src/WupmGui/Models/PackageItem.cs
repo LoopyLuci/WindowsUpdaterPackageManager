@@ -1,13 +1,15 @@
+using WindowsUpdateAndPackageManager.Models;
+
 namespace WupmGui.Models;
 
 public sealed class PackageItem
 {
-    public PackageItem(WindowsUpdateAndPackageManager.Models.PackageManifest package)
+    public PackageItem(PackageManifest package)
     {
         Package = package;
     }
 
-    public WindowsUpdateAndPackageManager.Models.PackageManifest Package { get; }
+    public PackageManifest Package { get; }
     public string Title => Package.DisplayName;
     public string Version => Package.Version;
     public string Size => Package.SizeBytes is long b ? $"{b / 1024 / 1024} MB" : string.Empty;

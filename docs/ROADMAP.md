@@ -103,9 +103,9 @@
 3. ~~Cache invalidation command~~ — `wupm cache invalidate <packageId> <version>`
 
 ## Proposed for v1.9.0
-1. ~~WPF GUI scaffold~~ — `WupmGui` project with dashboard, themes, and `WupmApiClient`
-2. ~~Plugin registry enable/disable lifecycle~~ — `wupm plugin registry enable|disable --name <plugin>`
-3. ~~Marketplace publish automation via GitHub release creation~~ — `gh release create` from CLI
+1. WPF GUI scaffold — `WupmGui` project with dashboard, themes, and `WupmApiClient`
+2. Drivers/history views
+3. Settings + diagnostics panel
 
 ## Environment blockers and exact fixes
 

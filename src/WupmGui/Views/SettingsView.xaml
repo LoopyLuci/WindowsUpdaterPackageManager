@@ -1,0 +1,23 @@
+<UserControl x:Class="WupmGui.Views.SettingsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <DockPanel Margin="16">
+    <TextBlock Text="Settings" FontSize="24" FontWeight="Bold" DockPanel.Dock="Top" Margin="0,0,0,12"/>
+    <StackPanel>
+      <TextBlock Text="General" FontWeight="SemiBold" Margin="0,0,0,8"/>
+      <CheckBox Content="Start minimized" Margin="0,0,0,6"/>
+      <CheckBox Content="Check for updates on startup" Margin="0,0,0,12"/>
+
+      <TextBlock Text="Service" FontWeight="SemiBold" Margin="0,0,0,8"/>
+      <Button Content="Install Windows Service" Margin="0,0,0,6"/>
+      <Button Content="Uninstall Windows Service" Margin="0,0,0,12"/>
+
+      <TextBlock Text="Telemetry" FontWeight="SemiBold" Margin="0,0,0,8"/>
+      <CheckBox Content="Send anonymous usage data" Margin="0,0,0,12"/>
+
+      <TextBlock Text="About" FontWeight="SemiBold" Margin="0,0,0,8"/>
+      <TextBlock Text="WUPM GUI v1.0.0" Margin="0,0,0,6"/>
+      <Button Content="Copy Diagnostics" Margin="0,0,0,6"/>
+    </StackPanel>
+  </DockPanel>
+</UserControl>

@@ -1,29 +1,51 @@
-using System.Collections.ObjectModel;
 using System.Windows.Input;
-using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
-using WupmGui.Models;
 using WupmGui.Services;
 
 namespace WupmGui.ViewModels;
 
-public partial class MainWindowViewModel : ViewModelBase
+public class MainWindowViewModel : ViewModelBase
 {
     private readonly IWupmApiClient _api;
 
-    [ObservableProperty] private string _status = "Initializing...";
-    [ObservableProperty] private bool _isConnected;
+    public DashboardViewModel Dashboard { get; }
+    public DriversViewModel Drivers { get; }
+    public HistoryViewModel History { get; }
+    public SettingsViewModel Settings { get; }
+
+    private ViewModelBase _currentViewModel = null!;
+    public ViewModelBase CurrentViewModel
+    {
+        get => _currentViewModel;
+        set => Set(ref _currentViewModel, value);
+    }
+
+    private string _status = "Initializing...";
+    public string Status
+    {
+        get => _status;
+        set => Set(ref _status, value);
+    }
+
+    private bool _isConnected;
+    public bool IsConnected
+    {
+        get => _isConnected;
+        set => Set(ref _isConnected, value);
+    }
 
     public MainWindowViewModel(IWupmApiClient api)
     {
         _api = api;
-        CurrentViewModel = this;
+        Dashboard = new DashboardViewModel(api);
+        Drivers = new DriversViewModel(api);
+        History = new HistoryViewModel(api);
+        Settings = new SettingsViewModel();
+        CurrentViewModel = Dashboard;
     }
 
-    public ViewModelBase CurrentViewModel { get; }
+    public ICommand LoadedCommand => new AsyncRelayCommand(LoadedAsync);
 
-    [RelayCommand]
-    private async Task LoadedAsync()
+    private async Task LoadedAsync(CancellationToken ct)
     {
         try
         {

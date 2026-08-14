@@ -1,0 +1,14 @@
+<UserControl x:Class="WupmGui.Views.DriversView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <DockPanel Margin="16">
+    <TextBlock Text="Drivers" FontSize="24" FontWeight="Bold" DockPanel.Dock="Top" Margin="0,0,0,12"/>
+    <DataGrid ItemsSource="{Binding Drivers}" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True">
+      <DataGrid.Columns>
+        <DataGridTextColumn Header="Title" Binding="{Binding DisplayName}" Width="*"/>
+        <DataGridTextColumn Header="Version" Binding="{Binding Version}" Width="150"/>
+        <DataGridTextColumn Header="Size" Binding="{Binding SizeBytes}" Width="120"/>
+      </DataGrid.Columns>
+    </DataGrid>
+  </DockPanel>
+</UserControl>

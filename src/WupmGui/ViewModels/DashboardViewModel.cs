@@ -1,29 +1,45 @@
 using System.Collections.ObjectModel;
 using System.Windows.Input;
-using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
-using WupmGui.Models;
 using WupmGui.Services;
 
 namespace WupmGui.ViewModels;
 
-public partial class DashboardViewModel : ViewModelBase
+public class DashboardViewModel : ViewModelBase
 {
     private readonly IWupmApiClient _api;
 
-    [ObservableProperty] private ObservableCollection<PackageItem> _updates = new();
-    [ObservableProperty] private bool _isScanning;
-    [ObservableProperty] private string _statusMessage = "Ready";
-    [ObservableProperty] private int _progressValue;
+    public ObservableCollection<object> Updates { get; } = new();
+
+    private bool _isScanning;
+    public bool IsScanning
+    {
+        get => _isScanning;
+        set => Set(ref _isScanning, value);
+    }
+
+    private string _statusMessage = "Ready";
+    public string StatusMessage
+    {
+        get => _statusMessage;
+        set => Set(ref _statusMessage, value);
+    }
+
+    private int _progressValue;
+    public int ProgressValue
+    {
+        get => _progressValue;
+        set => Set(ref _progressValue, value);
+    }
 
     public DashboardViewModel(IWupmApiClient api)
     {
         _api = api;
+        ScanCommand = new AsyncRelayCommand(ScanAsync, () => !IsScanning);
+        CancelCommand = new AsyncRelayCommand(CancelAsync, () => IsScanning);
     }
 
-    public IAsyncRelayCommand ScanCommand => new AsyncRelayCommand(ScanAsync, () => !IsScanning);
-    public IAsyncRelayCommand<PackageItem> InstallCommand => new AsyncRelayCommand<PackageItem>(InstallAsync);
-    public IAsyncRelayCommand CancelCommand => new AsyncRelayCommand(CancelAsync, () => IsScanning);
+    public ICommand ScanCommand { get; }
+    public ICommand CancelCommand { get; }
 
     private async Task ScanAsync(CancellationToken ct)
     {
@@ -36,7 +52,7 @@ public partial class DashboardViewModel : ViewModelBase
             var result = await _api.ScanAsync(false, ct);
             Updates.Clear();
             foreach (var pkg in result.Packages)
-                Updates.Add(new PackageItem(pkg));
+                Updates.Add(pkg);
 
             StatusMessage = $"Found {Updates.Count} updates";
         }
@@ -50,24 +66,9 @@ public partial class DashboardViewModel : ViewModelBase
         }
     }
 
-    private async Task InstallAsync(PackageItem? item, CancellationToken ct)
-    {
-        if (item is null) return;
-        StatusMessage = $"Installing {item.Title}...";
-        try
-        {
-            var result = await _api.InstallAsync(item.Package, ct);
-            StatusMessage = result.Success ? $"Installed {item.Title}" : $"Install failed: {result.Message}";
-        }
-        catch (Exception ex)
-        {
-            StatusMessage = $"Install failed: {ex.Message}";
-        }
-    }
-
-    private Task CancelAsync(CancellationToken ct)
+    private async Task CancelAsync(CancellationToken ct)
     {
         StatusMessage = "Cancelled";
-        return Task.CompletedTask;
+        await Task.CompletedTask;
     }
 }
