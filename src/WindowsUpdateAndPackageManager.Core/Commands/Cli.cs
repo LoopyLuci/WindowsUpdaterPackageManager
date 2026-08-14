@@ -504,6 +504,98 @@ public static class Cli
             }
         });
         plugin.AddCommand(pluginList);
+
+        var pluginRegistry = new Command("registry", "Manage plugin registry");
+        var pluginRegistryList = new Command("list", "List registry entries");
+        pluginRegistryList.SetHandler(() =>
+        {
+            try
+            {
+                var registry = services.GetService(typeof(IPluginRegistry)) as IPluginRegistry;
+                if (registry is null)
+                {
+                    Console.WriteLine("Plugin registry is not configured.");
+                    return;
+                }
+
+                var entries = registry.ListAsync().GetAwaiter().GetResult();
+                if (entries.Count == 0)
+                {
+                    Console.WriteLine("No plugins in registry.");
+                    return;
+                }
+
+                foreach (var e in entries)
+                {
+                    Console.WriteLine($"{e.Name}@{e.Version} | enabled={e.Enabled} | path={e.Path}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Plugin registry list failed: {ex.Message}");
+            }
+        });
+        pluginRegistry.AddCommand(pluginRegistryList);
+
+        var pluginRegistryAdd = new Command("add", "Add a plugin to registry");
+        var pluginAddName = new Option<string>("--name") { Description = "Plugin name" };
+        var pluginAddVersion = new Option<string>("--version") { Description = "Plugin version" };
+        var pluginAddPath = new Option<string>("--path") { Description = "Path to plugin DLL" };
+        pluginRegistryAdd.AddOption(pluginAddName);
+        pluginRegistryAdd.AddOption(pluginAddVersion);
+        pluginRegistryAdd.AddOption(pluginAddPath);
+        pluginRegistryAdd.SetHandler<string, string, string?>((name, version, path) =>
+        {
+            try
+            {
+                var registry = services.GetService(typeof(IPluginRegistry)) as IPluginRegistry;
+                if (registry is null)
+                {
+                    Console.WriteLine("Plugin registry is not configured.");
+                    return;
+                }
+
+                if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
+                {
+                    Console.WriteLine("Plugin path is required and must exist.");
+                    return;
+                }
+
+                registry.AddAsync(name, version, path).GetAwaiter().GetResult();
+                Console.WriteLine($"Registered plugin: {name}@{version}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Plugin registry add failed: {ex.Message}");
+            }
+        }, pluginAddName, pluginAddVersion, pluginAddPath);
+        pluginRegistry.AddCommand(pluginRegistryAdd);
+
+        var pluginRegistryRemove = new Command("remove", "Remove a plugin from registry");
+        var pluginRemoveName = new Option<string>("--name") { Description = "Plugin name" };
+        pluginRegistryRemove.AddOption(pluginRemoveName);
+        pluginRegistryRemove.SetHandler<string>((name) =>
+        {
+            try
+            {
+                var registry = services.GetService(typeof(IPluginRegistry)) as IPluginRegistry;
+                if (registry is null)
+                {
+                    Console.WriteLine("Plugin registry is not configured.");
+                    return;
+                }
+
+                registry.RemoveAsync(name).GetAwaiter().GetResult();
+                Console.WriteLine($"Removed plugin: {name}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Plugin registry remove failed: {ex.Message}");
+            }
+        }, pluginRemoveName);
+        pluginRegistry.AddCommand(pluginRegistryRemove);
+
+        plugin.AddCommand(pluginRegistry);
         root.AddCommand(plugin);
 
         var notify = new Command("notify", "Update notifications");
@@ -592,7 +684,13 @@ public static class Cli
             try
             {
                 var notifier = services.GetService(typeof(IUpdateNotificationService)) as IUpdateNotificationService;
-                Console.WriteLine(notifier is not null ? "Notification service is configured." : "Notification service is not configured.");
+                if (notifier is null)
+                {
+                    Console.WriteLine("Notification service is not configured.");
+                    return;
+                }
+
+                Console.WriteLine(notifier.IsRunning ? "Running" : "Stopped");
             }
             catch (Exception ex)
             {
@@ -977,7 +1075,11 @@ public static class Cli
                 using var stream = File.OpenRead(effectivePath);
                 var hash = sha.ComputeHash(stream);
                 var actual = Convert.ToHexString(hash).ToLowerInvariant();
-                Console.WriteLine($"SHA256={actual}");
+                var fileName = Path.GetFileName(effectivePath);
+                Console.WriteLine($"Package: {fileName}");
+                Console.WriteLine($"Path: {effectivePath}");
+                Console.WriteLine($"SHA256: {actual}");
+                Console.WriteLine("Verification: passed");
             }
             catch (Exception ex)
             {

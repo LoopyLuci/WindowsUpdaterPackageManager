@@ -8,4 +8,5 @@ public interface IUpdateNotificationService
 {
     Task StartAsync(TimeSpan interval, CancellationToken cancellationToken = default);
     Task StopAsync(CancellationToken cancellationToken = default);
+    bool IsRunning { get; }
 }
