@@ -506,6 +506,40 @@ public static class Cli
         plugin.AddCommand(pluginList);
         root.AddCommand(plugin);
 
+        var notify = new Command("notify", "Update notifications");
+        var notifyCheck = new Command("check", "Check for available updates");
+        notifyCheck.SetHandler(() =>
+        {
+            try
+            {
+                var repoUrl = "https://github.com/LoopyLuci/WindowsUpdateAndPackageManager";
+                var repoSync = services.GetService(typeof(IRepoSync)) as IRepoSync;
+                if (repoSync is null)
+                {
+                    Console.WriteLine("IRepoSync is not registered.");
+                    return;
+                }
+
+                var packages = repoSync.ListAsync(repoUrl).GetAwaiter().GetResult();
+                if (packages.Count == 0)
+                {
+                    Console.WriteLine("No packages available.");
+                    return;
+                }
+
+                foreach (var p in packages)
+                {
+                    Console.WriteLine($"{p.Id}@{p.Version} | {p.DisplayName} | published={p.PublishedAt:u}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Notify check failed: {ex.Message}");
+            }
+        });
+        notify.AddCommand(notifyCheck);
+        root.AddCommand(notify);
+
         var verify = new Command("verify", "Verify a package file by SHA256 and optional Authenticode signature");
         var verifyPackageArg = new Argument<string>("packagePath") { Description = "Path to package file" };
         var verifyShaOption = new Option<string?>("--sha256") { Description = "Expected SHA256 hex digest" };
