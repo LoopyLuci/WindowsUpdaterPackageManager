@@ -10,11 +10,18 @@
 - README badges and documentation
 
 ## Proposed for v0.3.0
-1. **Offline scan result caching** — `--offline-scan` saves results to `.wupm/cache/offline-scan-result.txt`
-2. **Delta update progress reporting** — `delta-update` and `delta-apply` show progress events
-3. **Offline cache management** — prune and inspect cached updates
-4. **Rollback UX improvements** — richer rollback output and dry-run
-5. **Self-update E2E** — blocked by missing `GITHUB_TOKEN`
+1. ~~Offline scan result caching~~ — `--offline-scan` saves results to `.wupm/cache/offline-scan-result.txt`
+2. ~~Delta update progress reporting~~ — `delta-update` and `delta-apply` show progress events
+3. ~~Offline cache management~~ — `wupm cache list` and `wupm cache prune`
+4. ~~Rollback dry-run~~ — `wupm rollback --dry-run --id <pkg>`
+5. Self-update E2E — blocked by missing `GITHUB_TOKEN`
+
+## Proposed for v0.4.0
+1. **Plugin system architecture** — extensible module interface for third-party extensions
+2. **Offline cache UX** — richer output, cache stats, and export
+3. **Rollback UX** — richer output, dry-run, and selective rollback
+4. **Update notifications** — background checks with system tray alerts
+5. **Delta UX** — progress bars, resume support, and delta verification
 
 ## Priority order
 1. Offline scan result caching

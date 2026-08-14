@@ -473,6 +473,39 @@ public static class Cli
 
         root.AddCommand(cache);
 
+        var plugin = new Command("plugin", "Manage plugins");
+        var pluginList = new Command("list", "List loaded plugins");
+        pluginList.SetHandler(() =>
+        {
+            try
+            {
+                var pluginManager = services.GetService(typeof(PluginManager)) as PluginManager;
+                if (pluginManager is null)
+                {
+                    Console.WriteLine("Plugin manager is not configured.");
+                    return;
+                }
+
+                pluginManager.LoadAsync().GetAwaiter().GetResult();
+                if (pluginManager.Plugins.Count == 0)
+                {
+                    Console.WriteLine("No plugins loaded.");
+                    return;
+                }
+
+                foreach (var p in pluginManager.Plugins)
+                {
+                    Console.WriteLine($"{p.Name} v{p.Version}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Plugin list failed: {ex.Message}");
+            }
+        });
+        plugin.AddCommand(pluginList);
+        root.AddCommand(plugin);
+
         var verify = new Command("verify", "Verify a package file by SHA256 and optional Authenticode signature");
         var verifyPackageArg = new Argument<string>("packagePath") { Description = "Path to package file" };
         var verifyShaOption = new Option<string?>("--sha256") { Description = "Expected SHA256 hex digest" };

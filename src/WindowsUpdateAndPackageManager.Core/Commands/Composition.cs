@@ -49,6 +49,10 @@ public static class Composition
         services.AddSingleton<IOfflineImageService, OfflineImageService>();
         services.AddSingleton<IDeltaStore>(sp => new SqliteDeltaStore(cacheRoot));
         services.AddSingleton<IPackageDeltaProvider, PackageDeltaProvider>();
+        var pluginRoot = Path.Combine(dataRoot, "plugins");
+        Directory.CreateDirectory(pluginRoot);
+        services.AddSingleton(sp => new PluginManager(pluginRoot));
+        services.AddSingleton(sp => sp.GetRequiredService<PluginManager>());
 
         if (!string.IsNullOrWhiteSpace(repositoryUrl))
         {
