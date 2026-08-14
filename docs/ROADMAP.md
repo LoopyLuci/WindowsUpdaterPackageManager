@@ -17,11 +17,16 @@
 5. Self-update E2E — blocked by missing `GITHUB_TOKEN`
 
 ## Proposed for v0.4.0
-1. **Plugin system architecture** — extensible module interface for third-party extensions
-2. **Offline cache UX** — richer output, cache stats, and export
-3. **Rollback UX** — richer output, dry-run, and selective rollback
-4. **Update notifications** — background checks with system tray alerts
-5. **Delta UX** — progress bars, resume support, and delta verification
+1. ~~Plugin system architecture~~ — extensible module interface for third-party extensions
+2. ~~Offline cache UX~~ — richer output, cache stats, and export
+3. ~~Rollback UX~~ — richer output, dry-run, and selective rollback
+4. ~~Update notifications~~ — background checks with system tray alerts
+5. ~~Delta UX~~ — progress bars, resume support, and delta verification
+
+## Proposed for v0.5.0
+1. Plugin SDK documentation — extensible module interface for third-party extensions
+2. Background notification daemon — periodic update checks with CLI controls
+3. Delta verification CLI — verify cached package hashes against expected SHA256
 
 ## Priority order
 1. Offline scan result caching
@@ -29,6 +34,9 @@
 3. Offline cache management
 4. Rollback UX improvements
 5. Self-update E2E
+6. Plugin SDK documentation
+7. Background notification daemon
+8. Delta verification CLI
 
 ## Environment blockers and exact fixes
 
@@ -38,7 +46,7 @@
 
 2. Self-update E2E
 - Fix: set `GITHUB_TOKEN` and run:
-  `wupm self-update --tag v0.3.0`
+  `wupm self-update --tag v0.4.0`
 
 3. Service wrapper hardening
 - Fix: open elevated PowerShell and run:
@@ -48,6 +56,6 @@
 4. Winget live submission
 - Fix: fork https://github.com/microsoft/winget-pkgs, copy `scripts/deploy/winget/winget-pkgs/LoopyLuci.WindowsUpdatePackageManager/*.yaml` into `manifests/L/LoopyLuci/WindowsUpdatePackageManager/`, and open a PR.
 
-5. v0.4.0 release
+5. v0.5.0 release
 - Fix: run:
-  `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/release.ps1 -Tag v0.4.0 -DeployTarget winget`
+  `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/release.ps1 -Tag v0.5.0 -DeployTarget winget`

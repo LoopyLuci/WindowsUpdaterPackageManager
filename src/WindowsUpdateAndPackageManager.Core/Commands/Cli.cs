@@ -860,8 +860,11 @@ public static class Cli
                             return;
                         }
 
-                        var cacheRoot = services.GetService(typeof(ICacheManager)) as ICacheManager;
-                        var packagePath = cacheRoot is null ? string.Empty : Path.Combine(cacheRoot.GetType().Name, id, "latest", $"{id}@latest.wupkg");
+                        var cacheManager = services.GetService(typeof(ICacheManager)) as ICacheManager;
+                        var cacheRoot = cacheManager is null ? string.Empty : cacheManager.GetCacheRootAsync().GetAwaiter().GetResult();
+                        var packagePath = string.IsNullOrWhiteSpace(cacheRoot)
+                            ? string.Empty
+                            : Path.Combine(cacheRoot, id, "latest", $"{id}@latest.wupkg");
                         if (string.IsNullOrWhiteSpace(packagePath) || !File.Exists(packagePath))
                         {
                             Console.WriteLine("Applied package path could not be resolved for offline apply.");
@@ -883,6 +886,42 @@ public static class Cli
             }
         }, deltaApplyId, deltaApplyFrom, deltaApplyMount);
         root.AddCommand(deltaApply);
+
+        var deltaVerify = new Command("delta-verify", "Verify a cached package hash against expected SHA256");
+        var deltaVerifyId = new Option<string>("--id") { Description = "Package ID" };
+        var deltaVerifyPath = new Option<string>("--path") { Description = "Path to package file" };
+        deltaVerify.AddOption(deltaVerifyId);
+        deltaVerify.AddOption(deltaVerifyPath);
+        deltaVerify.SetHandler<string, string?>((id, packagePath) =>
+        {
+            try
+            {
+                var cacheManager = services.GetService(typeof(ICacheManager)) as ICacheManager;
+                var cacheRootTask = cacheManager is null ? Task.FromResult<string>(string.Empty) : cacheManager.GetCacheRootAsync();
+                var effectivePath = string.IsNullOrWhiteSpace(packagePath)
+                    ? string.IsNullOrWhiteSpace(cacheRootTask.GetAwaiter().GetResult())
+                        ? string.Empty
+                        : Path.Combine(cacheRootTask.GetAwaiter().GetResult(), id, "latest", $"{id}@latest.wupkg")
+                    : packagePath!;
+
+                if (string.IsNullOrWhiteSpace(effectivePath) || !File.Exists(effectivePath))
+                {
+                    Console.WriteLine("Package path could not be resolved.");
+                    return;
+                }
+
+                using var sha = System.Security.Cryptography.SHA256.Create();
+                using var stream = File.OpenRead(effectivePath);
+                var hash = sha.ComputeHash(stream);
+                var actual = Convert.ToHexString(hash).ToLowerInvariant();
+                Console.WriteLine($"SHA256={actual}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Delta verify failed: {ex.Message}");
+            }
+        }, deltaVerifyId, deltaVerifyPath);
+        root.AddCommand(deltaVerify);
 
         var offlineMount = new Command("offline", "Offline image servicing");
         var offlineMountSub = new Command("mount", "Mount a WIM/ISO image")
