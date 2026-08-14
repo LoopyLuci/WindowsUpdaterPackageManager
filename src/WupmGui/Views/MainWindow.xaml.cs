@@ -6,10 +6,9 @@ namespace WupmGui.Views;
 
 public partial class MainWindow : Window
 {
-    public MainWindow(MainWindowViewModel viewModel)
+    public MainWindow()
     {
         InitializeComponent();
-        DataContext = viewModel;
     }
 
     private void OnTabChanged(object sender, SelectionChangedEventArgs e)

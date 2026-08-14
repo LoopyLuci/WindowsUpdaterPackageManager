@@ -33,6 +33,7 @@ public partial class App : Application
                 services.AddSingleton<MainWindowViewModel>();
                 services.AddSingleton<DashboardViewModel>();
                 services.AddTransient<WupmGui.ViewModels.MainWindowViewModel>(sp => sp.GetRequiredService<MainWindowViewModel>());
+                services.AddTransient<MainWindow>();
             })
             .Build();
     }
