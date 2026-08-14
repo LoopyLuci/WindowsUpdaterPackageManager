@@ -102,6 +102,11 @@
 2. ~~Registry sync conflict resolution UX~~ — `RegistrySyncResult` with added/replaced/skipped counts
 3. ~~Cache invalidation command~~ — `wupm cache invalidate <packageId> <version>`
 
+## Proposed for v1.8.0
+1. ~~Marketplace publish automation via GitHub release creation~~ — `gh release create` from CLI
+2. ~~Plugin registry enable/disable lifecycle~~ — `wupm plugin registry enable|disable --name <plugin>`
+3. ~~Cache invalidation UX improvements~~ — human-readable output
+
 ## Environment blockers and exact fixes
 
 1. Chocolatey live validation
