@@ -538,6 +538,69 @@ public static class Cli
             }
         });
         notify.AddCommand(notifyCheck);
+
+        var notifyStart = new Command("start", "Start background update notifications");
+        var notifyInterval = new Option<TimeSpan?>("--interval", description: "Polling interval, e.g. 1h");
+        notifyStart.AddOption(notifyInterval);
+        notifyStart.SetHandler<TimeSpan?>((interval) =>
+        {
+            try
+            {
+                var notifier = services.GetService(typeof(IUpdateNotificationService)) as IUpdateNotificationService;
+                if (notifier is null)
+                {
+                    Console.WriteLine("Notification service is not configured.");
+                    return;
+                }
+
+                var effective = interval ?? TimeSpan.FromHours(1);
+                notifier.StartAsync(effective).GetAwaiter().GetResult();
+                Console.WriteLine($"Notification service started with interval {effective}.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Notify start failed: {ex.Message}");
+            }
+        }, notifyInterval);
+        notify.AddCommand(notifyStart);
+
+        var notifyStop = new Command("stop", "Stop background update notifications");
+        notifyStop.SetHandler(() =>
+        {
+            try
+            {
+                var notifier = services.GetService(typeof(IUpdateNotificationService)) as IUpdateNotificationService;
+                if (notifier is null)
+                {
+                    Console.WriteLine("Notification service is not configured.");
+                    return;
+                }
+
+                notifier.StopAsync().GetAwaiter().GetResult();
+                Console.WriteLine("Notification service stopped.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Notify stop failed: {ex.Message}");
+            }
+        });
+        notify.AddCommand(notifyStop);
+
+        var notifyStatus = new Command("status", "Show notification service status");
+        notifyStatus.SetHandler(() =>
+        {
+            try
+            {
+                var notifier = services.GetService(typeof(IUpdateNotificationService)) as IUpdateNotificationService;
+                Console.WriteLine(notifier is not null ? "Notification service is configured." : "Notification service is not configured.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Notify status failed: {ex.Message}");
+            }
+        });
+        notify.AddCommand(notifyStatus);
+
         root.AddCommand(notify);
 
         var verify = new Command("verify", "Verify a package file by SHA256 and optional Authenticode signature");

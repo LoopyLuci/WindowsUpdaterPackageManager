@@ -28,6 +28,11 @@
 2. Background notification daemon — periodic update checks with CLI controls
 3. Delta verification CLI — verify cached package hashes against expected SHA256
 
+## Proposed for v0.6.0
+1. Plugin marketplace/registry — discover and install community plugins
+2. Notify daemon UX — system tray alerts, configurable thresholds
+3. Delta verification UX — human-readable verification reports
+
 ## Priority order
 1. Offline scan result caching
 2. Delta update progress reporting
@@ -46,7 +51,7 @@
 
 2. Self-update E2E
 - Fix: set `GITHUB_TOKEN` and run:
-  `wupm self-update --tag v0.4.0`
+  `wupm self-update --tag v0.5.0`
 
 3. Service wrapper hardening
 - Fix: open elevated PowerShell and run:
@@ -56,6 +61,6 @@
 4. Winget live submission
 - Fix: fork https://github.com/microsoft/winget-pkgs, copy `scripts/deploy/winget/winget-pkgs/LoopyLuci.WindowsUpdatePackageManager/*.yaml` into `manifests/L/LoopyLuci/WindowsUpdatePackageManager/`, and open a PR.
 
-5. v0.5.0 release
+5. v0.6.0 release
 - Fix: run:
-  `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/release.ps1 -Tag v0.5.0 -DeployTarget winget`
+  `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/release.ps1 -Tag v0.6.0 -DeployTarget winget`
