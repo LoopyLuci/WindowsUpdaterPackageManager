@@ -103,9 +103,9 @@
 3. ~~Cache invalidation command~~ — `wupm cache invalidate <packageId> <version>`
 
 ## Proposed for v1.9.0
-1. WPF GUI scaffold — `WupmGui` project with dashboard, themes, and `WupmApiClient`
-2. Drivers/history views
-3. Settings + diagnostics panel
+1. ~~WPF GUI scaffold~~ — `WupmGui` project with dashboard, themes, and `WupmApiClient`
+2. ~~Drivers/history views~~ — `DriversView` and `HistoryView` with basic data binding
+3. ~~Settings + diagnostics panel~~ — `SettingsView` with service and telemetry placeholders
 
 ## Environment blockers and exact fixes
 
