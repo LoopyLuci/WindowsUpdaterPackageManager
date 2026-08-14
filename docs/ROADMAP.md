@@ -24,9 +24,9 @@
 5. ~~Delta UX~~ — progress bars, resume support, and delta verification
 
 ## Proposed for v0.5.0
-1. Plugin SDK documentation — extensible module interface for third-party extensions
-2. Background notification daemon — periodic update checks with CLI controls
-3. Delta verification CLI — verify cached package hashes against expected SHA256
+1. ~~Plugin SDK documentation~~ — extensible module interface for third-party extensions
+2. ~~Background notification daemon~~ — periodic update checks with CLI controls
+3. ~~Delta verification CLI~~ — verify cached package hashes against expected SHA256
 
 ## Proposed for v0.6.0
 1. ~~Plugin marketplace/registry~~ — `wupm plugin registry list|add|remove`
@@ -36,7 +36,7 @@
 ## Proposed for v0.7.0
 1. ~~Plugin signing/verification~~ — `wupm plugin verify --path <dll>` with SHA256
 2. ~~Plugin marketplace UX~~ — `wupm marketplace search <term>`
-3. Plugin SDK examples — documented in `CONTRIBUTING.md`
+3. ~~Plugin SDK examples~~ — documented in `CONTRIBUTING.md`
 
 ## Proposed for v0.8.0
 1. ~~Plugin install/update commands~~ — `wupm plugin install --path <dll>` and registry lifecycle
@@ -47,6 +47,11 @@
 1. ~~Plugin update/remove UX~~ — `wupm plugin registry update` and confirmation prompts
 2. ~~Marketplace auth~~ — basic marketplace CLI controls
 3. ~~Plugin dependency management~~ — dependency metadata in registry entries
+
+## Proposed for v1.0.0
+1. Hardening — error handling, retries, timeouts, and graceful degradation
+2. Security review — plugin signing policy, secret hygiene, and input validation
+3. Production readiness — telemetry opt-out, structured logging, release artifacts, and documentation completeness
 
 ## Priority order
 1. Offline scan result caching
@@ -73,7 +78,7 @@
 
 2. Self-update E2E
 - Fix: set `GITHUB_TOKEN` and run:
-  `wupm self-update --tag v0.8.0`
+  `wupm self-update --tag v0.9.0`
 
 3. Service wrapper hardening
 - Fix: open elevated PowerShell and run:
@@ -83,6 +88,6 @@
 4. Winget live submission
 - Fix: fork https://github.com/microsoft/winget-pkgs, copy `scripts/deploy/winget/winget-pkgs/LoopyLuci.WindowsUpdatePackageManager/*.yaml` into `manifests/L/LoopyLuci/WindowsUpdatePackageManager/`, and open a PR.
 
-5. v0.9.0 release
+5. v1.0.0 release
 - Fix: run:
-  `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/release.ps1 -Tag v0.9.0 -DeployTarget winget`
+  `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/release.ps1 -Tag v1.0.0 -DeployTarget winget`
