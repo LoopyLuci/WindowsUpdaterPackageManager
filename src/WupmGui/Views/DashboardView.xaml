@@ -1,0 +1,27 @@
+<UserControl x:Class="WupmGui.Views.DashboardView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:converters="clr-namespace:WupmGui.Converters">
+  <UserControl.Resources>
+    <converters:SizeToStringConverter x:Key="SizeToString"/>
+  </UserControl.Resources>
+
+  <DockPanel Margin="16">
+    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,12">
+      <Button Content="Scan Now" Command="{Binding ScanCommand}" Margin="0,0,8,0"/>
+      <Button Content="Cancel" Command="{Binding CancelCommand}" IsEnabled="{Binding IsScanning}"/>
+      <TextBlock Text="{Binding StatusMessage}" VerticalAlignment="Center" Margin="12,0,0,0"/>
+    </StackPanel>
+
+    <ProgressBar Minimum="0" Maximum="100" Value="{Binding ProgressValue}" Height="18" DockPanel.Dock="Top" Margin="0,0,0,12"/>
+
+    <DataGrid ItemsSource="{Binding Updates}" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True">
+      <DataGrid.Columns>
+        <DataGridTextColumn Header="Title" Binding="{Binding Title}" Width="*"/>
+        <DataGridTextColumn Header="Version" Binding="{Binding Version}" Width="120"/>
+        <DataGridTextColumn Header="Size" Binding="{Binding Size}" Width="100"/>
+        <DataGridTextColumn Header="Category" Binding="{Binding Category}" Width="120"/>
+      </DataGrid.Columns>
+    </DataGrid>
+  </DockPanel>
+</UserControl>

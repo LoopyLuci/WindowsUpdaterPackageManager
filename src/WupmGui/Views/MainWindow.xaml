@@ -1,0 +1,35 @@
+<Window x:Class="WupmGui.Views.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:WupmGui.ViewModels"
+        xmlns:views="clr-namespace:WupmGui.Views"
+        xmlns:converters="clr-namespace:WupmGui.Converters"
+        Title="Windows Update Package Manager" Height="600" Width="1000">
+  <Window.Resources>
+    <ResourceDictionary>
+      <ResourceDictionary.MergedDictionaries>
+        <ResourceDictionary Source="../Themes/Shared.xaml"/>
+      </ResourceDictionary.MergedDictionaries>
+      <converters:SizeToStringConverter x:Key="SizeToString"/>
+    </ResourceDictionary>
+  </Window.Resources>
+
+  <DockPanel>
+    <TabControl DockPanel.Dock="Left" Width="180">
+      <TabItem Header="Dashboard" IsSelected="True"/>
+      <TabItem Header="Drivers"/>
+      <TabItem Header="History"/>
+      <TabItem Header="Plugins"/>
+      <TabItem Header="Marketplace"/>
+      <TabItem Header="Settings"/>
+    </TabControl>
+
+    <ContentControl Content="{Binding CurrentViewModel}">
+      <ContentControl.Resources>
+        <DataTemplate DataType="{x:Type vm:DashboardViewModel}">
+          <views:DashboardView/>
+        </DataTemplate>
+      </ContentControl.Resources>
+    </ContentControl>
+  </DockPanel>
+</Window>
