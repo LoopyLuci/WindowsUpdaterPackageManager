@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.IO.Compression;
+using System.Linq;
 using System.Threading.Tasks;
 using System.CommandLine;
 using System.CommandLine.Invocation;
@@ -687,6 +688,27 @@ public static class Cli
 
                 var verifier = services.GetService(typeof(IPluginVerifier)) as IPluginVerifier;
                 var trusted = verifier is null || verifier.VerifyAsync(path).GetAwaiter().GetResult();
+
+                var registryEntry = registry.ListAsync().GetAwaiter().GetResult().FirstOrDefault(e => e.Path.Equals(path, StringComparison.OrdinalIgnoreCase));
+                if (registryEntry is not null && !string.IsNullOrWhiteSpace(registryEntry.Dependencies))
+                {
+                    var deps = registryEntry.Dependencies.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                    var missing = new List<string>();
+                    foreach (var dep in deps)
+                    {
+                        if (!registry.ListAsync().GetAwaiter().GetResult().Any(e => e.Name.Equals(dep, StringComparison.OrdinalIgnoreCase)))
+                        {
+                            missing.Add(dep);
+                        }
+                    }
+                    if (missing.Count > 0)
+                    {
+                        Console.WriteLine($"SHA256: {hash}");
+                        Console.WriteLine($"Verification: missing dependencies: {string.Join(", ", missing)}");
+                        return;
+                    }
+                }
+
                 Console.WriteLine($"SHA256: {hash}");
                 Console.WriteLine(trusted ? "Verification: passed" : "Verification: untrusted - review before use");
             }
@@ -816,6 +838,14 @@ public static class Cli
                     return;
                 }
 
+                var auth = services.GetService(typeof(IMarketplaceAuthService)) as IMarketplaceAuthService;
+                if (auth is null)
+                {
+                    Console.WriteLine("Marketplace auth is not configured.");
+                    return;
+                }
+
+                auth.SetTokenAsync(token).GetAwaiter().GetResult();
                 Console.WriteLine("Marketplace auth token saved.");
             }
             catch (Exception ex)
@@ -824,6 +854,28 @@ public static class Cli
             }
         }, marketplaceAuthToken);
         marketplace.AddCommand(marketplaceAuth);
+
+        var marketplaceLogout = new Command("logout", "Clear marketplace authentication token");
+        marketplaceLogout.SetHandler(() =>
+        {
+            try
+            {
+                var auth = services.GetService(typeof(IMarketplaceAuthService)) as IMarketplaceAuthService;
+                if (auth is null)
+                {
+                    Console.WriteLine("Marketplace auth is not configured.");
+                    return;
+                }
+
+                auth.ClearTokenAsync().GetAwaiter().GetResult();
+                Console.WriteLine("Marketplace auth token cleared.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Marketplace logout failed: {ex.Message}");
+            }
+        });
+        marketplace.AddCommand(marketplaceLogout);
 
         root.AddCommand(marketplace);
 
