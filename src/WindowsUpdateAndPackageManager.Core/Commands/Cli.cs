@@ -657,6 +657,82 @@ public static class Cli
         }, pluginRemoveName, pluginRemoveConfirm);
         pluginRegistry.AddCommand(pluginRegistryRemove);
 
+        var pluginRegistryEnable = new Command("enable", "Enable a plugin in registry");
+        var pluginEnableName = new Option<string>("--name") { Description = "Plugin name" };
+        pluginRegistryEnable.AddOption(pluginEnableName);
+        pluginRegistryEnable.SetHandler<string>((name) =>
+        {
+            try
+            {
+                var registry = services.GetService(typeof(IPluginRegistry)) as IPluginRegistry;
+                if (registry is null)
+                {
+                    Console.WriteLine("Plugin registry is not configured.");
+                    return;
+                }
+
+                var entries = registry.ListAsync().GetAwaiter().GetResult().ToList();
+                var entry = entries.FirstOrDefault(e => e.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+                if (entry is null)
+                {
+                    Console.WriteLine("Plugin not found in registry.");
+                    return;
+                }
+
+                entry.Enabled = true;
+                registry.RemoveAsync(name).GetAwaiter().GetResult();
+                foreach (var e in entries)
+                {
+                    registry.AddAsync(e.Name, e.Version, e.Path, e.Dependencies).GetAwaiter().GetResult();
+                }
+
+                Console.WriteLine($"Enabled plugin: {name}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Plugin registry enable failed: {ex.Message}");
+            }
+        }, pluginEnableName);
+        pluginRegistry.AddCommand(pluginRegistryEnable);
+
+        var pluginRegistryDisable = new Command("disable", "Disable a plugin in registry");
+        var pluginDisableName = new Option<string>("--name") { Description = "Plugin name" };
+        pluginRegistryDisable.AddOption(pluginDisableName);
+        pluginRegistryDisable.SetHandler<string>((name) =>
+        {
+            try
+            {
+                var registry = services.GetService(typeof(IPluginRegistry)) as IPluginRegistry;
+                if (registry is null)
+                {
+                    Console.WriteLine("Plugin registry is not configured.");
+                    return;
+                }
+
+                var entries = registry.ListAsync().GetAwaiter().GetResult().ToList();
+                var entry = entries.FirstOrDefault(e => e.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+                if (entry is null)
+                {
+                    Console.WriteLine("Plugin not found in registry.");
+                    return;
+                }
+
+                entry.Enabled = false;
+                registry.RemoveAsync(name).GetAwaiter().GetResult();
+                foreach (var e in entries)
+                {
+                    registry.AddAsync(e.Name, e.Version, e.Path, e.Dependencies).GetAwaiter().GetResult();
+                }
+
+                Console.WriteLine($"Disabled plugin: {name}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Plugin registry disable failed: {ex.Message}");
+            }
+        }, pluginDisableName);
+        pluginRegistry.AddCommand(pluginRegistryDisable);
+
         plugin.AddCommand(pluginRegistry);
 
         var pluginVerify = new Command("verify", "Verify a plugin package hash");
