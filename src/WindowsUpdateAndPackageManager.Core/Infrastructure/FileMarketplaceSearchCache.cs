@@ -5,6 +5,7 @@ namespace WindowsUpdateAndPackageManager.Infrastructure;
 public sealed class FileMarketplaceSearchCache : IMarketplaceSearchCache
 {
     private readonly string _cacheRoot;
+    private TimeSpan _ttl = TimeSpan.FromHours(1);
 
     public FileMarketplaceSearchCache(string cacheRoot)
     {
@@ -15,7 +16,14 @@ public sealed class FileMarketplaceSearchCache : IMarketplaceSearchCache
     public async Task<IReadOnlyList<MarketplacePlugin>> GetAsync(string query, CancellationToken cancellationToken = default)
     {
         var path = GetPath(query);
-        if (!File.Exists(path))
+        var meta = GetMetaPath(query);
+        if (!File.Exists(path) || !File.Exists(meta))
+        {
+            return Array.Empty<MarketplacePlugin>();
+        }
+
+        var written = File.GetLastWriteTimeUtc(meta);
+        if (DateTime.UtcNow - written > _ttl)
         {
             return Array.Empty<MarketplacePlugin>();
         }
@@ -30,16 +38,28 @@ public sealed class FileMarketplaceSearchCache : IMarketplaceSearchCache
         return list;
     }
 
-    public async Task SetAsync(string query, IReadOnlyList<MarketplacePlugin> results, CancellationToken cancellationToken = default)
+    public async Task SetAsync(string query, IReadOnlyList<MarketplacePlugin> results, TimeSpan? ttl = null, CancellationToken cancellationToken = default)
     {
         var path = GetPath(query);
+        var meta = GetMetaPath(query);
         var json = JsonSerializer.Serialize(results);
         await File.WriteAllTextAsync(path, json, cancellationToken).ConfigureAwait(false);
+        File.WriteAllText(meta, DateTime.UtcNow.ToString("o"));
+        if (ttl.HasValue)
+        {
+            _ttl = ttl.Value;
+        }
     }
 
     private string GetPath(string query)
     {
         var safe = string.Join("_", query.Split(Path.GetInvalidFileNameChars()));
         return Path.Combine(_cacheRoot, $"marketplace-search-{safe}.json");
+    }
+
+    private string GetMetaPath(string query)
+    {
+        var safe = string.Join("_", query.Split(Path.GetInvalidFileNameChars()));
+        return Path.Combine(_cacheRoot, $"marketplace-search-{safe}.meta");
     }
 }

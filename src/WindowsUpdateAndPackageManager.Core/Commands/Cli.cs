@@ -776,6 +776,48 @@ public static class Cli
         });
         pluginRegistry.AddCommand(pluginRegistryValidate);
 
+        var pluginRegistryUninstall = new Command("uninstall", "Uninstall a plugin from registry");
+        var pluginUninstallName = new Option<string>("--name") { Description = "Plugin name" };
+        var pluginUninstallDelete = new Option<bool>("--delete") { Description = "Delete plugin file after uninstall" };
+        pluginRegistryUninstall.AddOption(pluginUninstallName);
+        pluginRegistryUninstall.AddOption(pluginUninstallDelete);
+        pluginRegistryUninstall.SetHandler<string, bool>((name, deleteFile) =>
+        {
+            try
+            {
+                var registry = services.GetService(typeof(IPluginRegistry)) as IPluginRegistry;
+                if (registry is null)
+                {
+                    Console.WriteLine("Plugin registry is not configured.");
+                    return;
+                }
+
+                var entries = registry.ListAsync().GetAwaiter().GetResult();
+                var entry = entries.FirstOrDefault(e => e.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+                if (entry is null)
+                {
+                    Console.WriteLine("Plugin not found in registry.");
+                    return;
+                }
+
+                registry.RemoveAsync(name).GetAwaiter().GetResult();
+                if (deleteFile && File.Exists(entry.Path))
+                {
+                    File.Delete(entry.Path);
+                    Console.WriteLine($"Uninstalled plugin {name} and deleted file.");
+                }
+                else
+                {
+                    Console.WriteLine($"Uninstalled plugin {name}.");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Plugin registry uninstall failed: {ex.Message}");
+            }
+        }, pluginUninstallName, pluginUninstallDelete);
+        pluginRegistry.AddCommand(pluginRegistryUninstall);
+
         var pluginRegistryBackup = new Command("backup", "Backup plugin registry to a JSON file");
         var pluginBackupPath = new Option<string>("--path") { Description = "Output JSON path" };
         pluginRegistryBackup.AddOption(pluginBackupPath);
@@ -882,6 +924,33 @@ public static class Cli
             }
         }, pluginRestorePath);
         pluginRegistry.AddCommand(pluginRegistryRestore);
+
+        var pluginRegistrySync = new Command("sync", "Sync plugin registry to GitHub");
+        var pluginSyncRepo = new Option<string>("--repo") { Description = "Owner/repo, e.g. LoopyLuci/WindowsUpdateAndPackageManager" };
+        var pluginSyncBranch = new Option<string>("--branch") { Description = "Git branch, default main" };
+        pluginRegistrySync.AddOption(pluginSyncRepo);
+        pluginRegistrySync.AddOption(pluginSyncBranch);
+        pluginRegistrySync.SetHandler<string, string>((repo, branch) =>
+        {
+            try
+            {
+                var registry = services.GetService(typeof(IRegistrySyncService)) as IRegistrySyncService;
+                if (registry is null)
+                {
+                    Console.WriteLine("Registry sync is not configured.");
+                    return;
+                }
+
+                var effectiveRepo = string.IsNullOrWhiteSpace(repo) ? "LoopyLuci/WindowsUpdateAndPackageManager" : repo;
+                registry.SyncAsync(effectiveRepo, branch).GetAwaiter().GetResult();
+                Console.WriteLine($"Synced registry to {effectiveRepo}.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Plugin registry sync failed: {ex.Message}");
+            }
+        }, pluginSyncRepo, pluginSyncBranch);
+        pluginRegistry.AddCommand(pluginRegistrySync);
 
         plugin.AddCommand(pluginRegistry);
 
@@ -1177,6 +1246,37 @@ public static class Cli
             }
         });
         marketplace.AddCommand(marketplaceLogout);
+
+        var marketplacePublish = new Command("publish", "Publish a plugin to marketplace");
+        var marketplacePublishPath = new Option<string>("--path") { Description = "Path to plugin JSON manifest" };
+        marketplacePublish.AddOption(marketplacePublishPath);
+        marketplacePublish.SetHandler<string?>((path) =>
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
+                {
+                    Console.WriteLine("Plugin manifest path is required and must exist.");
+                    return;
+                }
+
+                var json = File.ReadAllText(path);
+                var manifest = System.Text.Json.JsonSerializer.Deserialize<MarketplacePlugin>(json);
+                if (manifest is null)
+                {
+                    Console.WriteLine("Invalid plugin manifest.");
+                    return;
+                }
+
+                Console.WriteLine($"Publish prepared for: {manifest.Id}@{manifest.Version}");
+                Console.WriteLine("To complete publishing, push a GitHub release with the plugin asset.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Marketplace publish failed: {ex.Message}");
+            }
+        }, marketplacePublishPath);
+        marketplace.AddCommand(marketplacePublish);
 
         root.AddCommand(marketplace);
 
