@@ -54,6 +54,7 @@ public static class Composition
         services.AddSingleton(sp => new PluginManager(pluginRoot));
         services.AddSingleton(sp => sp.GetRequiredService<PluginManager>());
         services.AddSingleton<IPluginRegistry>(sp => new FilePluginRegistry(dataRoot));
+        services.AddSingleton<IPluginVerifier>(sp => new DefaultPluginVerifier(sp.GetRequiredService<IPluginRegistry>()));
         services.AddSingleton<IUpdateNotificationService>(sp => new UpdateNotificationService(sp.GetRequiredService<IRepoSync>()));
 
         if (!string.IsNullOrWhiteSpace(repositoryUrl))

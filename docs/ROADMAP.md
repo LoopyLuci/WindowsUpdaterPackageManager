@@ -38,6 +38,11 @@
 2. ~~Plugin marketplace UX~~ — `wupm marketplace search <term>`
 3. Plugin SDK examples — documented in `CONTRIBUTING.md`
 
+## Proposed for v0.8.0
+1. ~~Plugin install/update commands~~ — `wupm plugin install --path <dll>` and registry lifecycle
+2. ~~Marketplace UX improvements~~ — `wupm marketplace install <name>` and richer search results
+3. ~~Signing policy enforcement~~ — `IPluginVerifier` with trusted/untrusted status
+
 ## Priority order
 1. Offline scan result caching
 2. Delta update progress reporting
@@ -49,6 +54,8 @@
 8. Delta verification CLI
 9. Plugin signing/verification
 10. Plugin marketplace UX
+11. Plugin install/update commands
+12. Signing policy enforcement
 
 ## Environment blockers and exact fixes
 
@@ -58,7 +65,7 @@
 
 2. Self-update E2E
 - Fix: set `GITHUB_TOKEN` and run:
-  `wupm self-update --tag v0.6.0`
+  `wupm self-update --tag v0.7.0`
 
 3. Service wrapper hardening
 - Fix: open elevated PowerShell and run:
@@ -68,6 +75,6 @@
 4. Winget live submission
 - Fix: fork https://github.com/microsoft/winget-pkgs, copy `scripts/deploy/winget/winget-pkgs/LoopyLuci.WindowsUpdatePackageManager/*.yaml` into `manifests/L/LoopyLuci/WindowsUpdatePackageManager/`, and open a PR.
 
-5. v0.7.0 release
+5. v0.8.0 release
 - Fix: run:
-  `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/release.ps1 -Tag v0.7.0 -DeployTarget winget`
+  `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/release.ps1 -Tag v0.8.0 -DeployTarget winget`

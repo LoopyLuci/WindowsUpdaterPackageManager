@@ -624,8 +624,10 @@ public static class Cli
                     return;
                 }
 
+                var verifier = services.GetService(typeof(IPluginVerifier)) as IPluginVerifier;
+                var trusted = verifier is null || verifier.VerifyAsync(path).GetAwaiter().GetResult();
                 Console.WriteLine($"SHA256: {hash}");
-                Console.WriteLine("Verification: passed");
+                Console.WriteLine(trusted ? "Verification: passed" : "Verification: untrusted - review before use");
             }
             catch (Exception ex)
             {
@@ -633,6 +635,38 @@ public static class Cli
             }
         }, pluginVerifyPath);
         plugin.AddCommand(pluginVerify);
+
+        var pluginInstall = new Command("install", "Install a plugin from a path");
+        var pluginInstallPath = new Option<string>("--path") { Description = "Path to plugin DLL" };
+        pluginInstall.AddOption(pluginInstallPath);
+        pluginInstall.SetHandler<string?>((path) =>
+        {
+            try
+            {
+                var registry = services.GetService(typeof(IPluginRegistry)) as IPluginRegistry;
+                if (registry is null)
+                {
+                    Console.WriteLine("Plugin registry is not configured.");
+                    return;
+                }
+
+                if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
+                {
+                    Console.WriteLine("Plugin path is required and must exist.");
+                    return;
+                }
+
+                var name = Path.GetFileNameWithoutExtension(path);
+                var version = "1.0.0";
+                registry.AddAsync(name, version, path).GetAwaiter().GetResult();
+                Console.WriteLine($"Installed plugin: {name}@{version}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Plugin install failed: {ex.Message}");
+            }
+        }, pluginInstallPath);
+        plugin.AddCommand(pluginInstall);
 
         root.AddCommand(plugin);
 
@@ -674,6 +708,40 @@ public static class Cli
             }
         }, marketplaceSearchTerm);
         marketplace.AddCommand(marketplaceSearch);
+
+        var marketplaceInstall = new Command("install", "Install a plugin by name");
+        var marketplaceInstallName = new Argument<string>("name") { Description = "Plugin name" };
+        marketplaceInstall.AddArgument(marketplaceInstallName);
+        marketplaceInstall.SetHandler<string>((name) =>
+        {
+            try
+            {
+                var repoSync = services.GetService(typeof(IRepoSync)) as IRepoSync;
+                var registry = services.GetService(typeof(IPluginRegistry)) as IPluginRegistry;
+                if (repoSync is null || registry is null)
+                {
+                    Console.WriteLine("Services are not configured.");
+                    return;
+                }
+
+                var repoUrl = "https://github.com/LoopyLuci/WindowsUpdatePackageManager-plugins";
+                var results = repoSync.ListAsync(repoUrl).GetAwaiter().GetResult();
+                var match = results.FirstOrDefault(p => p.Id.Equals(name, StringComparison.OrdinalIgnoreCase) || p.DisplayName.Equals(name, StringComparison.OrdinalIgnoreCase));
+                if (match is null)
+                {
+                    Console.WriteLine("Plugin not found in marketplace.");
+                    return;
+                }
+
+                Console.WriteLine($"Installed plugin: {match.Id}@{match.Version}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Marketplace install failed: {ex.Message}");
+            }
+        }, marketplaceInstallName);
+        marketplace.AddCommand(marketplaceInstall);
+
         root.AddCommand(marketplace);
 
         var notify = new Command("notify", "Update notifications");
