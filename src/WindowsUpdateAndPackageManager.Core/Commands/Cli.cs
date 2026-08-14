@@ -982,54 +982,6 @@ public static class Cli
         }, pluginSyncRepo, pluginSyncBranch);
         pluginRegistry.AddCommand(pluginRegistrySync);
 
-        var pluginRegistryEnable = new Command("enable", "Enable a plugin in the registry");
-        var pluginEnableName = new Option<string>("--name") { Description = "Plugin name" };
-        pluginRegistryEnable.AddOption(pluginEnableName);
-        pluginRegistryEnable.SetHandler<string>((name) =>
-        {
-            try
-            {
-                var registry = services.GetService(typeof(IPluginRegistry)) as IPluginRegistry;
-                if (registry is null)
-                {
-                    Console.WriteLine("Plugin registry is not configured.");
-                    return;
-                }
-
-                registry.SetEnabledAsync(name, true).GetAwaiter().GetResult();
-                Console.WriteLine($"Enabled plugin: {name}");
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Plugin enable failed: {ex.Message}");
-            }
-        }, pluginEnableName);
-        pluginRegistry.AddCommand(pluginRegistryEnable);
-
-        var pluginRegistryDisable = new Command("disable", "Disable a plugin in the registry");
-        var pluginDisableName = new Option<string>("--name") { Description = "Plugin name" };
-        pluginRegistryDisable.AddOption(pluginDisableName);
-        pluginRegistryDisable.SetHandler<string>((name) =>
-        {
-            try
-            {
-                var registry = services.GetService(typeof(IPluginRegistry)) as IPluginRegistry;
-                if (registry is null)
-                {
-                    Console.WriteLine("Plugin registry is not configured.");
-                    return;
-                }
-
-                registry.SetEnabledAsync(name, false).GetAwaiter().GetResult();
-                Console.WriteLine($"Disabled plugin: {name}");
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Plugin disable failed: {ex.Message}");
-            }
-        }, pluginDisableName);
-        pluginRegistry.AddCommand(pluginRegistryDisable);
-
         plugin.AddCommand(pluginRegistry);
 
         var pluginVerify = new Command("verify", "Verify a plugin package hash");
@@ -1328,9 +1280,11 @@ public static class Cli
         var marketplacePublish = new Command("publish", "Publish a plugin to marketplace");
         var marketplacePublishPath = new Option<string>("--path") { Description = "Path to plugin JSON manifest" };
         var marketplacePublishAsset = new Option<string>("--asset") { Description = "Path to plugin asset ZIP/DLL" };
+        var marketplacePublishRepo = new Option<string>("--repo") { Description = "GitHub owner/repo, default LoopyLuci/WindowsUpdatePackageManager-plugins" };
         marketplacePublish.AddOption(marketplacePublishPath);
         marketplacePublish.AddOption(marketplacePublishAsset);
-        marketplacePublish.SetHandler<string?, string?>((path, asset) =>
+        marketplacePublish.AddOption(marketplacePublishRepo);
+        marketplacePublish.SetHandler<string?, string?, string?>((path, asset, repo) =>
         {
             try
             {
@@ -1355,7 +1309,7 @@ public static class Cli
                     return;
                 }
 
-                var repoUrl = "https://github.com/LoopyLuci/WindowsUpdatePackageManager-plugins";
+                var repoUrl = string.IsNullOrWhiteSpace(repo) ? "LoopyLuci/WindowsUpdatePackageManager-plugins" : repo;
                 var tag = $"v{manifest.Version}";
                 var releaseBody = $"## {manifest.Id} {manifest.Version}\n\n{manifest.DisplayName}\n";
                 if (!string.IsNullOrWhiteSpace(manifest.Dependencies))
@@ -1373,15 +1327,42 @@ public static class Cli
                 };
 
                 Console.WriteLine($"Publishing {manifest.Id}@{manifest.Version} to {repoUrl}...");
-                Console.WriteLine("To complete publishing, push a GitHub release with the plugin asset.");
-                Console.WriteLine($"Tag: {tag}");
-                Console.WriteLine($"Asset: {assetPath}");
+                Console.WriteLine($"{System.Text.Json.JsonSerializer.Serialize(release)}");
+
+                if (!File.Exists(path))
+                {
+                    Console.WriteLine("GitHub release metadata generated. Push with: gh release create ...");
+                    return;
+                }
+
+                var createArgs = $"release create {tag} --repo {repoUrl} --title \"{manifest.Id} {manifest.Version}\" --notes \"{releaseBody.Replace("\"", "'")}\" {assetPath}";
+                var psi = new System.Diagnostics.ProcessStartInfo("gh", createArgs) { RedirectStandardOutput = true, RedirectStandardError = true };
+                var proc = System.Diagnostics.Process.Start(psi);
+                if (proc is null)
+                {
+                    Console.WriteLine("To complete publishing, push a GitHub release with the plugin asset.");
+                    Console.WriteLine($"Tag: {tag}");
+                    Console.WriteLine($"Asset: {assetPath}");
+                    return;
+                }
+
+                proc.WaitForExit();
+                if (proc.ExitCode == 0)
+                {
+                    Console.WriteLine($"Published {manifest.Id}@{manifest.Version}.");
+                }
+                else
+                {
+                    Console.WriteLine("To complete publishing, push a GitHub release with the plugin asset.");
+                    Console.WriteLine($"Tag: {tag}");
+                    Console.WriteLine($"Asset: {assetPath}");
+                }
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Marketplace publish failed: {ex.Message}");
             }
-        }, marketplacePublishPath, marketplacePublishAsset);
+        }, marketplacePublishPath, marketplacePublishAsset, marketplacePublishRepo);
         marketplace.AddCommand(marketplacePublish);
 
         root.AddCommand(marketplace);
