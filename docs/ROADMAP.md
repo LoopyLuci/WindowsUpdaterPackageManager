@@ -107,6 +107,12 @@
 2. ~~Drivers/history views~~ — `DriversView` and `HistoryView` with basic data binding
 3. ~~Settings + diagnostics panel~~ — `SettingsView` with service and telemetry placeholders
 
+## MCP Integration
+- Added `WupmMcp` stdio MCP server exposing `health`, `scan`, `install`, `list`, `cache_list`, `cache_prune`, `plugins_list`, `marketplace_search`, `gui_status`, `gui_tab`, `gui_action`
+- Hermes config updated: `mcp_servers.wupm.command` points to `publish/wupm-mcp/WupmMcp.exe`
+- WupmApi now exposes `/health` for MCP discovery
+- After restart, Hermes auto-discovers `mcp_wupm_*` tools
+
 ## Proposed for v1.10.0
 1. Plugin/marketplace views — `PluginsView` and `MarketplaceView` in GUI
 2. Elevation-aware actions — shield icon + admin relaunch flow
