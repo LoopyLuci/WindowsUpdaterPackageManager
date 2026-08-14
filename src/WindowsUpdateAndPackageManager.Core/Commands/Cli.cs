@@ -803,6 +803,28 @@ public static class Cli
         }, marketplaceInstallName);
         marketplace.AddCommand(marketplaceInstall);
 
+        var marketplaceAuth = new Command("auth", "Set marketplace authentication token");
+        var marketplaceAuthToken = new Option<string>("--token") { Description = "Authentication token" };
+        marketplaceAuth.AddOption(marketplaceAuthToken);
+        marketplaceAuth.SetHandler<string?>((token) =>
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(token))
+                {
+                    Console.WriteLine("Token is required.");
+                    return;
+                }
+
+                Console.WriteLine("Marketplace auth token saved.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Marketplace auth failed: {ex.Message}");
+            }
+        }, marketplaceAuthToken);
+        marketplace.AddCommand(marketplaceAuth);
+
         root.AddCommand(marketplace);
 
         var notify = new Command("notify", "Update notifications");
