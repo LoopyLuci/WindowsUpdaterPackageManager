@@ -76,6 +76,7 @@ public sealed class DeltaEndToEndCliTests
         public Task<bool> IsCachedAsync(string packageId, string version, CancellationToken cancellationToken = default)
             => Task.FromResult(true);
         public Task PruneAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
+        public Task InvalidateAsync(string packageId, string version, CancellationToken cancellationToken = default) => Task.CompletedTask;
         public Task<IReadOnlyList<string>> ListCachedAsync(string? packageId = null, CancellationToken cancellationToken = default)
             => Task.FromResult<IReadOnlyList<string>>(new List<string>());
     }

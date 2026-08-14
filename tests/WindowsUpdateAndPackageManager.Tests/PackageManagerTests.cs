@@ -123,6 +123,7 @@ public sealed class PackageManagerTests
         public Task<string> EnsurePackageCacheAsync(string packageId, string version, CancellationToken cancellationToken = default) => Task.FromResult("cache");
         public Task<bool> IsCachedAsync(string packageId, string version, CancellationToken cancellationToken = default) => Task.FromResult(_cached);
         public Task PruneAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
+        public Task InvalidateAsync(string packageId, string version, CancellationToken cancellationToken = default) => Task.CompletedTask;
     }
 
     private sealed class FakePolicyEngine : IPolicyEngine
