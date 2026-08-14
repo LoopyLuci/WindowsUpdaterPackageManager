@@ -24,8 +24,9 @@ public partial class MainWindow : Window
             "Dashboard" => vm.Dashboard,
             "Drivers" => vm.Drivers,
             "History" => vm.History,
-            "Plugins" => vm.Dashboard,
-            "Marketplace" => vm.Dashboard,
+            "Plugins" => vm.Plugins,
+            "Marketplace" => vm.Marketplace,
+            "Cache" => vm.Cache,
             "Settings" => vm.Settings,
             _ => vm.Dashboard
         };

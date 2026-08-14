@@ -107,6 +107,11 @@
 2. ~~Drivers/history views~~ — `DriversView` and `HistoryView` with basic data binding
 3. ~~Settings + diagnostics panel~~ — `SettingsView` with service and telemetry placeholders
 
+## Proposed for v1.10.0
+1. Plugin/marketplace views — `PluginsView` and `MarketplaceView` in GUI
+2. Elevation-aware actions — shield icon + admin relaunch flow
+3. Cache management UI — `CacheView` with invalidate/verify/prune
+
 ## Environment blockers and exact fixes
 
 1. Chocolatey live validation

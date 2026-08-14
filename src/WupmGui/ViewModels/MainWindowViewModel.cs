@@ -10,6 +10,9 @@ public class MainWindowViewModel : ViewModelBase
     public DashboardViewModel Dashboard { get; }
     public DriversViewModel Drivers { get; }
     public HistoryViewModel History { get; }
+    public PluginsViewModel Plugins { get; }
+    public MarketplaceViewModel Marketplace { get; }
+    public CacheViewModel Cache { get; }
     public SettingsViewModel Settings { get; }
 
     private ViewModelBase _currentViewModel = null!;
@@ -39,6 +42,9 @@ public class MainWindowViewModel : ViewModelBase
         Dashboard = new DashboardViewModel(api);
         Drivers = new DriversViewModel(api);
         History = new HistoryViewModel(api);
+        Plugins = new PluginsViewModel(api);
+        Marketplace = new MarketplaceViewModel(api);
+        Cache = new CacheViewModel(api);
         Settings = new SettingsViewModel();
         CurrentViewModel = Dashboard;
     }

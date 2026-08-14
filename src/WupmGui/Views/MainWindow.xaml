@@ -18,6 +18,15 @@
       <DataTemplate DataType="{x:Type vm:HistoryViewModel}">
         <views:HistoryView/>
       </DataTemplate>
+      <DataTemplate DataType="{x:Type vm:PluginsViewModel}">
+        <views:PluginsView/>
+      </DataTemplate>
+      <DataTemplate DataType="{x:Type vm:MarketplaceViewModel}">
+        <views:MarketplaceView/>
+      </DataTemplate>
+      <DataTemplate DataType="{x:Type vm:CacheViewModel}">
+        <views:CacheView/>
+      </DataTemplate>
       <DataTemplate DataType="{x:Type vm:SettingsViewModel}">
         <views:SettingsView/>
       </DataTemplate>
@@ -26,11 +35,12 @@
 
   <DockPanel>
     <TabControl DockPanel.Dock="Left" Width="180" SelectionChanged="OnTabChanged">
-      <TabItem Header="Dashboard"/>
+      <TabItem Header="Dashboard" IsSelected="True"/>
       <TabItem Header="Drivers"/>
       <TabItem Header="History"/>
       <TabItem Header="Plugins"/>
       <TabItem Header="Marketplace"/>
+      <TabItem Header="Cache"/>
       <TabItem Header="Settings"/>
     </TabControl>
 
