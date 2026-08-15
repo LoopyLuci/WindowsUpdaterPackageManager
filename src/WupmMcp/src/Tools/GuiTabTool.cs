@@ -9,7 +9,7 @@ namespace WupmMcp.Tools;
 public sealed class GuiTabTool : McpTool
 {
     private readonly HttpClient _http;
-    private const string GuiBase = "http://127.0.0.1:5001/gui";
+    private const string GuiBase = "http://127.0.0.1:5003/gui";
 
     public GuiTabTool() : base("gui_tab", "Switch GUI tab", new JsonObject
     {

@@ -24,7 +24,7 @@ public partial class App : Application
             _host = Host.CreateDefaultBuilder()
                 .ConfigureServices((context, services) =>
                 {
-                    var apiBase = Environment.GetEnvironmentVariable("WUPM_API_URL") ?? "http://localhost:5000";
+                    var apiBase = Environment.GetEnvironmentVariable("WUPM_API_URL") ?? "http://localhost:5002";
                     var apiKey = Environment.GetEnvironmentVariable("WUPM_API_KEY");
 
                     services.AddHttpClient<IWupmApiClient, WupmApiClient>(client =>

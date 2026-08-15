@@ -22,6 +22,7 @@ public sealed class MarketplaceSearchTool : McpTool
 
     public override async Task<JsonNode> ExecuteAsync(JsonNode? parameters, CancellationToken ct)
     {
-        return await _api.GetHealthAsync(ct);
+        var query = parameters?["query"]?.ToString() ?? string.Empty;
+        return await _api.MarketplaceSearchAsync(query, ct);
     }
 }

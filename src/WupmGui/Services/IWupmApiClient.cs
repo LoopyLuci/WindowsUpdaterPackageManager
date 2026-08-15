@@ -16,6 +16,10 @@ public interface IWupmApiClient
     Task<InstallResult> InstallAsync(PackageManifest manifest, CancellationToken cancellationToken = default);
     Task<ScanResult> ScanAsync(bool offlineScan, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<AuditEntry>> GetAuditAsync(DateTimeOffset? from, DateTimeOffset? to, string? action, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<CacheEntry>> GetCacheEntriesAsync(CancellationToken cancellationToken = default);
+    Task PruneCacheAsync(CancellationToken cancellationToken = default);
+    Task InstallServiceAsync(CancellationToken cancellationToken = default);
+    Task UninstallServiceAsync(CancellationToken cancellationToken = default);
 }
 
 public sealed class WupmApiClient : IWupmApiClient, IDisposable
@@ -76,6 +80,31 @@ public sealed class WupmApiClient : IWupmApiClient, IDisposable
         using var response = await _http.GetAsync(url, cancellationToken).ConfigureAwait(false);
         response.EnsureSuccessStatusCode();
         return (await response.Content.ReadFromJsonAsync<List<AuditEntry>>(cancellationToken).ConfigureAwait(false))!;
+    }
+
+    public async Task<IReadOnlyList<CacheEntry>> GetCacheEntriesAsync(CancellationToken cancellationToken = default)
+    {
+        using var response = await _http.GetAsync("/cache", cancellationToken).ConfigureAwait(false);
+        response.EnsureSuccessStatusCode();
+        return (await response.Content.ReadFromJsonAsync<List<CacheEntry>>(cancellationToken).ConfigureAwait(false))!;
+    }
+
+    public async Task PruneCacheAsync(CancellationToken cancellationToken = default)
+    {
+        using var response = await _http.PostAsync("/cache/prune", null, cancellationToken).ConfigureAwait(false);
+        response.EnsureSuccessStatusCode();
+    }
+
+    public async Task InstallServiceAsync(CancellationToken cancellationToken = default)
+    {
+        using var response = await _http.PostAsync("/service/install", null, cancellationToken).ConfigureAwait(false);
+        response.EnsureSuccessStatusCode();
+    }
+
+    public async Task UninstallServiceAsync(CancellationToken cancellationToken = default)
+    {
+        using var response = await _http.PostAsync("/service/uninstall", null, cancellationToken).ConfigureAwait(false);
+        response.EnsureSuccessStatusCode();
     }
 
     public void Dispose()

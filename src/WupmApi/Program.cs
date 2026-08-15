@@ -9,6 +9,7 @@ using Microsoft.Extensions.Hosting.WindowsServices;
 using Serilog;
 using WindowsUpdateAndPackageManager.Commands;
 using WindowsUpdateAndPackageManager.Core;
+using WindowsUpdateAndPackageManager.Infrastructure;
 using WindowsUpdateAndPackageManager.Models;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -166,6 +167,47 @@ app.MapGet("/audit", async (IServiceProvider sp, DateTimeOffset? from = null, Da
     var entries = await auditor.QueryAsync(from, to, action);
     Log.Information("Audit query returned {Count} entries", entries.Count);
     return Results.Ok(entries);
+});
+
+app.MapGet("/cache", async (IServiceProvider sp) =>
+{
+    var cache = sp.GetRequiredService<ICacheManager>();
+    var root = await cache.GetCacheRootAsync();
+    if (!Directory.Exists(root)) return Results.Ok(new List<CacheEntry>());
+    var list = new List<CacheEntry>();
+    foreach (var dir in Directory.EnumerateDirectories(root))
+    {
+        var name = Path.GetRelativePath(root, dir);
+        var parts = name.Split('@', 2);
+        if (parts.Length == 2)
+        {
+            var size = Directory.EnumerateFiles(dir, "*", SearchOption.AllDirectories).Sum(f => new FileInfo(f).Length);
+            list.Add(new CacheEntry { PackageId = parts[0], Version = parts[1], SizeBytes = size, CachedAt = Directory.GetCreationTimeUtc(dir) });
+        }
+    }
+    return Results.Ok(list);
+});
+
+app.MapPost("/cache/prune", async (IServiceProvider sp) =>
+{
+    var cache = sp.GetRequiredService<ICacheManager>();
+    await cache.PruneAsync();
+    return Results.Ok(new { pruned = true });
+});
+
+app.MapGet("/marketplace/search", async (IServiceProvider sp, string query = "") =>
+{
+    try
+    {
+        var client = sp.GetRequiredService<IMarketplaceClient>();
+        var results = await client.SearchAsync(query);
+        return Results.Ok(results);
+    }
+    catch (Exception ex)
+    {
+        Log.Error(ex, "Marketplace search failed");
+        return Results.Problem(ex.Message);
+    }
 });
 
 app.Run();

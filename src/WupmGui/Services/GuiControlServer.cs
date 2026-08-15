@@ -17,12 +17,12 @@ public sealed class GuiControlServer : IDisposable
     private readonly MainWindowViewModel _vm;
     private bool _disposed;
 
-    public GuiControlServer(MainWindow window, MainWindowViewModel vm, int port = 5001)
+    public GuiControlServer(MainWindow window, MainWindowViewModel vm, int port = 5003)
     {
         _window = window;
         _vm = vm;
         _listener = new HttpListener();
-        _listener.Prefixes.Add("http://127.0.0.1:5001/gui/");
+        _listener.Prefixes.Add($"http://127.0.0.1:{port}/gui/");
         _listener.Start();
         _ = RunAsync();
     }

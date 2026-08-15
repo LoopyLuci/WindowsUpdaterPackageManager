@@ -9,7 +9,7 @@ namespace WupmMcp.Tools;
 public sealed class GuiActionTool : McpTool
 {
     private readonly HttpClient _http;
-    private const string GuiBase = "http://127.0.0.1:5001/gui";
+    private const string GuiBase = "http://127.0.0.1:5003/gui";
 
     public GuiActionTool() : base("gui_action", "Trigger a GUI action", new JsonObject
     {

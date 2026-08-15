@@ -4,14 +4,14 @@
   <DockPanel Margin="16">
     <TextBlock Text="Cache" FontSize="24" FontWeight="Bold" DockPanel.Dock="Top" Margin="0,0,0,12"/>
     <StackPanel Orientation="Horizontal" DockPanel.Dock="Top" Margin="0,0,0,12">
-      <Button Content="Prune" Margin="0,0,8,0"/>
-      <Button Content="Invalidate Selected"/>
+      <Button Content="Prune" Command="{Binding PruneCommand}" Margin="0,0,8,0"/>
+      <Button Content="Invalidate Selected" Command="{Binding LoadCommand}"/>
     </StackPanel>
     <DataGrid ItemsSource="{Binding Entries}" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True">
       <DataGrid.Columns>
         <DataGridTextColumn Header="Package" Binding="{Binding PackageId}" Width="*"/>
         <DataGridTextColumn Header="Version" Binding="{Binding Version}" Width="120"/>
-        <DataGridTextColumn Header="Size" Binding="{Binding Size}" Width="100"/>
+        <DataGridTextColumn Header="Size" Binding="{Binding SizeBytes}" Width="100"/>
       </DataGrid.Columns>
     </DataGrid>
   </DockPanel>

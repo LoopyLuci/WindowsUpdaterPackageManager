@@ -18,7 +18,7 @@ public sealed class WupmApiClient
 
     public async Task<JsonNode> GetHealthAsync(CancellationToken ct)
     {
-        using var response = await _http.GetAsync("http://localhost:5000/", ct);
+        using var response = await _http.GetAsync("http://localhost:5002/", ct);
         response.EnsureSuccessStatusCode();
         var json = await response.Content.ReadAsStringAsync(ct);
         return JsonNode.Parse(json)!;
@@ -26,7 +26,7 @@ public sealed class WupmApiClient
 
     public async Task<JsonNode> ScanAsync(bool offlineScan, CancellationToken ct)
     {
-        using var response = await _http.PostAsync($"/windows-update?offlineScan={offlineScan}", null, ct);
+        using var response = await _http.PostAsync($"http://localhost:5002/windows-update?offlineScan={offlineScan}", null, ct);
         response.EnsureSuccessStatusCode();
         var json = await response.Content.ReadAsStringAsync(ct);
         return JsonNode.Parse(json)!;
@@ -34,7 +34,7 @@ public sealed class WupmApiClient
 
     public async Task<JsonNode> InstallAsync(JsonNode manifest, CancellationToken ct)
     {
-        using var response = await _http.PostAsync("/install", new StringContent(manifest.ToJsonString(), Encoding.UTF8, "application/json"), ct);
+        using var response = await _http.PostAsync("http://localhost:5002/install", new StringContent(manifest.ToJsonString(), Encoding.UTF8, "application/json"), ct);
         response.EnsureSuccessStatusCode();
         var json = await response.Content.ReadAsStringAsync(ct);
         return JsonNode.Parse(json)!;
@@ -42,7 +42,7 @@ public sealed class WupmApiClient
 
     public async Task<JsonNode> ListPackagesAsync(CancellationToken ct)
     {
-        using var response = await _http.GetAsync("/packages", ct);
+        using var response = await _http.GetAsync("http://localhost:5002/packages", ct);
         response.EnsureSuccessStatusCode();
         var json = await response.Content.ReadAsStringAsync(ct);
         return JsonNode.Parse(json)!;
@@ -50,7 +50,15 @@ public sealed class WupmApiClient
 
     public async Task<JsonNode> ListInstalledAsync(CancellationToken ct)
     {
-        using var response = await _http.GetAsync("/installed", ct);
+        using var response = await _http.GetAsync("http://localhost:5002/installed", ct);
+        response.EnsureSuccessStatusCode();
+        var json = await response.Content.ReadAsStringAsync(ct);
+        return JsonNode.Parse(json)!;
+    }
+
+    public async Task<JsonNode> MarketplaceSearchAsync(string query, CancellationToken ct)
+    {
+        using var response = await _http.GetAsync($"http://localhost:5002/marketplace/search?query={Uri.EscapeDataString(query ?? string.Empty)}", ct);
         response.EnsureSuccessStatusCode();
         var json = await response.Content.ReadAsStringAsync(ct);
         return JsonNode.Parse(json)!;
