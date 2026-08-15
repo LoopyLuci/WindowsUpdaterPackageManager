@@ -1,3 +1,4 @@
+using System.IO;
 using System.Windows.Input;
 using WupmGui.Services;
 
@@ -38,6 +39,7 @@ public class MainWindowViewModel : ViewModelBase
 
     public MainWindowViewModel(IWupmApiClient api)
     {
+        File.AppendAllText("C:/Users/limpi/AppData/Local/WupmGui/startup.log", $"[GUI] MainWindowViewModel ctor start {DateTime.Now:O}{Environment.NewLine}");
         _api = api;
         Dashboard = new DashboardViewModel(api);
         Drivers = new DriversViewModel(api);
@@ -47,6 +49,7 @@ public class MainWindowViewModel : ViewModelBase
         Cache = new CacheViewModel(api);
         Settings = new SettingsViewModel();
         CurrentViewModel = Dashboard;
+        File.AppendAllText("C:/Users/limpi/AppData/Local/WupmGui/startup.log", $"[GUI] MainWindowViewModel ctor end {DateTime.Now:O}{Environment.NewLine}");
     }
 
     public ICommand LoadedCommand => new AsyncRelayCommand(LoadedAsync);

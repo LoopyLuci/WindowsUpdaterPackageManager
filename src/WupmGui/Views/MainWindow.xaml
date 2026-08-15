@@ -3,7 +3,10 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="clr-namespace:WupmGui.ViewModels"
         xmlns:views="clr-namespace:WupmGui.Views"
-        Title="Windows Update Package Manager" Height="600" Width="1000">
+        Title="Windows Update Package Manager" Height="600" Width="1000"
+        Visibility="Visible"
+        ShowInTaskbar="True"
+        WindowStartupLocation="CenterScreen">
   <Window.Resources>
     <ResourceDictionary>
       <ResourceDictionary.MergedDictionaries>
