@@ -70,7 +70,7 @@ app.MapPost("/mcp", async (HttpRequest req, McpToolRegistry registry, Cancellati
             }
         },
         "tools/list" => BuildToolList(registry),
-        "tools/call" => await registry.InvokeAsync(GetString(parameters, "name") ?? string.Empty, parameters, ct),
+        "tools/call" => await registry.InvokeAsync(GetString(parameters, "name") ?? string.Empty, (parameters["arguments"] as JsonObject) ?? new JsonObject(), ct),
         _ => new JsonObject { ["error"] = new JsonObject { ["code"] = -32601, ["message"] = "method not found" } }
     };
 
