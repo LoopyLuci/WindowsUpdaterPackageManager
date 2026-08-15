@@ -47,7 +47,7 @@ public class MainWindowViewModel : ViewModelBase
         Plugins = new PluginsViewModel(api);
         Marketplace = new MarketplaceViewModel(api);
         Cache = new CacheViewModel(api);
-        Settings = new SettingsViewModel();
+        Settings = new SettingsViewModel(api);
         CurrentViewModel = Dashboard;
         File.AppendAllText("C:/Users/limpi/AppData/Local/WupmGui/startup.log", $"[GUI] MainWindowViewModel ctor end {DateTime.Now:O}{Environment.NewLine}");
     }

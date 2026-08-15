@@ -44,9 +44,23 @@ public class SettingsViewModel : ViewModelBase
     public ICommand UninstallServiceCommand => new AsyncRelayCommand(UninstallServiceAsync);
     public ICommand CopyDiagnosticsCommand => new AsyncRelayCommand(CopyDiagnosticsAsync);
 
-    public SettingsViewModel(IWupmApiClient? api = null)
+    public SettingsViewModel(IWupmApiClient api)
     {
-        _api = api!;
+        _api = api;
+        _ = LoadServiceStatusAsync();
+    }
+
+    private async Task LoadServiceStatusAsync()
+    {
+        try
+        {
+            var status = await _api.GetServiceStatusAsync();
+            ServiceStatus = status["message"]?.ToString() ?? "Unknown";
+        }
+        catch
+        {
+            ServiceStatus = "Unable to load service status";
+        }
     }
 
     private async Task InstallServiceAsync(CancellationToken ct)

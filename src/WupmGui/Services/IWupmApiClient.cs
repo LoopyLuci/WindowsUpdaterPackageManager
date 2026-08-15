@@ -2,6 +2,7 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using Microsoft.Extensions.Http;
 using WindowsUpdateAndPackageManager.Models;
 using WindowsUpdateAndPackageManager.Core;
@@ -24,6 +25,9 @@ public interface IWupmApiClient
     Task UninstallServiceAsync(CancellationToken cancellationToken = default);
     Task<IReadOnlyList<PluginRegistryEntry>> GetPluginsAsync(CancellationToken cancellationToken = default);
     Task TogglePluginAsync(string name, bool enabled, CancellationToken cancellationToken = default);
+    Task<JsonNode> ExecutePluginAsync(string name, string command, string args, CancellationToken cancellationToken = default);
+    Task InvalidateCacheEntryAsync(string packageId, string version, CancellationToken cancellationToken = default);
+    Task<JsonNode> GetServiceStatusAsync(CancellationToken cancellationToken = default);
     Task<IReadOnlyList<MarketplacePlugin>> MarketplaceSearchAsync(string query, CancellationToken cancellationToken = default);
 }
 
@@ -123,6 +127,28 @@ public sealed class WupmApiClient : IWupmApiClient, IDisposable
     {
         using var response = await _http.PostAsJsonAsync($"/plugins/{Uri.EscapeDataString(name)}/toggle", new { enabled }, cancellationToken).ConfigureAwait(false);
         response.EnsureSuccessStatusCode();
+    }
+
+    public async Task<JsonNode> ExecutePluginAsync(string name, string command, string args, CancellationToken cancellationToken = default)
+    {
+        using var response = await _http.PostAsJsonAsync($"/plugins/{Uri.EscapeDataString(name)}/execute", new { command, args }, cancellationToken).ConfigureAwait(false);
+        response.EnsureSuccessStatusCode();
+        var json = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+        return JsonNode.Parse(json)!;
+    }
+
+    public async Task InvalidateCacheEntryAsync(string packageId, string version, CancellationToken cancellationToken = default)
+    {
+        using var response = await _http.PostAsJsonAsync("/cache/invalidate", new { packageId, version }, cancellationToken).ConfigureAwait(false);
+        response.EnsureSuccessStatusCode();
+    }
+
+    public async Task<JsonNode> GetServiceStatusAsync(CancellationToken cancellationToken = default)
+    {
+        using var response = await _http.GetAsync("/service/status", cancellationToken).ConfigureAwait(false);
+        response.EnsureSuccessStatusCode();
+        var json = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+        return JsonNode.Parse(json)!;
     }
 
     public async Task<IReadOnlyList<MarketplacePlugin>> MarketplaceSearchAsync(string query, CancellationToken cancellationToken = default)

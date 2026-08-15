@@ -31,6 +31,7 @@ public class PluginsViewModel : ViewModelBase
         _api = api;
         LoadCommand = new AsyncRelayCommand(LoadAsync);
         ToggleSelectedCommand = new AsyncRelayCommand(ToggleSelectedAsync, () => SelectedPlugin is not null);
+        ExecuteSelectedCommand = new AsyncRelayCommand(ExecuteSelectedAsync, () => SelectedPlugin is not null);
     }
 
     public ICommand LoadCommand { get; }
@@ -54,5 +55,21 @@ public class PluginsViewModel : ViewModelBase
         await _api.TogglePluginAsync(SelectedPlugin.Name, next, ct);
         SelectedPlugin.Enabled = next;
         StatusMessage = $"{(next ? "Enabled" : "Disabled")} {SelectedPlugin.Name}";
+    }
+
+    public ICommand ExecuteSelectedCommand { get; }
+
+    private async Task ExecuteSelectedAsync(CancellationToken ct)
+    {
+        if (SelectedPlugin is null) return;
+        try
+        {
+            var result = await _api.ExecutePluginAsync(SelectedPlugin.Name, "default", string.Empty, ct);
+            StatusMessage = $"Executed: {result?["output"]?.ToString() ?? "ok"}";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Execute failed: {ex.Message}";
+        }
     }
 }

@@ -13,6 +13,7 @@
     </DataGrid>
     <StackPanel Orientation="Horizontal" DockPanel.Dock="Top" Margin="0,0,0,12">
       <Button Content="Toggle Selected" Command="{Binding ToggleSelectedCommand}" Margin="0,0,8,0"/>
+      <Button Content="Execute Selected" Command="{Binding ExecuteSelectedCommand}" Margin="0,0,8,0"/>
       <TextBlock Text="{Binding StatusMessage}" VerticalAlignment="Center"/>
     </StackPanel>
   </DockPanel>

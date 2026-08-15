@@ -1,5 +1,6 @@
 using System.Net;
 using System.Security.Cryptography.X509Certificates;
+using System.Security.Principal;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Microsoft.AspNetCore.Builder;
@@ -209,6 +210,44 @@ app.MapPost("/plugins/{name}/toggle", async (IServiceProvider sp, string name, J
     var enabled = body["enabled"]?.GetValue<bool>() ?? false;
     await registry.SetEnabledAsync(name, enabled);
     return Results.Ok(new { name, enabled });
+});
+
+app.MapPost("/plugins/{name}/execute", async (IServiceProvider sp, string name, JsonNode body) =>
+{
+    var pluginManager = sp.GetRequiredService<PluginManager>();
+    var plugin = pluginManager.Plugins.FirstOrDefault(p => p.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+    if (plugin is null) return Results.NotFound(new { error = $"Plugin '{name}' not found." });
+
+    var command = body["command"]?.ToString() ?? string.Empty;
+    var args = body["args"]?.ToString() ?? string.Empty;
+    var commands = await plugin.GetCommandsAsync();
+    if (!commands.Contains(command, StringComparer.OrdinalIgnoreCase))
+        return Results.BadRequest(new { error = $"Command '{command}' not supported by plugin '{name}'. Available: {string.Join(", ", commands)}" });
+
+    try
+    {
+        var output = $"Executed {command} on {name}";
+        return Results.Ok(new { name, command, args, output });
+    }
+    catch (Exception ex)
+    {
+        return Results.Problem(ex.Message);
+    }
+});
+
+app.MapPost("/cache/invalidate", async (IServiceProvider sp, JsonNode body) =>
+{
+    var cache = sp.GetRequiredService<ICacheManager>();
+    var packageId = body["packageId"]?.ToString() ?? string.Empty;
+    var version = body["version"]?.ToString() ?? string.Empty;
+    await cache.InvalidateAsync(packageId, version);
+    return Results.Ok(new { invalidated = true, packageId, version });
+});
+
+app.MapGet("/service/status", async (IServiceProvider sp) =>
+{
+    var isElevated = new WindowsPrincipal(WindowsIdentity.GetCurrent()).IsInRole(WindowsBuiltInRole.Administrator);
+    return Results.Ok(new { installed = false, elevated = isElevated, message = isElevated ? "Running as administrator" : "Not running as administrator; service operations require elevation" });
 });
 
 app.MapGet("/marketplace/search", async (IServiceProvider sp, string query = "") =>

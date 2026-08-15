@@ -59,7 +59,8 @@ public class CacheViewModel : ViewModelBase
     private async Task InvalidateSelectedAsync(CancellationToken ct)
     {
         if (SelectedEntry is null) return;
-        StatusMessage = $"Invalidated {SelectedEntry.PackageId}";
-        await Task.CompletedTask;
+        await _api.InvalidateCacheEntryAsync(SelectedEntry.PackageId, SelectedEntry.Version, ct);
+        StatusMessage = $"Invalidated {SelectedEntry.PackageId} {SelectedEntry.Version}";
+        await LoadAsync(ct);
     }
 }
