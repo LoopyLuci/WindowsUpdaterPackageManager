@@ -1,3 +1,4 @@
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 
@@ -13,16 +14,47 @@ public sealed class StdioTransport : McpTransport
 {
     public override async Task<JsonNode?> ReadAsync(CancellationToken ct)
     {
-        using var reader = new StreamReader(Console.OpenStandardInput(), leaveOpen: true);
-        var line = await reader.ReadLineAsync();
-        if (string.IsNullOrWhiteSpace(line)) return null;
-        return JsonNode.Parse(line);
+        using var stdin = Console.OpenStandardInput();
+        using var reader = new StreamReader(stdin, Encoding.UTF8, leaveOpen: true);
+
+        // Read headers until blank line
+        string? line;
+        var headers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        while (!string.IsNullOrWhiteSpace(line = await reader.ReadLineAsync().ConfigureAwait(false)))
+        {
+            var idx = line.IndexOf(':', StringComparison.Ordinal);
+            if (idx > 0)
+            {
+                headers[line[..idx].Trim()] = line[(idx + 1)..].Trim();
+            }
+        }
+
+        if (!headers.TryGetValue("Content-Length", out var lengthText) || !int.TryParse(lengthText, out var length))
+        {
+            return null;
+        }
+
+        var buffer = new char[length];
+        var read = 0;
+        while (read < length)
+        {
+            var n = await reader.ReadAsync(buffer, read, length - read).ConfigureAwait(false);
+            if (n == 0) return null;
+            read += n;
+        }
+
+        var json = new string(buffer);
+        return JsonNode.Parse(json);
     }
 
     public override async Task WriteAsync(JsonNode message, CancellationToken ct)
     {
         var json = message.ToJsonString();
-        await Console.Out.WriteLineAsync(json);
-        await Console.Out.FlushAsync();
+        var payload = Encoding.UTF8.GetBytes(json);
+        var header = $"Content-Length: {payload.Length}\r\n\r\n";
+
+        await Console.Out.WriteAsync(header).ConfigureAwait(false);
+        await Console.OpenStandardOutput().WriteAsync(payload, 0, payload.Length).ConfigureAwait(false);
+        await Console.Out.FlushAsync().ConfigureAwait(false);
     }
 }

@@ -19,8 +19,6 @@ public sealed class McpSession
 
     public async Task RunAsync()
     {
-        await _transport.WriteAsync(new JsonObject { ["jsonrpc"] = "2.0", ["id"] = 1, ["result"] = new JsonObject { ["protocolVersion"] = "2024-11-05", ["capabilities"] = new JsonObject { ["tools"] = new JsonObject { ["listChanged"] = false } } } }, CancellationToken.None);
-
         while (true)
         {
             var message = await _transport.ReadAsync(CancellationToken.None);
@@ -39,12 +37,48 @@ public sealed class McpSession
         var request = JsonSerializer.Deserialize<McpRequest>(message.ToJsonString(), _jsonOptions);
         if (request is null) return null;
 
+        // Notifications must not receive a response
+        if (request.Id is null)
+        {
+            await Task.CompletedTask;
+            return null;
+        }
+
         return request.Method switch
         {
-            "initialize" => JsonNode.Parse(@"{""jsonrpc"":""2.0"",""id"":""" + request.Id + @""",""result"":{""protocolVersion"":""2024-11-05"",""capabilities"":{""tools"":{""listChanged"":false}},""serverInfo"":{""name"":""wupm-mcp"",""version"":""1.0.0""}}}"),
+            "initialize" => new JsonObject
+            {
+                ["jsonrpc"] = "2.0",
+                ["id"] = request.Id,
+                ["result"] = new JsonObject
+                {
+                    ["protocolVersion"] = "2024-11-05",
+                    ["capabilities"] = new JsonObject
+                    {
+                        ["tools"] = new JsonObject
+                        {
+                            ["listChanged"] = false
+                        }
+                    },
+                    ["serverInfo"] = new JsonObject
+                    {
+                        ["name"] = "wupm-mcp",
+                        ["version"] = "1.0.0"
+                    }
+                }
+            },
             "tools/list" => _tools.ListTools(),
             "tools/call" => await HandleToolCallAsync(request, _jsonOptions),
-            _ => JsonNode.Parse(@"{""jsonrpc"":""2.0"",""id"":""" + request.Id + @""",""error"":{""code"":-32601,""message"":""Method not found""}}")
+            _ => new JsonObject
+            {
+                ["jsonrpc"] = "2.0",
+                ["id"] = request.Id,
+                ["error"] = new JsonObject
+                {
+                    ["code"] = -32601,
+                    ["message"] = "Method not found"
+                }
+            }
         };
     }
 
