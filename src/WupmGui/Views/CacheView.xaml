@@ -5,7 +5,7 @@
     <TextBlock Text="Cache" FontSize="24" FontWeight="Bold" DockPanel.Dock="Top" Margin="0,0,0,12"/>
     <StackPanel Orientation="Horizontal" DockPanel.Dock="Top" Margin="0,0,0,12">
       <Button Content="Prune" Command="{Binding PruneCommand}" Margin="0,0,8,0"/>
-      <Button Content="Invalidate Selected" Command="{Binding LoadCommand}"/>
+      <Button Content="Invalidate Selected" Command="{Binding InvalidateSelectedCommand}"/>
     </StackPanel>
     <DataGrid ItemsSource="{Binding Entries}" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True">
       <DataGrid.Columns>

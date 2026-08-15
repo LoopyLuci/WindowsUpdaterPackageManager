@@ -17,6 +17,7 @@ public sealed class MarketplacePlugin
     public string DisplayName { get; set; } = string.Empty;
     public string Version { get; set; } = string.Empty;
     public string? Dependencies { get; set; }
+    public int? DownloadCount { get; set; }
 }
 
 public sealed class GitHubMarketplaceClient : IMarketplaceClient, IAsyncDisposable
@@ -79,7 +80,8 @@ public sealed class GitHubMarketplaceClient : IMarketplaceClient, IAsyncDisposab
                     Id = id,
                     DisplayName = name,
                     Version = tag.TrimStart('v'),
-                    Dependencies = ParseDependencies(release)
+                    Dependencies = ParseDependencies(release),
+                    DownloadCount = asset.GetProperty("download_count").GetInt32()
                 });
             }
         }

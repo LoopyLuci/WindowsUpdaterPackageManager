@@ -19,13 +19,22 @@ public class PluginsViewModel : ViewModelBase
         set => Set(ref _statusMessage, value);
     }
 
+    private PluginRegistryEntry? _selectedPlugin;
+    public PluginRegistryEntry? SelectedPlugin
+    {
+        get => _selectedPlugin;
+        set => Set(ref _selectedPlugin, value);
+    }
+
     public PluginsViewModel(IWupmApiClient api)
     {
         _api = api;
         LoadCommand = new AsyncRelayCommand(LoadAsync);
+        ToggleSelectedCommand = new AsyncRelayCommand(ToggleSelectedAsync, () => SelectedPlugin is not null);
     }
 
     public ICommand LoadCommand { get; }
+    public ICommand ToggleSelectedCommand { get; }
 
     private async Task LoadAsync(CancellationToken ct)
     {
@@ -36,5 +45,14 @@ public class PluginsViewModel : ViewModelBase
             Plugins.Add(entry);
 
         StatusMessage = $"Loaded {Plugins.Count} plugins";
+    }
+
+    private async Task ToggleSelectedAsync(CancellationToken ct)
+    {
+        if (SelectedPlugin is null) return;
+        var next = !SelectedPlugin.Enabled;
+        await _api.TogglePluginAsync(SelectedPlugin.Name, next, ct);
+        SelectedPlugin.Enabled = next;
+        StatusMessage = $"{(next ? "Enabled" : "Disabled")} {SelectedPlugin.Name}";
     }
 }

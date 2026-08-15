@@ -13,7 +13,7 @@
       <DataGrid.Columns>
         <DataGridTextColumn Header="Name" Binding="{Binding DisplayName}" Width="*"/>
         <DataGridTextColumn Header="Version" Binding="{Binding Version}" Width="120"/>
-        <DataGridTextColumn Header="Downloads" Binding="{Binding Dependencies}" Width="180"/>
+        <DataGridTextColumn Header="Downloads" Binding="{Binding DownloadCount}" Width="100"/>
       </DataGrid.Columns>
     </DataGrid>
   </DockPanel>

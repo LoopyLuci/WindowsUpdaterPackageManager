@@ -3,7 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
   <DockPanel Margin="16">
     <TextBlock Text="Plugins" FontSize="24" FontWeight="Bold" DockPanel.Dock="Top" Margin="0,0,0,12"/>
-    <DataGrid ItemsSource="{Binding Plugins}" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True">
+    <DataGrid ItemsSource="{Binding Plugins}" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True" SelectedItem="{Binding SelectedPlugin}">
       <DataGrid.Columns>
         <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="*"/>
         <DataGridTextColumn Header="Version" Binding="{Binding Version}" Width="120"/>
@@ -11,5 +11,9 @@
         <DataGridCheckBoxColumn Header="Enabled" Binding="{Binding Enabled}" Width="80"/>
       </DataGrid.Columns>
     </DataGrid>
+    <StackPanel Orientation="Horizontal" DockPanel.Dock="Top" Margin="0,0,0,12">
+      <Button Content="Toggle Selected" Command="{Binding ToggleSelectedCommand}" Margin="0,0,8,0"/>
+      <TextBlock Text="{Binding StatusMessage}" VerticalAlignment="Center"/>
+    </StackPanel>
   </DockPanel>
 </UserControl>

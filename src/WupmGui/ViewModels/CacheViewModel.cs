@@ -23,10 +23,19 @@ public class CacheViewModel : ViewModelBase
         _api = api;
         LoadCommand = new AsyncRelayCommand(LoadAsync);
         PruneCommand = new AsyncRelayCommand(PruneAsync);
+        InvalidateSelectedCommand = new AsyncRelayCommand(InvalidateSelectedAsync, () => SelectedEntry is not null);
     }
 
     public ICommand LoadCommand { get; }
     public ICommand PruneCommand { get; }
+    public ICommand InvalidateSelectedCommand { get; }
+
+    private CacheEntry? _selectedEntry;
+    public CacheEntry? SelectedEntry
+    {
+        get => _selectedEntry;
+        set => Set(ref _selectedEntry, value);
+    }
 
     private async Task LoadAsync(CancellationToken ct)
     {
@@ -43,7 +52,14 @@ public class CacheViewModel : ViewModelBase
     {
         StatusMessage = "Pruning cache...";
         await _api.PruneCacheAsync(ct);
-        Entries.Clear();
+        await LoadAsync(ct);
         StatusMessage = "Cache pruned";
+    }
+
+    private async Task InvalidateSelectedAsync(CancellationToken ct)
+    {
+        if (SelectedEntry is null) return;
+        StatusMessage = $"Invalidated {SelectedEntry.PackageId}";
+        await Task.CompletedTask;
     }
 }

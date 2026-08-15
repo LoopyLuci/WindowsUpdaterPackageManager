@@ -1,6 +1,7 @@
 using System.Net;
 using System.Security.Cryptography.X509Certificates;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
@@ -202,6 +203,14 @@ app.MapGet("/plugins", async (IServiceProvider sp) =>
     return Results.Ok(entries);
 });
 
+app.MapPost("/plugins/{name}/toggle", async (IServiceProvider sp, string name, JsonNode body) =>
+{
+    var registry = sp.GetRequiredService<IPluginRegistry>();
+    var enabled = body["enabled"]?.GetValue<bool>() ?? false;
+    await registry.SetEnabledAsync(name, enabled);
+    return Results.Ok(new { name, enabled });
+});
+
 app.MapGet("/marketplace/search", async (IServiceProvider sp, string query = "") =>
 {
     try
@@ -209,6 +218,10 @@ app.MapGet("/marketplace/search", async (IServiceProvider sp, string query = "")
         var client = sp.GetRequiredService<IMarketplaceClient>();
         var results = await client.SearchAsync(query);
         return Results.Ok(results);
+    }
+    catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
+    {
+        return Results.Ok(Array.Empty<MarketplacePlugin>());
     }
     catch (Exception ex)
     {

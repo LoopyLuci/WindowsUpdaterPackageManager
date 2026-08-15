@@ -23,6 +23,7 @@ public interface IWupmApiClient
     Task InstallServiceAsync(CancellationToken cancellationToken = default);
     Task UninstallServiceAsync(CancellationToken cancellationToken = default);
     Task<IReadOnlyList<PluginRegistryEntry>> GetPluginsAsync(CancellationToken cancellationToken = default);
+    Task TogglePluginAsync(string name, bool enabled, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<MarketplacePlugin>> MarketplaceSearchAsync(string query, CancellationToken cancellationToken = default);
 }
 
@@ -116,6 +117,12 @@ public sealed class WupmApiClient : IWupmApiClient, IDisposable
         using var response = await _http.GetAsync("/plugins", cancellationToken).ConfigureAwait(false);
         response.EnsureSuccessStatusCode();
         return (await response.Content.ReadFromJsonAsync<List<PluginRegistryEntry>>(cancellationToken).ConfigureAwait(false))!;
+    }
+
+    public async Task TogglePluginAsync(string name, bool enabled, CancellationToken cancellationToken = default)
+    {
+        using var response = await _http.PostAsJsonAsync($"/plugins/{Uri.EscapeDataString(name)}/toggle", new { enabled }, cancellationToken).ConfigureAwait(false);
+        response.EnsureSuccessStatusCode();
     }
 
     public async Task<IReadOnlyList<MarketplacePlugin>> MarketplaceSearchAsync(string query, CancellationToken cancellationToken = default)
