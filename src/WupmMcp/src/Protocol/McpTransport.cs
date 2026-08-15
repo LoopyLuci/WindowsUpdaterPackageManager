@@ -86,9 +86,11 @@ public sealed class StdioTransport : McpTransport
         var json = message.ToJsonString();
         var payload = Encoding.UTF8.GetBytes(json);
         var header = $"Content-Length: {payload.Length}\r\n\r\n";
+        var frame = new byte[header.Length + payload.Length];
+        Buffer.BlockCopy(Encoding.UTF8.GetBytes(header), 0, frame, 0, header.Length);
+        Buffer.BlockCopy(payload, 0, frame, header.Length, payload.Length);
 
-        await Console.Out.WriteAsync(header).ConfigureAwait(false);
-        await Console.OpenStandardOutput().WriteAsync(payload, 0, payload.Length, ct).ConfigureAwait(false);
+        await Console.OpenStandardOutput().WriteAsync(frame, 0, frame.Length, ct).ConfigureAwait(false);
         await Console.Out.FlushAsync().ConfigureAwait(false);
     }
 }
