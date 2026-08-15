@@ -1,14 +1,17 @@
+using System.Net.Http;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using WupmMcp.Tools;
+using WupmMcp.Protocol;
 
 namespace WupmMcp.Tools;
 
 public sealed class GuiTabTool : McpTool
 {
-    private readonly WupmApiClient _api;
+    private readonly HttpClient _http;
+    private const string GuiBase = "http://127.0.0.1:5001/gui";
 
-    public GuiTabTool(WupmApiClient api) : base("gui_tab", "Switch GUI tab", new JsonObject
+    public GuiTabTool() : base("gui_tab", "Switch GUI tab", new JsonObject
     {
         ["type"] = "object",
         ["required"] = new JsonArray("tab"),
@@ -18,22 +21,22 @@ public sealed class GuiTabTool : McpTool
         }
     })
     {
-        _api = api;
+        _http = new HttpClient();
     }
 
     public override async Task<JsonNode> ExecuteAsync(JsonNode? parameters, CancellationToken ct)
     {
-        var tab = parameters?["tab"]?.ToString();
-        var validTabs = new[] { "Dashboard", "Drivers", "History", "Plugins", "Marketplace", "Cache", "Settings" };
-        if (string.IsNullOrWhiteSpace(tab) || !validTabs.Contains(tab))
+        var payload = new JsonObject
         {
-            throw new InvalidOperationException($"Invalid tab. Valid tabs: {string.Join(", ", validTabs)}");
-        }
-
-        return new JsonObject
-        {
-            ["switched"] = true,
-            ["tab"] = tab
+            ["command"] = "tab",
+            ["tab"] = parameters?["tab"]?.ToString() ?? string.Empty
         };
+
+        using var req = new HttpRequestMessage(HttpMethod.Post, GuiBase);
+        req.Content = new StringContent(payload.ToJsonString(), Encoding.UTF8, "application/json");
+        using var res = await _http.SendAsync(req, ct);
+        res.EnsureSuccessStatusCode();
+        var json = await res.Content.ReadAsStringAsync(ct);
+        return JsonNode.Parse(json)!;
     }
 }

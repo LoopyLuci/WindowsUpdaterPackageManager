@@ -1,14 +1,17 @@
+using System.Net.Http;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using WupmMcp.Tools;
+using WupmMcp.Protocol;
 
 namespace WupmMcp.Tools;
 
 public sealed class GuiActionTool : McpTool
 {
-    private readonly WupmApiClient _api;
+    private readonly HttpClient _http;
+    private const string GuiBase = "http://127.0.0.1:5001/gui";
 
-    public GuiActionTool(WupmApiClient api) : base("gui_action", "Trigger a GUI action", new JsonObject
+    public GuiActionTool() : base("gui_action", "Trigger a GUI action", new JsonObject
     {
         ["type"] = "object",
         ["required"] = new JsonArray("action"),
@@ -19,19 +22,22 @@ public sealed class GuiActionTool : McpTool
         }
     })
     {
-        _api = api;
+        _http = new HttpClient();
     }
 
     public override async Task<JsonNode> ExecuteAsync(JsonNode? parameters, CancellationToken ct)
     {
-        var action = parameters?["action"]?.ToString();
-        return action?.ToLowerInvariant() switch
+        var payload = new JsonObject
         {
-            "scan" => await _api.ScanAsync(false, ct),
-            "install" => await _api.InstallAsync(parameters?["params"] ?? new JsonObject(), ct),
-            "prune" => new JsonObject { ["pruned"] = true },
-            "cancel" => new JsonObject { ["cancelled"] = true },
-            _ => throw new InvalidOperationException($"Unknown action: {action}")
+            ["command"] = "action",
+            ["action"] = parameters?["action"]?.ToString() ?? string.Empty,
+            ["params"] = parameters?["params"] ?? new JsonObject()
         };
+
+        using var req = new HttpRequestMessage(HttpMethod.Post, GuiBase);
+        req.Content = new StringContent(payload.ToJsonString(), Encoding.UTF8, "application/json");
+        using var res = await _http.SendAsync(req, ct);
+        var json = await res.Content.ReadAsStringAsync(ct);
+        return JsonNode.Parse(json)!;
     }
 }

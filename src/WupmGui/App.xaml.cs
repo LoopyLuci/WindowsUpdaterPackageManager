@@ -13,6 +13,7 @@ public partial class App : Application
 {
     private readonly IHost _host;
     private static readonly string DiagPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "WupmGui", "startup.log");
+    private GuiControlServer? _controlServer;
 
     public App()
     {
@@ -89,6 +90,10 @@ public partial class App : Application
             var interop = new System.Windows.Interop.WindowInteropHelper(main);
             File.AppendAllText(DiagPath, $"[GUI] MainWindow shown, Handle={interop.Handle}, State={main.WindowState}, Visibility={main.Visibility} {DateTime.Now:O}{Environment.NewLine}");
 
+            var controlServer = new GuiControlServer(main, vm);
+            _controlServer = controlServer;
+            File.AppendAllText(DiagPath, $"[GUI] control server started {DateTime.Now:O}{Environment.NewLine}");
+
             base.OnStartup(e);
         }
         catch (Exception ex)
@@ -101,6 +106,7 @@ public partial class App : Application
 
     protected override async void OnExit(ExitEventArgs e)
     {
+        try { _controlServer?.Dispose(); } catch { }
         using (_host)
         {
             await _host.StopAsync();

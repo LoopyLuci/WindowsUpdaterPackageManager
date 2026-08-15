@@ -22,9 +22,9 @@ public sealed class McpToolRegistry
             ["cache_prune"] = new CachePruneTool(_api),
             ["plugins_list"] = new PluginsListTool(_api),
             ["marketplace_search"] = new MarketplaceSearchTool(_api),
-            ["gui_status"] = new GuiStatusTool(_api),
-            ["gui_tab"] = new GuiTabTool(_api),
-            ["gui_action"] = new GuiActionTool(_api)
+            ["gui_status"] = new GuiStatusTool(),
+            ["gui_tab"] = new GuiTabTool(),
+            ["gui_action"] = new GuiActionTool()
         };
     }
 
