@@ -21,13 +21,45 @@ public sealed class McpSession
     {
         while (true)
         {
-            var message = await _transport.ReadAsync(CancellationToken.None);
-            if (message is null) break;
+            JsonNode? message = null;
+            try
+            {
+                message = await _transport.ReadAsync(CancellationToken.None);
+                Console.Error.WriteLine($"[MCP] received: {(message?.ToJsonString() ?? "null")}");
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"[MCP] read error: {ex.GetType().Name}: {ex.Message}");
+                break;
+            }
 
-            var response = await HandleAsync(message);
+            if (message is null)
+            {
+                Console.Error.WriteLine("[MCP] EOF");
+                break;
+            }
+
+            JsonNode? response = null;
+            try
+            {
+                response = await HandleAsync(message);
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"[MCP] handle error: {ex.GetType().Name}: {ex.Message}");
+            }
+
             if (response is not null)
             {
-                await _transport.WriteAsync(response, CancellationToken.None);
+                try
+                {
+                    await _transport.WriteAsync(response, CancellationToken.None);
+                    Console.Error.WriteLine($"[MCP] sent: {response.ToJsonString()}");
+                }
+                catch (Exception ex)
+                {
+                    Console.Error.WriteLine($"[MCP] write error: {ex.GetType().Name}: {ex.Message}");
+                }
             }
         }
     }
