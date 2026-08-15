@@ -53,6 +53,40 @@ public class MainWindowViewModel : ViewModelBase
     }
 
     public ICommand LoadedCommand => new AsyncRelayCommand(LoadedAsync);
+    public ICommand SwitchTabCommand => new AsyncRelayCommand<string>(SwitchTabAsync);
+
+    private async Task SwitchTabAsync(string? tab, CancellationToken ct)
+    {
+        await Task.CompletedTask;
+        if (string.Equals(tab, nameof(Dashboard), StringComparison.OrdinalIgnoreCase))
+        {
+            CurrentViewModel = Dashboard;
+        }
+        else if (string.Equals(tab, nameof(Drivers), StringComparison.OrdinalIgnoreCase))
+        {
+            CurrentViewModel = Drivers;
+        }
+        else if (string.Equals(tab, nameof(History), StringComparison.OrdinalIgnoreCase))
+        {
+            CurrentViewModel = History;
+        }
+        else if (string.Equals(tab, nameof(Plugins), StringComparison.OrdinalIgnoreCase))
+        {
+            CurrentViewModel = Plugins;
+        }
+        else if (string.Equals(tab, nameof(Marketplace), StringComparison.OrdinalIgnoreCase))
+        {
+            CurrentViewModel = Marketplace;
+        }
+        else if (string.Equals(tab, nameof(Cache), StringComparison.OrdinalIgnoreCase))
+        {
+            CurrentViewModel = Cache;
+        }
+        else if (string.Equals(tab, nameof(Settings), StringComparison.OrdinalIgnoreCase))
+        {
+            CurrentViewModel = Settings;
+        }
+    }
 
     private async Task LoadedAsync(CancellationToken ct)
     {

@@ -60,6 +60,17 @@ public partial class App : Application
 
     protected override async void OnStartup(StartupEventArgs e)
     {
+        DispatcherUnhandledException += (_, e) =>
+        {
+            File.AppendAllText(DiagPath, $"[GUI] DISPATCHER EXCEPTION: {e.Exception}{Environment.NewLine}");
+            e.Handled = true;
+        };
+
+        AppDomain.CurrentDomain.UnhandledException += (_, e) =>
+        {
+            File.AppendAllText(DiagPath, $"[GUI] UNHANDLED EXCEPTION: {e.ExceptionObject}{Environment.NewLine}");
+        };
+
         try
         {
             File.AppendAllText(DiagPath, $"[GUI] OnStartup begin {DateTime.Now:O}{Environment.NewLine}");
