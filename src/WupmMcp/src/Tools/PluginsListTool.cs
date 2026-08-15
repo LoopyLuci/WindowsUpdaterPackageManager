@@ -19,6 +19,6 @@ public sealed class PluginsListTool : McpTool
 
     public override async Task<JsonNode> ExecuteAsync(JsonNode? parameters, CancellationToken ct)
     {
-        return await _api.GetHealthAsync(ct);
+        return await _api.ListPluginsAsync(ct);
     }
 }

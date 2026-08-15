@@ -4,6 +4,8 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.Extensions.Http;
 using WindowsUpdateAndPackageManager.Models;
+using WindowsUpdateAndPackageManager.Core;
+using WindowsUpdateAndPackageManager.Infrastructure;
 using WupmGui.Models;
 
 namespace WupmGui.Services;
@@ -20,6 +22,8 @@ public interface IWupmApiClient
     Task PruneCacheAsync(CancellationToken cancellationToken = default);
     Task InstallServiceAsync(CancellationToken cancellationToken = default);
     Task UninstallServiceAsync(CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<PluginRegistryEntry>> GetPluginsAsync(CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<MarketplacePlugin>> MarketplaceSearchAsync(string query, CancellationToken cancellationToken = default);
 }
 
 public sealed class WupmApiClient : IWupmApiClient, IDisposable
@@ -105,6 +109,20 @@ public sealed class WupmApiClient : IWupmApiClient, IDisposable
     {
         using var response = await _http.PostAsync("/service/uninstall", null, cancellationToken).ConfigureAwait(false);
         response.EnsureSuccessStatusCode();
+    }
+
+    public async Task<IReadOnlyList<PluginRegistryEntry>> GetPluginsAsync(CancellationToken cancellationToken = default)
+    {
+        using var response = await _http.GetAsync("/plugins", cancellationToken).ConfigureAwait(false);
+        response.EnsureSuccessStatusCode();
+        return (await response.Content.ReadFromJsonAsync<List<PluginRegistryEntry>>(cancellationToken).ConfigureAwait(false))!;
+    }
+
+    public async Task<IReadOnlyList<MarketplacePlugin>> MarketplaceSearchAsync(string query, CancellationToken cancellationToken = default)
+    {
+        using var response = await _http.GetAsync($"/marketplace/search?query={Uri.EscapeDataString(query ?? string.Empty)}", cancellationToken).ConfigureAwait(false);
+        response.EnsureSuccessStatusCode();
+        return (await response.Content.ReadFromJsonAsync<List<MarketplacePlugin>>(cancellationToken).ConfigureAwait(false))!;
     }
 
     public void Dispose()

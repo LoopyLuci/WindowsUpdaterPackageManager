@@ -195,6 +195,13 @@ app.MapPost("/cache/prune", async (IServiceProvider sp) =>
     return Results.Ok(new { pruned = true });
 });
 
+app.MapGet("/plugins", async (IServiceProvider sp) =>
+{
+    var registry = sp.GetRequiredService<IPluginRegistry>();
+    var entries = await registry.ListAsync();
+    return Results.Ok(entries);
+});
+
 app.MapGet("/marketplace/search", async (IServiceProvider sp, string query = "") =>
 {
     try

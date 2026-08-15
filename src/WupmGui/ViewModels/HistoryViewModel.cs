@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.Windows.Input;
 using WupmGui.Services;
+using WindowsUpdateAndPackageManager.Models;
 
 namespace WupmGui.ViewModels;
 
@@ -8,7 +9,7 @@ public class HistoryViewModel : ViewModelBase
 {
     private readonly IWupmApiClient _api;
 
-    public ObservableCollection<object> History { get; } = new();
+    public ObservableCollection<AuditEntry> History { get; } = new();
 
     private string _statusMessage = "Ready";
     public string StatusMessage

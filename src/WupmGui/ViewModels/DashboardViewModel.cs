@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.Windows.Input;
 using WupmGui.Services;
+using WindowsUpdateAndPackageManager.Models;
 
 namespace WupmGui.ViewModels;
 
@@ -8,7 +9,7 @@ public class DashboardViewModel : ViewModelBase
 {
     private readonly IWupmApiClient _api;
 
-    public ObservableCollection<object> Updates { get; } = new();
+    public ObservableCollection<PackageManifest> Updates { get; } = new();
 
     private bool _isScanning;
     public bool IsScanning

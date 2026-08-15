@@ -56,6 +56,14 @@ public sealed class WupmApiClient
         return JsonNode.Parse(json)!;
     }
 
+    public async Task<JsonNode> ListPluginsAsync(CancellationToken ct)
+    {
+        using var response = await _http.GetAsync("http://localhost:5002/plugins", ct);
+        response.EnsureSuccessStatusCode();
+        var json = await response.Content.ReadAsStringAsync(ct);
+        return JsonNode.Parse(json)!;
+    }
+
     public async Task<JsonNode> MarketplaceSearchAsync(string query, CancellationToken ct)
     {
         using var response = await _http.GetAsync($"http://localhost:5002/marketplace/search?query={Uri.EscapeDataString(query ?? string.Empty)}", ct);
