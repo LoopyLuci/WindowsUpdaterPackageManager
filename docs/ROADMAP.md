@@ -141,3 +141,8 @@
 5. v1.7.0 release
 - Fix: run:
   `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/release.ps1 -Tag v1.7.0 -DeployTarget winget`
+
+6. API runtime binding
+- Current blocker: in this environment, `WupmApi` does not bind on `127.0.0.1:5002`.
+- Code-side remediation completed: `/plugins` endpoint restored, plugin loading deferred with try/catch, `UseWindowsService()` restored.
+- Next verification: test external binding on a clean terminal or machine without port conflicts.
