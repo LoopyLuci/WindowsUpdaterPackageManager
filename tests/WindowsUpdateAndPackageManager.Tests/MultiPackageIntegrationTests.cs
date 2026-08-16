@@ -45,8 +45,22 @@ public sealed class MultiPackageIntegrationTests
         }
         finally
         {
-            if (Directory.Exists(root))
-                Directory.Delete(root, recursive: true);
+            if (provider is IDisposable disposable)
+                disposable.Dispose();
+
+            for (int i = 0; i < 5; i++)
+            {
+                try
+                {
+                    if (Directory.Exists(root))
+                        Directory.Delete(root, recursive: true);
+                    break;
+                }
+                catch (IOException)
+                {
+                    Thread.Sleep(100);
+                }
+            }
         }
     }
 }
