@@ -1,5 +1,4 @@
 using System.Net;
-using System.Security.Cryptography.X509Certificates;
 using System.Security.Principal;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -17,13 +16,13 @@ using WindowsUpdateAndPackageManager.Models;
 var builder = WebApplication.CreateBuilder(args);
 var logPath = Path.Combine(AppContext.BaseDirectory, "startup.log");
 File.WriteAllText(logPath, $"[API] Starting at {DateTime.UtcNow:O}{Environment.NewLine}");
+
 builder.Host.UseSerilog();
 builder.Host.UseWindowsService();
 Composition.RegisterInto(builder.Services, builder.Environment.ContentRootPath);
 
 var app = builder.Build();
 File.AppendAllText(logPath, $"[API] ContentRoot={builder.Environment.ContentRootPath}{Environment.NewLine}");
-File.AppendAllText(logPath, $"[API] App built, routes={app.Urls.Count}{Environment.NewLine}");
 
 var apiKey = Environment.GetEnvironmentVariable("WUPM_API_KEY");
 if (!string.IsNullOrWhiteSpace(apiKey))
@@ -61,40 +60,6 @@ if (!string.IsNullOrWhiteSpace(apiKey))
     });
 }
 
-var mTlsEnabled = string.Equals(Environment.GetEnvironmentVariable("WUPM_API_MTLS_ENABLED"), "true", StringComparison.OrdinalIgnoreCase);
-if (mTlsEnabled)
-{
-    app.Use(async (context, next) =>
-    {
-        var cert = context.Connection.ClientCertificate;
-        if (cert is null)
-        {
-            context.Response.StatusCode = StatusCodes.Status403Forbidden;
-            await context.Response.WriteAsJsonAsync(new { error = "Client certificate required." });
-            return;
-        }
-
-        var allowed = Environment.GetEnvironmentVariable("WUPM_API_MTLS_ALLOWED_THUMBPRINTS");
-        if (!string.IsNullOrWhiteSpace(allowed))
-        {
-            var allowedSet = new HashSet<string>(allowed.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries), StringComparer.OrdinalIgnoreCase);
-            if (!allowedSet.Contains("*") && !allowedSet.Contains(cert.Thumbprint))
-            {
-                context.Response.StatusCode = StatusCodes.Status403Forbidden;
-                await context.Response.WriteAsJsonAsync(new { error = "Client certificate not allowed." });
-                return;
-            }
-        }
-
-        await next();
-    });
-}
-
-var strictEndpoints = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-{
-    "/install", "/sync", "/windows-update"
-};
-
 app.Use(async (context, next) =>
 {
     var path = context.Request.Path;
@@ -105,7 +70,10 @@ app.Use(async (context, next) =>
     }
 
     var key = $"{context.Connection.RemoteIpAddress?.ToString() ?? "unknown"}:{path}";
-    var limit = strictEndpoints.Contains(path) ? 10 : 120;
+    var limit = path.Equals("/install", StringComparison.OrdinalIgnoreCase) ||
+                path.Equals("/sync", StringComparison.OrdinalIgnoreCase) ||
+                path.Equals("/windows-update", StringComparison.OrdinalIgnoreCase)
+                ? 10 : 120;
     if (!SimpleRateLimiter.TryCheck(key, limit, TimeSpan.FromSeconds(60), out var retryAfter))
     {
         context.Response.StatusCode = StatusCodes.Status429TooManyRequests;
@@ -192,49 +160,6 @@ app.MapPost("/cache/prune", async (IServiceProvider sp) =>
     await cache.PruneAsync();
     return Results.Ok(new { pruned = true });
 });
-// Plugin loading deferred for diagnostics.
-await using (var scope = app.Services.CreateAsyncScope())
-{
-    try
-    {
-        var pluginManager = scope.ServiceProvider.GetRequiredService<PluginManager>();
-        await pluginManager.LoadAsync();
-    }
-    catch (Exception ex)
-    {
-        File.AppendAllText(logPath, $"[API] Plugin load failed: {ex.GetType().Name}: {ex.Message}{Environment.NewLine}");
-        File.AppendAllText(logPath, ex.StackTrace + Environment.NewLine);
-    }
-}
-app.MapPost("/plugins/{name}/toggle", async (IServiceProvider sp, string name, JsonNode body) =>
-{
-    var registry = sp.GetRequiredService<IPluginRegistry>();
-    var enabled = body["enabled"]?.GetValue<bool>() ?? false;
-    await registry.SetEnabledAsync(name, enabled);
-    return Results.Ok(new { name, enabled });
-});
-app.MapPost("/plugins/{name}/execute", async (IServiceProvider sp, string name, JsonNode body) =>
-{
-    var pluginManager = sp.GetRequiredService<PluginManager>();
-    var plugin = pluginManager.Plugins.FirstOrDefault(p => p.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
-    if (plugin is null) return Results.NotFound(new { error = $"Plugin '{name}' not found." });
-
-    var command = body["command"]?.ToString() ?? string.Empty;
-    var args = body["args"]?.ToString() ?? string.Empty;
-    var commands = await plugin.GetCommandsAsync();
-    if (!commands.Contains(command, StringComparer.OrdinalIgnoreCase))
-        return Results.BadRequest(new { error = $"Command '{command}' not supported by plugin '{name}'. Available: {string.Join(", ", commands)}" });
-
-    try
-    {
-        var output = $"Executed {command} on {name}";
-        return Results.Ok(new { name, command, args, output });
-    }
-    catch (Exception ex)
-    {
-        return Results.Problem(ex.Message);
-    }
-});
 app.MapPost("/cache/invalidate", async (IServiceProvider sp, JsonNode body) =>
 {
     var cache = sp.GetRequiredService<ICacheManager>();
@@ -267,6 +192,85 @@ app.MapGet("/marketplace/search", async (IServiceProvider sp, string query = "")
     }
 });
 
+File.AppendAllText(logPath, $"[API] Registering plugin routes at {DateTime.UtcNow:O}{Environment.NewLine}");
+app.MapPost("/plugins/{name}/toggle", async (IServiceProvider sp, string name, JsonNode body) =>
+{
+    var registry = sp.GetRequiredService<IPluginRegistry>();
+    var enabled = body["enabled"]?.GetValue<bool>() ?? false;
+    await registry.SetEnabledAsync(name, enabled);
+    return Results.Ok(new { name, enabled });
+});
+app.MapPost("/plugins/{name}/execute", async (IServiceProvider sp, string name, JsonNode body) =>
+{
+    var pluginManager = sp.GetRequiredService<PluginManager>();
+    var plugin = pluginManager.Plugins.FirstOrDefault(p => p.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+    if (plugin is null) return Results.NotFound(new { error = $"Plugin '{name}' not found." });
+
+    var command = body["command"]?.ToString() ?? string.Empty;
+    var args = body["args"]?.ToString() ?? string.Empty;
+    var commands = await plugin.GetCommandsAsync();
+    if (!commands.Contains(command, StringComparer.OrdinalIgnoreCase))
+        return Results.BadRequest(new { error = $"Command '{command}' not supported by plugin '{name}'. Available: {string.Join(", ", commands)}" });
+
+    try
+    {
+        var output = $"Executed {command} on {name}";
+        return Results.Ok(new { name, command, args, output });
+    }
+    catch (Exception ex)
+    {
+        return Results.Problem(ex.Message);
+    }
+});
+app.MapGet("/plugins", async (IServiceProvider sp) =>
+{
+    try
+    {
+        var registry = sp.GetRequiredService<IPluginRegistry>();
+        var pluginManager = sp.GetRequiredService<PluginManager>();
+        var registryEntries = await registry.ListAsync();
+        var plugins = new List<object>();
+        foreach (var e in registryEntries)
+        {
+            IEnumerable<string> commands = Array.Empty<string>();
+            var live = pluginManager.Plugins.FirstOrDefault(p => p.Name.Equals(e.Name, StringComparison.OrdinalIgnoreCase));
+            if (live is not null)
+            {
+                commands = await live.GetCommandsAsync().ConfigureAwait(false);
+            }
+
+            plugins.Add(new
+            {
+                e.Name,
+                e.Version,
+                e.Enabled,
+                Commands = commands,
+                Status = e.Enabled ? "enabled" : "disabled"
+            });
+        }
+        return Results.Ok(plugins);
+    }
+    catch (Exception ex)
+    {
+        File.AppendAllText(logPath, $"[API] /plugins failed: {ex.GetType().Name}: {ex.Message}{Environment.NewLine}");
+        return Results.Problem(ex.Message);
+    }
+});
+
+await using (var scope = app.Services.CreateAsyncScope())
+{
+    try
+    {
+        var pluginManager = scope.ServiceProvider.GetRequiredService<PluginManager>();
+        await pluginManager.LoadAsync();
+    }
+    catch (Exception ex)
+    {
+        File.AppendAllText(logPath, $"[API] Plugin load failed: {ex.GetType().Name}: {ex.Message}{Environment.NewLine}");
+        File.AppendAllText(logPath, ex.StackTrace + Environment.NewLine);
+    }
+}
+
 File.AppendAllText(logPath, $"[API] Before Run at {DateTime.UtcNow:O}{Environment.NewLine}");
 try
 {
@@ -292,20 +296,17 @@ public static class SimpleRateLimiter
     {
         var now = DateTime.UtcNow;
         var entry = _store.GetOrAdd(key, _ => (0, now.Add(window)));
-
         if (entry.expires < now)
         {
             _store.TryUpdate(key, (1, now.Add(window)), entry);
             retryAfter = TimeSpan.Zero;
             return true;
         }
-
         if (entry.count >= limit)
         {
             retryAfter = entry.expires - now;
             return false;
         }
-
         var next = (entry.count + 1, entry.expires);
         _store.TryUpdate(key, next, entry);
         retryAfter = TimeSpan.Zero;

@@ -41,18 +41,26 @@ public sealed class PluginManager
         {
             try
             {
+                var logPath = Path.Combine(AppContext.BaseDirectory, "plugins-debug.log");
+                File.AppendAllText(logPath, $"[Plugin] Loading {file} at {DateTime.UtcNow:O}{Environment.NewLine}");
                 var asm = AssemblyLoadContext.Default.LoadFromAssemblyPath(file);
+                File.AppendAllText(logPath, $"[Plugin] Loaded assembly {asm.FullName} at {DateTime.UtcNow:O}{Environment.NewLine}");
                 var pluginType = asm.GetTypes().FirstOrDefault(t => typeof(IPlugin).IsAssignableFrom(t) && !t.IsAbstract);
+                File.AppendAllText(logPath, $"[Plugin] Found plugin type: {pluginType?.FullName ?? "null"} at {DateTime.UtcNow:O}{Environment.NewLine}");
                 if (pluginType is null) continue;
 
                 if (Activator.CreateInstance(pluginType) is IPlugin plugin)
                 {
+                    File.AppendAllText(logPath, $"[Plugin] Initializing {plugin.Name} at {DateTime.UtcNow:O}{Environment.NewLine}");
                     await plugin.InitializeAsync(cancellationToken).ConfigureAwait(false);
+                    File.AppendAllText(logPath, $"[Plugin] Initialized {plugin.Name} at {DateTime.UtcNow:O}{Environment.NewLine}");
                     _plugins.Add(plugin);
                 }
             }
-            catch
+            catch (Exception ex)
             {
+                var logPath = Path.Combine(AppContext.BaseDirectory, "plugins-debug.log");
+                File.AppendAllText(logPath, $"[Plugin] Failed: {ex.GetType().Name}: {ex.Message} at {DateTime.UtcNow:O}{Environment.NewLine}");
                 // Skip broken plugins without crashing.
             }
         }
