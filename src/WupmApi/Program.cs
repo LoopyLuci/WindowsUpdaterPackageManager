@@ -225,17 +225,17 @@ app.MapGet("/plugins", (HttpContext ctx) =>
     return ctx.Response.WriteAsync("[]");
 });
 
-await using (var scope = app.Services.CreateAsyncScope())
+try
 {
-    try
+    await using (var scope = app.Services.CreateAsyncScope())
     {
         var pluginManager = scope.ServiceProvider.GetRequiredService<PluginManager>();
         await pluginManager.LoadAsync();
     }
-    catch (Exception ex)
-    {
-        Log.Error(ex, "Plugin load failed");
-    }
+}
+catch (Exception ex)
+{
+    Log.Error(ex, "Plugin load failed");
 }
 
 app.Run();

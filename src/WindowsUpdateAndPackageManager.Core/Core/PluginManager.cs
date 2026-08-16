@@ -37,31 +37,69 @@ public sealed class PluginManager
     {
         if (!Directory.Exists(_pluginsRoot)) return;
 
-        foreach (var file in Directory.EnumerateFiles(_pluginsRoot, "*.dll", SearchOption.TopDirectoryOnly))
+        var pluginFiles = Directory.EnumerateFiles(_pluginsRoot, "*.dll", SearchOption.TopDirectoryOnly).ToList();
+        foreach (var file in pluginFiles)
         {
+            var logPath = Path.Combine(AppContext.BaseDirectory, "plugins-debug.log");
+            File.AppendAllText(logPath, $"[Plugin] Loading {file} at {DateTime.UtcNow:O}{Environment.NewLine}");
+
+            Assembly asm;
             try
             {
-                var logPath = Path.Combine(AppContext.BaseDirectory, "plugins-debug.log");
-                File.AppendAllText(logPath, $"[Plugin] Loading {file} at {DateTime.UtcNow:O}{Environment.NewLine}");
-                var asm = AssemblyLoadContext.Default.LoadFromAssemblyPath(file);
-                File.AppendAllText(logPath, $"[Plugin] Loaded assembly {asm.FullName} at {DateTime.UtcNow:O}{Environment.NewLine}");
-                var pluginType = asm.GetTypes().FirstOrDefault(t => typeof(IPlugin).IsAssignableFrom(t) && !t.IsAbstract);
-                File.AppendAllText(logPath, $"[Plugin] Found plugin type: {pluginType?.FullName ?? "null"} at {DateTime.UtcNow:O}{Environment.NewLine}");
-                if (pluginType is null) continue;
+                using var loadCts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+                using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, loadCts.Token);
+                asm = await Task.Run(() => AssemblyLoadContext.Default.LoadFromAssemblyPath(file), linkedCts.Token).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                File.AppendAllText(logPath, $"[Plugin] LoadFromAssemblyPath timed out for {file} at {DateTime.UtcNow:O}{Environment.NewLine}");
+                continue;
+            }
+            catch (Exception ex)
+            {
+                File.AppendAllText(logPath, $"[Plugin] LoadFromAssemblyPath failed: {ex.GetType().Name}: {ex.Message} at {DateTime.UtcNow:O}{Environment.NewLine}");
+                continue;
+            }
 
+            File.AppendAllText(logPath, $"[Plugin] Loaded assembly {asm.FullName} at {DateTime.UtcNow:O}{Environment.NewLine}");
+            Type[] types;
+            try
+            {
+                using var typeCts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+                using var linkedTypeCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, typeCts.Token);
+                types = await Task.Run(() => asm.GetTypes(), linkedTypeCts.Token).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                File.AppendAllText(logPath, $"[Plugin] GetTypes timed out for {file} at {DateTime.UtcNow:O}{Environment.NewLine}");
+                continue;
+            }
+            catch (Exception ex)
+            {
+                File.AppendAllText(logPath, $"[Plugin] GetTypes failed: {ex.GetType().Name}: {ex.Message} at {DateTime.UtcNow:O}{Environment.NewLine}");
+                continue;
+            }
+
+            var pluginType = types.FirstOrDefault(t => typeof(IPlugin).IsAssignableFrom(t) && !t.IsAbstract);
+            File.AppendAllText(logPath, $"[Plugin] Found plugin type: {pluginType?.FullName ?? "null"} at {DateTime.UtcNow:O}{Environment.NewLine}");
+            if (pluginType is null) continue;
+
+            try
+            {
                 if (Activator.CreateInstance(pluginType) is IPlugin plugin)
                 {
                     File.AppendAllText(logPath, $"[Plugin] Initializing {plugin.Name} at {DateTime.UtcNow:O}{Environment.NewLine}");
-                    await plugin.InitializeAsync(cancellationToken).ConfigureAwait(false);
+                    using var initCts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+                    using var linkedInitCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, initCts.Token);
+                    await plugin.InitializeAsync(linkedInitCts.Token).ConfigureAwait(false);
                     File.AppendAllText(logPath, $"[Plugin] Initialized {plugin.Name} at {DateTime.UtcNow:O}{Environment.NewLine}");
                     _plugins.Add(plugin);
                 }
             }
             catch (Exception ex)
             {
-                var logPath = Path.Combine(AppContext.BaseDirectory, "plugins-debug.log");
-                File.AppendAllText(logPath, $"[Plugin] Failed: {ex.GetType().Name}: {ex.Message} at {DateTime.UtcNow:O}{Environment.NewLine}");
-                // Skip broken plugins without crashing.
+                File.AppendAllText(logPath, $"[Plugin] Init failed: {ex.GetType().Name}: {ex.Message} at {DateTime.UtcNow:O}{Environment.NewLine}");
+                continue;
             }
         }
     }
