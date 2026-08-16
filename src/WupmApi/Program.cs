@@ -18,7 +18,6 @@ var logPath = Path.Combine(AppContext.BaseDirectory, "startup.log");
 File.WriteAllText(logPath, $"[API] Starting at {DateTime.UtcNow:O}{Environment.NewLine}");
 
 builder.Host.UseSerilog();
-// builder.Host.UseWindowsService();
 Composition.RegisterInto(builder.Services, builder.Environment.ContentRootPath);
 File.AppendAllText(logPath, $"[API] Services registered at {DateTime.UtcNow:O}{Environment.NewLine}");
 
@@ -246,7 +245,22 @@ await using (var scope = app.Services.CreateAsyncScope())
     }
 }
 
+File.AppendAllText(logPath, $"[API] About to call app.Run() at {DateTime.UtcNow:O}{Environment.NewLine}");
 File.AppendAllText(logPath, $"[API] Before Run at {DateTime.UtcNow:O}{Environment.NewLine}");
+var startupCts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+_ = Task.Run(async () =>
+{
+    try
+    {
+        await Task.Delay(TimeSpan.FromSeconds(15), startupCts.Token);
+        if (!startupCts.Token.IsCancellationRequested)
+        {
+            File.AppendAllText(logPath, $"[API] Startup timeout: app did not start within 15s at {DateTime.UtcNow:O}{Environment.NewLine}");
+        }
+    }
+    catch (TaskCanceledException) { }
+    catch { }
+}, startupCts.Token);
 try
 {
     app.Run();
@@ -256,6 +270,10 @@ catch (Exception ex)
     File.AppendAllText(logPath, $"[API] Run failed: {ex.GetType().Name}: {ex.Message}{Environment.NewLine}");
     File.AppendAllText(logPath, ex.StackTrace + Environment.NewLine);
     throw;
+}
+finally
+{
+    startupCts.Cancel();
 }
 File.AppendAllText(logPath, $"[API] After Run at {DateTime.UtcNow:O}{Environment.NewLine}");
 
