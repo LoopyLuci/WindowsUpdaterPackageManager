@@ -18,11 +18,16 @@ var logPath = Path.Combine(AppContext.BaseDirectory, "startup.log");
 File.WriteAllText(logPath, $"[API] Starting at {DateTime.UtcNow:O}{Environment.NewLine}");
 
 builder.Host.UseSerilog();
-builder.Host.UseWindowsService();
+// builder.Host.UseWindowsService();
 Composition.RegisterInto(builder.Services, builder.Environment.ContentRootPath);
+File.AppendAllText(logPath, $"[API] Services registered at {DateTime.UtcNow:O}{Environment.NewLine}");
 
 var app = builder.Build();
+File.AppendAllText(logPath, $"[API] App built at {DateTime.UtcNow:O}{Environment.NewLine}");
 File.AppendAllText(logPath, $"[API] ContentRoot={builder.Environment.ContentRootPath}{Environment.NewLine}");
+app.Lifetime.ApplicationStarted.Register(() => File.AppendAllText(logPath, $"[API] ApplicationStarted at {DateTime.UtcNow:O}{Environment.NewLine}"));
+app.Lifetime.ApplicationStopping.Register(() => File.AppendAllText(logPath, $"[API] ApplicationStopping at {DateTime.UtcNow:O}{Environment.NewLine}"));
+app.Lifetime.ApplicationStopped.Register(() => File.AppendAllText(logPath, $"[API] ApplicationStopped at {DateTime.UtcNow:O}{Environment.NewLine}"));
 
 var apiKey = Environment.GetEnvironmentVariable("WUPM_API_KEY");
 if (!string.IsNullOrWhiteSpace(apiKey))
@@ -192,7 +197,6 @@ app.MapGet("/marketplace/search", async (IServiceProvider sp, string query = "")
     }
 });
 
-File.AppendAllText(logPath, $"[API] Registering plugin routes at {DateTime.UtcNow:O}{Environment.NewLine}");
 app.MapPost("/plugins/{name}/toggle", async (IServiceProvider sp, string name, JsonNode body) =>
 {
     var registry = sp.GetRequiredService<IPluginRegistry>();
@@ -222,39 +226,10 @@ app.MapPost("/plugins/{name}/execute", async (IServiceProvider sp, string name, 
         return Results.Problem(ex.Message);
     }
 });
-app.MapGet("/plugins", async (IServiceProvider sp) =>
+app.MapGet("/plugins", (HttpContext ctx) =>
 {
-    try
-    {
-        var registry = sp.GetRequiredService<IPluginRegistry>();
-        var pluginManager = sp.GetRequiredService<PluginManager>();
-        var registryEntries = await registry.ListAsync();
-        var plugins = new List<object>();
-        foreach (var e in registryEntries)
-        {
-            IEnumerable<string> commands = Array.Empty<string>();
-            var live = pluginManager.Plugins.FirstOrDefault(p => p.Name.Equals(e.Name, StringComparison.OrdinalIgnoreCase));
-            if (live is not null)
-            {
-                commands = await live.GetCommandsAsync().ConfigureAwait(false);
-            }
-
-            plugins.Add(new
-            {
-                e.Name,
-                e.Version,
-                e.Enabled,
-                Commands = commands,
-                Status = e.Enabled ? "enabled" : "disabled"
-            });
-        }
-        return Results.Ok(plugins);
-    }
-    catch (Exception ex)
-    {
-        File.AppendAllText(logPath, $"[API] /plugins failed: {ex.GetType().Name}: {ex.Message}{Environment.NewLine}");
-        return Results.Problem(ex.Message);
-    }
+    ctx.Response.ContentType = "application/json";
+    return ctx.Response.WriteAsync("[]");
 });
 
 await using (var scope = app.Services.CreateAsyncScope())
@@ -282,6 +257,7 @@ catch (Exception ex)
     File.AppendAllText(logPath, ex.StackTrace + Environment.NewLine);
     throw;
 }
+File.AppendAllText(logPath, $"[API] After Run at {DateTime.UtcNow:O}{Environment.NewLine}");
 
 public static class SimpleRateLimiter
 {
