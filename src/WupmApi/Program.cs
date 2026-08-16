@@ -15,27 +15,15 @@ using WindowsUpdateAndPackageManager.Infrastructure;
 using WindowsUpdateAndPackageManager.Models;
 
 var builder = WebApplication.CreateBuilder(args);
+var logPath = Path.Combine(AppContext.BaseDirectory, "startup.log");
+File.WriteAllText(logPath, $"[API] Starting at {DateTime.UtcNow:O}{Environment.NewLine}");
 builder.Host.UseSerilog();
 builder.Host.UseWindowsService();
 Composition.RegisterInto(builder.Services, builder.Environment.ContentRootPath);
 
 var app = builder.Build();
-
-await using (var scope = app.Services.CreateAsyncScope())
-{
-    try
-    {
-        var pluginManager = scope.ServiceProvider.GetRequiredService<PluginManager>();
-        await pluginManager.LoadAsync();
-    }
-    catch (Exception ex)
-    {
-        Log.Error(ex, "Plugin load failed");
-    }
-}
-
-app.MapGet("/", () => Results.Ok(new { status = "ok", name = "wupm-api" }));
-app.MapGet("/health", () => Results.Ok(new { status = "ok", name = "wupm-api" }));
+File.AppendAllText(logPath, $"[API] ContentRoot={builder.Environment.ContentRootPath}{Environment.NewLine}");
+File.AppendAllText(logPath, $"[API] App built, routes={app.Urls.Count}{Environment.NewLine}");
 
 var apiKey = Environment.GetEnvironmentVariable("WUPM_API_KEY");
 if (!string.IsNullOrWhiteSpace(apiKey))
@@ -129,6 +117,8 @@ app.Use(async (context, next) =>
     await next();
 });
 
+app.MapGet("/", () => Results.Ok(new { status = "ok", name = "wupm-api" }));
+app.MapGet("/health", () => Results.Ok(new { status = "ok", name = "wupm-api" }));
 app.MapGet("/packages", async (IServiceProvider sp, string repositoryUrl = "https://github.com/LoopyLuci/WindowsUpdateAndPackageManager") =>
 {
     var repoSync = sp.GetRequiredService<IRepoSync>();
@@ -136,7 +126,6 @@ app.MapGet("/packages", async (IServiceProvider sp, string repositoryUrl = "http
     Log.Information("Listed {Count} packages", packages.Count);
     return Results.Ok(packages);
 });
-
 app.MapGet("/installed", async (IServiceProvider sp) =>
 {
     var packageManager = sp.GetRequiredService<IPackageManager>();
@@ -144,7 +133,6 @@ app.MapGet("/installed", async (IServiceProvider sp) =>
     Log.Information("Listed {Count} installed packages", packages.Count);
     return Results.Ok(packages);
 });
-
 app.MapPost("/install", async (IServiceProvider sp, HttpRequest request) =>
 {
     var packageManager = sp.GetRequiredService<IPackageManager>();
@@ -159,7 +147,6 @@ app.MapPost("/install", async (IServiceProvider sp, HttpRequest request) =>
     Log.Information("Install {PackageId} success={Success}", package.Id, result.Success);
     return Results.Ok(result);
 });
-
 app.MapPost("/sync", async (IServiceProvider sp, string repositoryUrl = "https://github.com/LoopyLuci/WindowsUpdateAndPackageManager") =>
 {
     var repoSync = sp.GetRequiredService<IRepoSync>();
@@ -167,7 +154,6 @@ app.MapPost("/sync", async (IServiceProvider sp, string repositoryUrl = "https:/
     Log.Information("Sync success={Success} message={Message}", result.Success, result.Message);
     return Results.Ok(result);
 });
-
 app.MapPost("/windows-update", async (IServiceProvider sp) =>
 {
     var manager = sp.GetRequiredService<IWindowsUpdateManager>();
@@ -175,7 +161,6 @@ app.MapPost("/windows-update", async (IServiceProvider sp) =>
     Log.Information("Windows update result success={Success} message={Message}", result.Success, result.Message);
     return Results.Ok(result);
 });
-
 app.MapGet("/audit", async (IServiceProvider sp, DateTimeOffset? from = null, DateTimeOffset? to = null, string? action = null) =>
 {
     var auditor = sp.GetRequiredService<IAuditor>();
@@ -183,7 +168,6 @@ app.MapGet("/audit", async (IServiceProvider sp, DateTimeOffset? from = null, Da
     Log.Information("Audit query returned {Count} entries", entries.Count);
     return Results.Ok(entries);
 });
-
 app.MapGet("/cache", async (IServiceProvider sp) =>
 {
     var cache = sp.GetRequiredService<ICacheManager>();
@@ -202,31 +186,37 @@ app.MapGet("/cache", async (IServiceProvider sp) =>
     }
     return Results.Ok(list);
 });
-
 app.MapPost("/cache/prune", async (IServiceProvider sp) =>
 {
     var cache = sp.GetRequiredService<ICacheManager>();
     await cache.PruneAsync();
     return Results.Ok(new { pruned = true });
 });
-
 app.MapGet("/plugins", async (IServiceProvider sp) =>
 {
     var registry = sp.GetRequiredService<IPluginRegistry>();
     var pluginManager = sp.GetRequiredService<PluginManager>();
     var registryEntries = await registry.ListAsync();
     var loadedNames = new HashSet<string>(pluginManager.Plugins.Select(p => p.Name), StringComparer.OrdinalIgnoreCase);
-    var merged = registryEntries.Select(e => new PluginRegistryEntry
+    var merged = new List<PluginRegistryEntry>();
+    foreach (var e in registryEntries)
     {
-        Name = e.Name,
-        Version = e.Version,
-        Enabled = e.Enabled,
-        Commands = loadedNames.Contains(e.Name) ? pluginManager.Plugins.First(p => p.Name.Equals(e.Name, StringComparison.OrdinalIgnoreCase)).GetCommandsAsync().GetAwaiter().GetResult().ToArray() : Array.Empty<string>(),
-        Status = e.Enabled && loadedNames.Contains(e.Name) ? "Active" : (e.Enabled ? "NotLoaded" : "Disabled")
-    }).ToList();
+        var entry = new PluginRegistryEntry
+        {
+            Name = e.Name,
+            Version = e.Version,
+            Enabled = e.Enabled,
+            Status = e.Enabled && loadedNames.Contains(e.Name) ? "Active" : (e.Enabled ? "NotLoaded" : "Disabled")
+        };
+        if (loadedNames.Contains(e.Name))
+        {
+            var plugin = pluginManager.Plugins.First(p => p.Name.Equals(e.Name, StringComparison.OrdinalIgnoreCase));
+            entry.Commands = (await plugin.GetCommandsAsync()).ToArray();
+        }
+        merged.Add(entry);
+    }
     return Results.Ok(merged);
 });
-
 app.MapPost("/plugins/{name}/toggle", async (IServiceProvider sp, string name, JsonNode body) =>
 {
     var registry = sp.GetRequiredService<IPluginRegistry>();
@@ -234,7 +224,6 @@ app.MapPost("/plugins/{name}/toggle", async (IServiceProvider sp, string name, J
     await registry.SetEnabledAsync(name, enabled);
     return Results.Ok(new { name, enabled });
 });
-
 app.MapPost("/plugins/{name}/execute", async (IServiceProvider sp, string name, JsonNode body) =>
 {
     var pluginManager = sp.GetRequiredService<PluginManager>();
@@ -257,7 +246,6 @@ app.MapPost("/plugins/{name}/execute", async (IServiceProvider sp, string name, 
         return Results.Problem(ex.Message);
     }
 });
-
 app.MapPost("/cache/invalidate", async (IServiceProvider sp, JsonNode body) =>
 {
     var cache = sp.GetRequiredService<ICacheManager>();
@@ -266,13 +254,11 @@ app.MapPost("/cache/invalidate", async (IServiceProvider sp, JsonNode body) =>
     await cache.InvalidateAsync(packageId, version);
     return Results.Ok(new { invalidated = true, packageId, version });
 });
-
 app.MapGet("/service/status", async (IServiceProvider sp) =>
 {
     var isElevated = new WindowsPrincipal(WindowsIdentity.GetCurrent()).IsInRole(WindowsBuiltInRole.Administrator);
     return Results.Ok(new { installed = false, elevated = isElevated, message = isElevated ? "Running as administrator" : "Not running as administrator; service operations require elevation" });
 });
-
 app.MapGet("/marketplace/search", async (IServiceProvider sp, string query = "") =>
 {
     try
@@ -292,7 +278,17 @@ app.MapGet("/marketplace/search", async (IServiceProvider sp, string query = "")
     }
 });
 
-app.Run();
+File.AppendAllText(logPath, $"[API] Before Run at {DateTime.UtcNow:O}{Environment.NewLine}");
+try
+{
+    app.Run();
+}
+catch (Exception ex)
+{
+    File.AppendAllText(logPath, $"[API] Run failed: {ex.GetType().Name}: {ex.Message}{Environment.NewLine}");
+    File.AppendAllText(logPath, ex.StackTrace + Environment.NewLine);
+    throw;
+}
 
 public static class SimpleRateLimiter
 {
