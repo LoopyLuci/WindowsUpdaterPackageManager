@@ -1,0 +1,17 @@
+Id: LoopyLuci.WindowsUpdateAndPackageManager
+Name: Windows Update Package Manager
+Version: 1.11.0
+Publisher: LoopyLuci
+License: MIT
+Homepage: https://github.com/LoopyLuci/WindowsUpdateAndPackageManager
+Description: Windows Update Package Manager with offline support, delta updates, plugin extensibility, GUI, and MCP integration.
+Installers:
+  - Arch: x64
+    InstallerType: zip
+    Url: https://github.com/LoopyLuci/WindowsUpdateAndPackageManager/releases/download/v1.11.0/wupm-cli-publish.zip
+    Sha256: 0000000000000000000000000000000000000000000000000000000000000000
+  - Arch: x64
+    InstallerType: zip
+    Url: https://github.com/LoopyLuci/WindowsUpdateAndPackageManager/releases/download/v1.11.0/wupm-api-publish.zip
+    Sha256: 0000000000000000000000000000000000000000000000000000000000000000
+ReleaseDate: 2026-08-16

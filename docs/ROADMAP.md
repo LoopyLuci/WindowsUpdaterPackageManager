@@ -135,6 +135,8 @@
 
 4. Winget live submission
 - Fix: fork https://github.com/microsoft/winget-pkgs, copy `scripts/deploy/winget/winget-pkgs/LoopyLuci.WindowsUpdatePackageManager/*.yaml` into `manifests/L/LoopyLuci/WindowsUpdatePackageManager/`, and open a PR.
+- Requirement: winget >= 1.6.0 for multi-file manifests; zip installers require `NestedInstallerType` and `NestedInstallerFiles`.
+- Current blocker: installed winget v1.29.280 rejects the current manifest schema without nested installer fields.
 
 5. v1.7.0 release
 - Fix: run:

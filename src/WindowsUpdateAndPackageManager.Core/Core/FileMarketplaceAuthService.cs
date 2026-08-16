@@ -12,6 +12,21 @@ public sealed class FileMarketplaceAuthService : IMarketplaceAuthService, IAsync
         _authPath = Path.Combine(dataRoot, "marketplace", "auth.json");
     }
 
+    public string? GetToken()
+    {
+        if (!File.Exists(_authPath)) return null;
+        try
+        {
+            var json = File.ReadAllText(_authPath);
+            var doc = System.Text.Json.JsonSerializer.Deserialize<MarketplaceAuth>(json);
+            return doc?.Token;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
     public async Task<string?> GetTokenAsync(CancellationToken cancellationToken = default)
     {
         if (!File.Exists(_authPath)) return null;
