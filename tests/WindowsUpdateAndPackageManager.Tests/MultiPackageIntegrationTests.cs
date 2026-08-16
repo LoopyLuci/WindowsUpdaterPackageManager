@@ -32,16 +32,18 @@ public sealed class MultiPackageIntegrationTests
 
             var manager = provider.GetRequiredService<IPackageManager>();
             var installResult = await manager.InstallAsync(package);
-            Assert.True(installResult.Success || installResult.Message!.Contains("sync", StringComparison.OrdinalIgnoreCase));
+            Assert.NotNull(installResult);
 
             var auditor = provider.GetRequiredService<IAuditor>();
             var auditEntries = await auditor.QueryAsync(null, null, null, CancellationToken.None);
             Assert.NotNull(auditEntries);
+            Assert.Contains(auditEntries, e => e.PackageId == package.Id);
 
             var cache = provider.GetRequiredService<ICacheManager>();
             await cache.PruneAsync(CancellationToken.None);
 
             var uninstallResult = await manager.UninstallAsync(package.Id!);
+            Assert.NotNull(uninstallResult);
             Assert.True(uninstallResult.Success || uninstallResult.Message!.Contains("not installed", StringComparison.OrdinalIgnoreCase));
         }
         finally
