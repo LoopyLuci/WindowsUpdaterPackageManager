@@ -192,31 +192,20 @@ app.MapPost("/cache/prune", async (IServiceProvider sp) =>
     await cache.PruneAsync();
     return Results.Ok(new { pruned = true });
 });
-app.MapGet("/plugins", async (IServiceProvider sp) =>
+// Plugin loading deferred for diagnostics.
+await using (var scope = app.Services.CreateAsyncScope())
 {
-    var registry = sp.GetRequiredService<IPluginRegistry>();
-    var pluginManager = sp.GetRequiredService<PluginManager>();
-    var registryEntries = await registry.ListAsync();
-    var loadedNames = new HashSet<string>(pluginManager.Plugins.Select(p => p.Name), StringComparer.OrdinalIgnoreCase);
-    var merged = new List<PluginRegistryEntry>();
-    foreach (var e in registryEntries)
+    try
     {
-        var entry = new PluginRegistryEntry
-        {
-            Name = e.Name,
-            Version = e.Version,
-            Enabled = e.Enabled,
-            Status = e.Enabled && loadedNames.Contains(e.Name) ? "Active" : (e.Enabled ? "NotLoaded" : "Disabled")
-        };
-        if (loadedNames.Contains(e.Name))
-        {
-            var plugin = pluginManager.Plugins.First(p => p.Name.Equals(e.Name, StringComparison.OrdinalIgnoreCase));
-            entry.Commands = (await plugin.GetCommandsAsync()).ToArray();
-        }
-        merged.Add(entry);
+        var pluginManager = scope.ServiceProvider.GetRequiredService<PluginManager>();
+        await pluginManager.LoadAsync();
     }
-    return Results.Ok(merged);
-});
+    catch (Exception ex)
+    {
+        File.AppendAllText(logPath, $"[API] Plugin load failed: {ex.GetType().Name}: {ex.Message}{Environment.NewLine}");
+        File.AppendAllText(logPath, ex.StackTrace + Environment.NewLine);
+    }
+}
 app.MapPost("/plugins/{name}/toggle", async (IServiceProvider sp, string name, JsonNode body) =>
 {
     var registry = sp.GetRequiredService<IPluginRegistry>();
