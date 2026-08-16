@@ -1,6 +1,7 @@
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -9,6 +10,90 @@ namespace WindowsUpdateAndPackageManager.Infrastructure;
 public interface IMarketplaceClient
 {
     Task<IReadOnlyList<MarketplacePlugin>> SearchAsync(string query, CancellationToken cancellationToken = default);
+}
+
+public sealed class CompositeMarketplaceClient : IMarketplaceClient
+{
+    private readonly IMarketplaceClient _primary;
+    private readonly IMarketplaceClient _local;
+
+    public CompositeMarketplaceClient(IMarketplaceClient primary, IMarketplaceClient local)
+    {
+        _primary = primary;
+        _local = local;
+    }
+
+    public async Task<IReadOnlyList<MarketplacePlugin>> SearchAsync(string query, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var primary = await _primary.SearchAsync(query, cancellationToken).ConfigureAwait(false);
+            if (primary.Count > 0)
+                return primary;
+        }
+        catch
+        {
+            // fallback to local on primary failure
+        }
+
+        return await _local.SearchAsync(query, cancellationToken).ConfigureAwait(false);
+    }
+}
+
+public sealed class LocalMarketplaceClient : IMarketplaceClient
+{
+    private readonly string _marketplaceRoot;
+
+    public LocalMarketplaceClient(string rootPath)
+    {
+        _marketplaceRoot = Path.Combine(rootPath, ".wupm", "marketplace");
+    }
+
+    public Task<IReadOnlyList<MarketplacePlugin>> SearchAsync(string query, CancellationToken cancellationToken = default)
+    {
+        var results = new List<MarketplacePlugin>();
+        if (!Directory.Exists(_marketplaceRoot))
+            return Task.FromResult<IReadOnlyList<MarketplacePlugin>>(results);
+
+        foreach (var file in Directory.EnumerateFiles(_marketplaceRoot, "*.json", SearchOption.TopDirectoryOnly))
+        {
+            try
+            {
+                var json = File.ReadAllText(file);
+                var node = JsonNode.Parse(json);
+                if (node is null) continue;
+
+                var id = node["id"]?.ToString() ?? Path.GetFileNameWithoutExtension(file);
+                var displayName = node["displayName"]?.ToString() ?? id;
+                var version = node["version"]?.ToString() ?? "0.0.0";
+                var deps = node["dependencies"]?.ToString();
+                var dl = node["downloadCount"]?.GetValue<int?>();
+
+                if (!string.IsNullOrWhiteSpace(query))
+                {
+                    var q = query.Trim();
+                    if (!id.Contains(q, StringComparison.OrdinalIgnoreCase) &&
+                        !displayName.Contains(q, StringComparison.OrdinalIgnoreCase))
+                        continue;
+                }
+
+                results.Add(new MarketplacePlugin
+                {
+                    Id = id,
+                    DisplayName = displayName,
+                    Version = version,
+                    Dependencies = deps,
+                    DownloadCount = dl
+                });
+            }
+            catch
+            {
+                // skip bad manifests
+            }
+        }
+
+        return Task.FromResult<IReadOnlyList<MarketplacePlugin>>(results);
+    }
 }
 
 public sealed class MarketplacePlugin

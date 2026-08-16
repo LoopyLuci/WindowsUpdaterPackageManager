@@ -51,12 +51,19 @@ public static class Composition
         services.AddSingleton<IPackageDeltaProvider, PackageDeltaProvider>();
         var pluginRoot = Path.Combine(dataRoot, "plugins");
         Directory.CreateDirectory(pluginRoot);
+        var marketplaceRoot = Path.Combine(dataRoot, "marketplace");
+        Directory.CreateDirectory(marketplaceRoot);
         services.AddSingleton(sp => new PluginManager(pluginRoot));
         services.AddSingleton(sp => sp.GetRequiredService<PluginManager>());
         services.AddSingleton<IPluginRegistry>(sp => new FilePluginRegistry(dataRoot));
         services.AddSingleton<IPluginVerifier>(sp => new DefaultPluginVerifier(sp.GetRequiredService<IPluginRegistry>()));
         services.AddSingleton<IMarketplaceAuthService>(sp => new FileMarketplaceAuthService(dataRoot));
-        services.AddSingleton<IMarketplaceClient>(sp => new GitHubMarketplaceClient(new HttpClient(), "https://github.com/LoopyLuci/WindowsUpdatePackageManager-plugins", sp.GetRequiredService<IMarketplaceAuthService>().GetTokenAsync().GetAwaiter().GetResult()));
+        services.AddSingleton<IMarketplaceClient>(sp =>
+        {
+            var primary = new GitHubMarketplaceClient(new HttpClient(), "https://github.com/LoopyLuci/WindowsUpdatePackageManager-plugins", sp.GetRequiredService<IMarketplaceAuthService>().GetTokenAsync().GetAwaiter().GetResult());
+            var local = new LocalMarketplaceClient(dataRoot);
+            return new CompositeMarketplaceClient(primary, local);
+        });
         services.AddSingleton<IMarketplaceSearchCache>(sp => new FileMarketplaceSearchCache(cacheRoot));
         services.AddSingleton<IRegistrySyncService>(sp => new GitHubRegistrySyncService(sp.GetRequiredService<IPluginRegistry>(), "LoopyLuci/WindowsUpdateAndPackageManager", sp.GetRequiredService<IMarketplaceAuthService>().GetTokenAsync().GetAwaiter().GetResult()));
         services.AddSingleton<IUpdateNotificationService>(sp => new UpdateNotificationService(sp.GetRequiredService<IRepoSync>()));
