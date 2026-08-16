@@ -21,6 +21,19 @@ Composition.RegisterInto(builder.Services, builder.Environment.ContentRootPath);
 
 var app = builder.Build();
 
+await using (var scope = app.Services.CreateAsyncScope())
+{
+    try
+    {
+        var pluginManager = scope.ServiceProvider.GetRequiredService<PluginManager>();
+        await pluginManager.LoadAsync();
+    }
+    catch (Exception ex)
+    {
+        Log.Error(ex, "Plugin load failed");
+    }
+}
+
 app.MapGet("/", () => Results.Ok(new { status = "ok", name = "wupm-api" }));
 app.MapGet("/health", () => Results.Ok(new { status = "ok", name = "wupm-api" }));
 
@@ -200,8 +213,18 @@ app.MapPost("/cache/prune", async (IServiceProvider sp) =>
 app.MapGet("/plugins", async (IServiceProvider sp) =>
 {
     var registry = sp.GetRequiredService<IPluginRegistry>();
-    var entries = await registry.ListAsync();
-    return Results.Ok(entries);
+    var pluginManager = sp.GetRequiredService<PluginManager>();
+    var registryEntries = await registry.ListAsync();
+    var loadedNames = new HashSet<string>(pluginManager.Plugins.Select(p => p.Name), StringComparer.OrdinalIgnoreCase);
+    var merged = registryEntries.Select(e => new PluginRegistryEntry
+    {
+        Name = e.Name,
+        Version = e.Version,
+        Enabled = e.Enabled,
+        Commands = loadedNames.Contains(e.Name) ? pluginManager.Plugins.First(p => p.Name.Equals(e.Name, StringComparison.OrdinalIgnoreCase)).GetCommandsAsync().GetAwaiter().GetResult().ToArray() : Array.Empty<string>(),
+        Status = e.Enabled && loadedNames.Contains(e.Name) ? "Active" : (e.Enabled ? "NotLoaded" : "Disabled")
+    }).ToList();
+    return Results.Ok(merged);
 });
 
 app.MapPost("/plugins/{name}/toggle", async (IServiceProvider sp, string name, JsonNode body) =>

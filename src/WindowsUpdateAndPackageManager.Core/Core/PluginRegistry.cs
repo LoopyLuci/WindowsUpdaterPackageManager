@@ -10,6 +10,8 @@ public sealed class PluginRegistryEntry
     public string Path { get; set; } = string.Empty;
     public bool Enabled { get; set; }
     public string Dependencies { get; set; } = string.Empty;
+    public string[] Commands { get; set; } = Array.Empty<string>();
+    public string Status { get; set; } = "Unknown";
 }
 
 public interface IPluginRegistry
