@@ -219,10 +219,11 @@ app.MapPost("/plugins/{name}/execute", async (IServiceProvider sp, string name, 
         return Results.Problem(ex.Message);
     }
 });
-app.MapGet("/plugins", (HttpContext ctx) =>
+app.MapGet("/plugins", async (IServiceProvider sp) =>
 {
-    ctx.Response.ContentType = "application/json";
-    return ctx.Response.WriteAsync("[]");
+    var pluginManager = sp.GetRequiredService<PluginManager>();
+    var result = pluginManager.Plugins.Select(p => new { p.Name, p.Description, Commands = new string[0] });
+    return Results.Ok(result);
 });
 
 try
