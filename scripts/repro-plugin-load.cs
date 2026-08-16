@@ -10,7 +10,7 @@ class Repro
 {
     static async Task Main()
     {
-        var pluginsRoot = Path.Combine(Directory.GetCurrentDirectory(), ".wupm", "plugins");
+        var pluginsRoot = @"D:\Projects\WindowsUpdatePackageManager\publish\sample-plugin";
         Console.WriteLine($"pluginsRoot={pluginsRoot}");
         if (!Directory.Exists(pluginsRoot))
         {
@@ -18,7 +18,7 @@ class Repro
             return;
         }
 
-        foreach (var file in Directory.EnumerateFiles(pluginsRoot, "*.dll", SearchOption.TopDirectoryOnly))
+        foreach (var file in Directory.EnumerateFiles(pluginsRoot, "SamplePlugin.dll", SearchOption.TopDirectoryOnly))
         {
             Console.WriteLine($"found dll={file}");
             try

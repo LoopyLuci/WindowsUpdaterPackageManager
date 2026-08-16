@@ -8,6 +8,26 @@ public sealed class PluginManager
     private readonly List<IPlugin> _plugins = new();
     private readonly string _pluginsRoot;
 
+    static PluginManager()
+    {
+        AssemblyLoadContext.Default.Resolving += (context, name) =>
+        {
+            try
+            {
+                var assemblyName = name.Name ?? string.Empty;
+                var simpleName = new AssemblyName(assemblyName).Name;
+                if (string.IsNullOrWhiteSpace(simpleName)) return null;
+                var candidate = Path.Combine(AppContext.BaseDirectory, $"{simpleName}.dll");
+                if (File.Exists(candidate)) return context.LoadFromAssemblyPath(candidate);
+            }
+            catch
+            {
+                // ignore resolution failures
+            }
+            return null;
+        };
+    }
+
     public PluginManager(string pluginsRoot)
     {
         _pluginsRoot = pluginsRoot;
