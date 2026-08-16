@@ -21,11 +21,12 @@ public sealed class MultiPackageIntegrationTests
         var root = Path.Combine(Path.GetTempPath(), "wupm-integration-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
 
+        IServiceProvider? provider = null;
         try
         {
             var services = new Microsoft.Extensions.DependencyInjection.ServiceCollection();
             WindowsUpdateAndPackageManager.Commands.Composition.RegisterInto(services, root, "https://github.com/LoopyLuci/WindowsUpdateAndPackageManager");
-            var provider = services.BuildServiceProvider();
+            provider = services.BuildServiceProvider();
 
             var package = new PackageManifest { Id = "pkg-integration", Version = "1.2.3", DisplayName = "Integration Package" };
 
