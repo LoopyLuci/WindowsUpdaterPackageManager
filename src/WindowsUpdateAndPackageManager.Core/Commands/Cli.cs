@@ -3,6 +3,10 @@ using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Net;
+using System.Net.Http;
+using System.Security.Cryptography;
+using System.Text.Json;
 using System.Threading.Tasks;
 using System.CommandLine;
 using System.CommandLine.Invocation;
@@ -500,6 +504,135 @@ public static class Cli
         cache.AddCommand(cacheInvalidate);
 
         root.AddCommand(cache);
+
+        var update = new Command("update", "Push or pull properly organized/tagged updates by Windows version");
+        var repoOptionUpdate = new Option<string?>("--repo") { Arity = ArgumentArity.ZeroOrOne };
+        update.AddGlobalOption(repoOptionUpdate);
+
+        var push = new Command("push", "Push an update release with tag and manifest");
+        push.AddOption(new Option<string?>("--source") { Arity = ArgumentArity.ExactlyOne });
+        push.AddOption(new Option<string?>("--id") { Arity = ArgumentArity.ExactlyOne });
+        push.AddOption(new Option<string?>("--version") { Arity = ArgumentArity.ExactlyOne });
+        push.AddOption(new Option<string?>("--for") { Arity = ArgumentArity.ExactlyOne });
+        push.AddOption(new Option<string?>("--channel") { Arity = ArgumentArity.ZeroOrOne });
+        push.AddOption(new Option<string?>("--token") { Arity = ArgumentArity.ZeroOrOne });
+        push.SetHandler(async ctx => await HandleUpdatePushAsync(ctx));
+        update.AddCommand(push);
+
+        var pull = new Command("pull", "Pull updates for this Windows version/build");
+        pull.AddOption(repoOptionUpdate);
+        pull.AddOption(new Option<string?>("--for") { Arity = ArgumentArity.ZeroOrOne });
+        pull.AddOption(new Option<string?>("--channel") { Arity = ArgumentArity.ZeroOrOne });
+        pull.SetHandler(ctx => HandleUpdatePullAsync(ctx));
+        update.AddCommand(pull);
+
+        root.AddCommand(update);
+
+        async Task HandleUpdatePushAsync(InvocationContext ctx)
+        {
+            try
+            {
+                var repo = ctx.ParseResult.GetValueForOption(repoOptionUpdate);
+                var source = ctx.ParseResult.GetValueForOption(new Option<string?>("--source"));
+                var id = ctx.ParseResult.GetValueForOption(new Option<string?>("--id"));
+                var version = ctx.ParseResult.GetValueForOption(new Option<string?>("--version"));
+                var forVersion = ctx.ParseResult.GetValueForOption(new Option<string?>("--for"));
+                var channel = ctx.ParseResult.GetValueForOption(new Option<string?>("--channel"));
+                var token = ctx.ParseResult.GetValueForOption(new Option<string?>("--token"));
+                var effectiveRepo = string.IsNullOrWhiteSpace(repo) ? "https://github.com/LoopyLuci/WindowsUpdatePackageManager" : repo;
+                if (string.IsNullOrWhiteSpace(source) || string.IsNullOrWhiteSpace(id) || string.IsNullOrWhiteSpace(version) || string.IsNullOrWhiteSpace(forVersion))
+                {
+                    Console.WriteLine("update push requires --source, --id, --version, and --for.");
+                    return;
+                }
+
+                if (!File.Exists(source))
+                {
+                    Console.WriteLine($"Source not found: {source}");
+                    return;
+                }
+
+                var segments = new Uri(effectiveRepo).Segments.Select(x => x.TrimEnd('/')).Where(x => !string.IsNullOrWhiteSpace(x)).ToArray();
+                var owner = segments.Length >= 2 ? segments[^2] : "owner";
+                var repoName = segments.Length >= 2 ? segments[^1] : "repo";
+                var http = new HttpClient();
+                await using var stream = File.OpenRead(source);
+                using var sha = SHA256.Create();
+                var hash = sha.ComputeHash(stream);
+                var sha256 = Convert.ToHexString(hash).ToLowerInvariant();
+                var publisher = new GitHubReleasePublisher(http);
+                var tag = $"updates/{id}/{version}";
+                var title = $"{id} {version} for {forVersion} ({channel ?? "stable"})";
+                var release = await publisher.CreateReleaseAsync(owner, repoName, tag, title, token);
+                if (release is null)
+                {
+                    Console.WriteLine("Release creation failed.");
+                    return;
+                }
+
+                var asset = await publisher.UploadAssetAsync(owner, repoName, release.Id, source, token);
+                if (asset is null)
+                {
+                    Console.WriteLine("Asset upload failed.");
+                    return;
+                }
+
+                var manifest = new UpdateManifest(forVersion, "x64", id, version, sha256, asset.BrowserDownloadUrl, DateTimeOffset.UtcNow, channel ?? "stable")
+                {
+                    Channels = new List<string> { channel ?? "stable" }
+                };
+
+                var body = JsonSerializer.Serialize(manifest, new JsonSerializerOptions { WriteIndented = true });
+                using var updateReq = new HttpRequestMessage(HttpMethod.Patch, $"https://api.github.com/repos/{owner}/{repoName}/releases/{release.Id}");
+                updateReq.Headers.Accept.Add(new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/vnd.github+json"));
+                updateReq.Headers.UserAgent.Add(new System.Net.Http.Headers.ProductInfoHeaderValue("wupm", "1.0"));
+                if (!string.IsNullOrWhiteSpace(token))
+                {
+                    updateReq.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+                }
+                updateReq.Content = new StringContent(JsonSerializer.Serialize(new { body }), System.Text.Encoding.UTF8, "application/json");
+                using var updateResp = await http.SendAsync(updateReq);
+                updateResp.EnsureSuccessStatusCode();
+
+                Console.WriteLine($"Pushed {id}@{version} for {forVersion} to {effectiveRepo}.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Push failed: {ex.Message}");
+            }
+        }
+
+        async Task HandleUpdatePullAsync(InvocationContext ctx)
+        {
+            try
+            {
+                var repo = ctx.ParseResult.GetValueForOption(repoOptionUpdate);
+                var forVersion = ctx.ParseResult.GetValueForOption(new Option<string?>("--for"));
+                var channel = ctx.ParseResult.GetValueForOption(new Option<string?>("--channel"));
+                var effectiveRepo = string.IsNullOrWhiteSpace(repo) ? "https://github.com/LoopyLuci/WindowsUpdatePackageManager" : repo;
+                var segments = new Uri(effectiveRepo).Segments.Select(x => x.TrimEnd('/')).Where(x => !string.IsNullOrWhiteSpace(x)).ToArray();
+                var owner = segments.Length >= 2 ? segments[^2] : "owner";
+                var repoName = segments.Length >= 2 ? segments[^1] : "repo";
+                var http = new HttpClient();
+                var client = new GitHubRepoClient(http, effectiveRepo);
+                var service = new UpdateDistributionService(client, new GitHubReleasePublisher(http), owner, repoName);
+                var updates = service.PullUpdatesAsync(forVersion, architecture: "x64", channel, buildNumber: null).GetAwaiter().GetResult();
+                if (updates.Count == 0)
+                {
+                    Console.WriteLine("No matching updates.");
+                    return;
+                }
+
+                foreach (var u in updates)
+                {
+                    Console.WriteLine($"{u.PackageId}@{u.Version} | {u.WindowsVersion} | arch={u.Architecture} | channel={string.Join(",", u.Channels)} | sha256={u.Sha256} | source={u.SourceUrl}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Pull failed: {ex.Message}");
+            }
+        }
 
         var plugin = new Command("plugin", "Manage plugins");
         var pluginList = new Command("list", "List loaded plugins");
