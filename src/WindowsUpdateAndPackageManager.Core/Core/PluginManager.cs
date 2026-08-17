@@ -43,7 +43,7 @@ public sealed class PluginManager
             Assembly asm;
             try
             {
-                using var loadCts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+                using var loadCts = new CancellationTokenSource(GetLoadTimeout());
                 using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, loadCts.Token);
                 asm = await Task.Run(() => AssemblyLoadContext.Default.LoadFromAssemblyPath(file), linkedCts.Token).ConfigureAwait(false);
             }
@@ -59,7 +59,7 @@ public sealed class PluginManager
             Type[] types;
             try
             {
-                using var typeCts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+                using var typeCts = new CancellationTokenSource(GetLoadTimeout());
                 using var linkedTypeCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, typeCts.Token);
                 types = await Task.Run(() => asm.GetTypes(), linkedTypeCts.Token).ConfigureAwait(false);
             }
@@ -79,7 +79,7 @@ public sealed class PluginManager
             {
                 if (Activator.CreateInstance(pluginType) is IPlugin plugin)
                 {
-                    using var initCts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+                    using var initCts = new CancellationTokenSource(GetLoadTimeout());
                     using var linkedInitCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, initCts.Token);
                     await plugin.InitializeAsync(linkedInitCts.Token).ConfigureAwait(false);
                     _plugins.Add(plugin);
@@ -93,4 +93,14 @@ public sealed class PluginManager
     }
 
     public IReadOnlyList<IPlugin> Plugins => _plugins;
+
+    private static TimeSpan GetLoadTimeout()
+    {
+        var env = Environment.GetEnvironmentVariable("WUPM_PLUGIN_LOAD_TIMEOUT_SECONDS");
+        if (int.TryParse(env, out var seconds) && seconds > 0)
+        {
+            return TimeSpan.FromSeconds(seconds);
+        }
+        return TimeSpan.FromSeconds(10);
+    }
 }

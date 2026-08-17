@@ -25,8 +25,24 @@ WUPM can run as a Windows service via `sc.exe create` or `nssm install`. This do
 ## Plugin loading
 
 - `/plugins` returns plugin metadata from `PluginManager.Plugins`.
-- Plugin loading is timeout-protected (10s per plugin) to avoid startup hangs.
+- Plugin loading is timeout-protected by default to avoid startup hangs.
+  - Default per-plugin timeout: 10s.
+  - Override with `WUPM_PLUGIN_LOAD_TIMEOUT_SECONDS` if a plugin needs longer initialization.
 - Plugin assembly resolution falls back to `AppContext.BaseDirectory` for dependencies.
+
+## Plugin execution
+
+- `IPlugin.ExecuteAsync(command, args)` is the standard execution contract.
+- `/plugins/{name}/execute` accepts `{ "command": "...", "args": "..." }` and returns `{ command, args, output }`.
+- Plugins should return `null` for unknown commands and throw only for unrecoverable errors.
+
+## Conditional API tests
+
+- Live endpoint tests in `WupmApiEndpointTests` are skipped by default.
+- Run them only when:
+  - `WUPM_API_TESTS=1`
+  - port 5002 is available for binding
+- Example: `WUPM_API_TESTS=1 dotnet test -c Release --filter "FullyQualifiedName~WupmApiEndpointTests"`
 
 ## Non-admin fallback
 
@@ -41,4 +57,5 @@ WUPM can run as a Windows service via `sc.exe create` or `nssm install`. This do
   - MCP HTTP: 5000
   - GUI control: 5003
   - WupmApi: 5002
-- **Plugin load timeout**: check `AppContext.BaseDirectory/plugins-debug.log` for plugin initialization errors.
+- **Plugin load timeout**: if plugins timeout at 10s, set `WUPM_PLUGIN_LOAD_TIMEOUT_SECONDS` to a higher value.
+- **Accidental publish artifacts in git**: `.gitignore` ignores `publish/` and common zip outputs; remove any accidentally committed archives before push.

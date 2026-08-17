@@ -252,6 +252,8 @@ tests/**/TestResults/
 test-results/
 wupm-cli.zip
 wupm-api.zip
+wupm-api-publish.zip
+wupm-cli-publish.zip
 sbom.json
 **/obj/
 scripts/deploy/winget/winget-pkgs/**/*.yaml

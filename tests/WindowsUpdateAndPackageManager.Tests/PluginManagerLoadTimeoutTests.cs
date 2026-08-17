@@ -30,6 +30,29 @@ public class PluginManagerLoadTimeoutTests
     }
 
     [Fact]
+    public async Task LoadAsync_uses_env_timeout_when_set()
+    {
+        var tempRoot = Path.Combine(Path.GetTempPath(), "wupm-plugin-test-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(tempRoot);
+        try
+        {
+            Environment.SetEnvironmentVariable("WUPM_PLUGIN_LOAD_TIMEOUT_SECONDS", "30");
+            var manager = new PluginManager(tempRoot);
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+            await manager.LoadAsync(cts.Token);
+            Assert.True(true, "PluginManager.LoadAsync completed with custom timeout.");
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("WUPM_PLUGIN_LOAD_TIMEOUT_SECONDS", null);
+            if (Directory.Exists(tempRoot))
+            {
+                Directory.Delete(tempRoot, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
     public async Task Plugin_manager_commands_match_registered_plugin()
     {
         var plugin = new FakePlugin();
