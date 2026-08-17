@@ -516,6 +516,8 @@ public static class Cli
         push.AddOption(new Option<string?>("--for") { Arity = ArgumentArity.ExactlyOne });
         push.AddOption(new Option<string?>("--channel") { Arity = ArgumentArity.ZeroOrOne });
         push.AddOption(new Option<string?>("--token") { Arity = ArgumentArity.ZeroOrOne });
+        push.AddOption(new Option<string?>("--build-number") { Arity = ArgumentArity.ZeroOrOne });
+        push.AddOption(new Option<string?>("--display-name") { Arity = ArgumentArity.ZeroOrOne });
         push.SetHandler(async ctx => await HandleUpdatePushAsync(ctx));
         update.AddCommand(push);
 
@@ -523,6 +525,7 @@ public static class Cli
         pull.AddOption(repoOptionUpdate);
         pull.AddOption(new Option<string?>("--for") { Arity = ArgumentArity.ZeroOrOne });
         pull.AddOption(new Option<string?>("--channel") { Arity = ArgumentArity.ZeroOrOne });
+        pull.AddOption(new Option<string?>("--build-number") { Arity = ArgumentArity.ZeroOrOne });
         pull.SetHandler(ctx => HandleUpdatePullAsync(ctx));
         update.AddCommand(pull);
 
@@ -539,6 +542,8 @@ public static class Cli
                 var forVersion = ctx.ParseResult.GetValueForOption(new Option<string?>("--for"));
                 var channel = ctx.ParseResult.GetValueForOption(new Option<string?>("--channel"));
                 var token = ctx.ParseResult.GetValueForOption(new Option<string?>("--token"));
+                var buildNumber = ctx.ParseResult.GetValueForOption(new Option<string?>("--build-number"));
+                var displayName = ctx.ParseResult.GetValueForOption(new Option<string?>("--display-name"));
                 var effectiveRepo = string.IsNullOrWhiteSpace(repo) ? "https://github.com/LoopyLuci/WindowsUpdatePackageManager" : repo;
                 if (string.IsNullOrWhiteSpace(source) || string.IsNullOrWhiteSpace(id) || string.IsNullOrWhiteSpace(version) || string.IsNullOrWhiteSpace(forVersion))
                 {
@@ -561,38 +566,13 @@ public static class Cli
                 var hash = sha.ComputeHash(stream);
                 var sha256 = Convert.ToHexString(hash).ToLowerInvariant();
                 var publisher = new GitHubReleasePublisher(http);
-                var tag = $"updates/{id}/{version}";
-                var title = $"{id} {version} for {forVersion} ({channel ?? "stable"})";
-                var release = await publisher.CreateReleaseAsync(owner, repoName, tag, title, token);
-                if (release is null)
+                var service = new UpdateDistributionService(null, publisher, owner, repoName, token);
+                var success = await service.PushUpdateAsync(source, id, version, forVersion, "x64", channel ?? "stable", buildNumber, false, displayName);
+                if (!success)
                 {
-                    Console.WriteLine("Release creation failed.");
+                    Console.WriteLine("Push failed.");
                     return;
                 }
-
-                var asset = await publisher.UploadAssetAsync(owner, repoName, release.Id, source, token);
-                if (asset is null)
-                {
-                    Console.WriteLine("Asset upload failed.");
-                    return;
-                }
-
-                var manifest = new UpdateManifest(forVersion, "x64", id, version, sha256, asset.BrowserDownloadUrl, DateTimeOffset.UtcNow, channel ?? "stable")
-                {
-                    Channels = new List<string> { channel ?? "stable" }
-                };
-
-                var body = JsonSerializer.Serialize(manifest, new JsonSerializerOptions { WriteIndented = true });
-                using var updateReq = new HttpRequestMessage(HttpMethod.Patch, $"https://api.github.com/repos/{owner}/{repoName}/releases/{release.Id}");
-                updateReq.Headers.Accept.Add(new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/vnd.github+json"));
-                updateReq.Headers.UserAgent.Add(new System.Net.Http.Headers.ProductInfoHeaderValue("wupm", "1.0"));
-                if (!string.IsNullOrWhiteSpace(token))
-                {
-                    updateReq.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
-                }
-                updateReq.Content = new StringContent(JsonSerializer.Serialize(new { body }), System.Text.Encoding.UTF8, "application/json");
-                using var updateResp = await http.SendAsync(updateReq);
-                updateResp.EnsureSuccessStatusCode();
 
                 Console.WriteLine($"Pushed {id}@{version} for {forVersion} to {effectiveRepo}.");
             }
@@ -609,6 +589,7 @@ public static class Cli
                 var repo = ctx.ParseResult.GetValueForOption(repoOptionUpdate);
                 var forVersion = ctx.ParseResult.GetValueForOption(new Option<string?>("--for"));
                 var channel = ctx.ParseResult.GetValueForOption(new Option<string?>("--channel"));
+                var buildNumber = ctx.ParseResult.GetValueForOption(new Option<string?>("--build-number"));
                 var effectiveRepo = string.IsNullOrWhiteSpace(repo) ? "https://github.com/LoopyLuci/WindowsUpdatePackageManager" : repo;
                 var segments = new Uri(effectiveRepo).Segments.Select(x => x.TrimEnd('/')).Where(x => !string.IsNullOrWhiteSpace(x)).ToArray();
                 var owner = segments.Length >= 2 ? segments[^2] : "owner";
@@ -616,7 +597,7 @@ public static class Cli
                 var http = new HttpClient();
                 var client = new GitHubRepoClient(http, effectiveRepo);
                 var service = new UpdateDistributionService(client, new GitHubReleasePublisher(http), owner, repoName);
-                var updates = service.PullUpdatesAsync(forVersion, architecture: "x64", channel, buildNumber: null).GetAwaiter().GetResult();
+                var updates = await service.PullUpdatesAsync(forVersion, architecture: "x64", channel, buildNumber).ConfigureAwait(false);
                 if (updates.Count == 0)
                 {
                     Console.WriteLine("No matching updates.");
@@ -625,7 +606,8 @@ public static class Cli
 
                 foreach (var u in updates)
                 {
-                    Console.WriteLine($"{u.PackageId}@{u.Version} | {u.WindowsVersion} | arch={u.Architecture} | channel={string.Join(",", u.Channels)} | sha256={u.Sha256} | source={u.SourceUrl}");
+                    var name = string.IsNullOrWhiteSpace(u.DisplayName) ? u.PackageId : u.DisplayName;
+                    Console.WriteLine($"{name}@{u.Version} | {u.WindowsVersion} | build={u.BuildNumber ?? "-"} | channel={string.Join(",", u.Channels)} | sha256={u.Sha256} | source={u.SourceUrl}");
                 }
             }
             catch (Exception ex)

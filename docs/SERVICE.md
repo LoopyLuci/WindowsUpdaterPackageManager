@@ -65,6 +65,14 @@ WUPM can run as a Windows service via `sc.exe create` or `nssm install`. This do
 - The root cause is the same environment-specific ASP.NET Core test-host issue that required removing `WupmApiTests`.
 - Workaround: validate `/plugins/{name}/execute` on a machine where the API can bind to port 5002, or rely on the existing plugin execution contract tests.
 
+## Update distribution
+
+- Repo layout uses GitHub release tags: `updates/{packageId}/{version}`.
+- The release body is the manifest JSON. Assets are the packaged binaries.
+- `wupm update push --source <pkg> --id <id> --version <ver> --for <winVer> --token <token>`
+- `wupm update pull --for <winVer> --channel stable`
+- Push validates SHA256 and writes `UpdateManifest` with `WindowsVersion`, `Architecture`, `PackageId`, `Version`, `Sha256`, `SourceUrl`, `PublishedAt`, and `Channels`.
+
 ## Troubleshooting
 
 - **Access denied**: rerun GUI/MCP/API from an elevated shell.

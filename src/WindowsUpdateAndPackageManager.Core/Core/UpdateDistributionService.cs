@@ -7,14 +7,14 @@ namespace WindowsUpdateAndPackageManager.Core;
 
 public sealed class UpdateDistributionService
 {
-    private readonly IRepoClient _repoClient;
+    private readonly IRepoClient? _repoClient;
     private readonly GitHubReleasePublisher _publisher;
     private readonly string _owner;
     private readonly string _repo;
     private readonly string? _token;
     private readonly HttpClient _http;
 
-    public UpdateDistributionService(IRepoClient repoClient, GitHubReleasePublisher publisher, string owner, string repo, string? token = null)
+    public UpdateDistributionService(IRepoClient? repoClient, GitHubReleasePublisher publisher, string owner, string repo, string? token = null)
     {
         _repoClient = repoClient;
         _publisher = publisher;
@@ -52,7 +52,9 @@ public sealed class UpdateDistributionService
 
         var manifest = new UpdateManifest(windowsVersion, architecture, packageId, version, sha256, asset.BrowserDownloadUrl, DateTimeOffset.UtcNow, channel)
         {
-            Channels = new List<string> { channel }
+            Channels = new List<string> { channel },
+            BuildNumber = buildNumber,
+            DisplayName = displayName
         };
 
         var body = JsonSerializer.Serialize(manifest, new JsonSerializerOptions { WriteIndented = true });
@@ -74,12 +76,17 @@ public sealed class UpdateDistributionService
         return true;
     }
 
-    public async Task<IReadOnlyList<UpdateManifest>> PullUpdatesAsync(string? windowsVersion = null, string? architecture = null, string? channel = null, string? buildNumber = null, CancellationToken cancellationToken = default)
+    public async Task<List<UpdateManifest>> PullUpdatesAsync(string? windowsVersion, string? architecture = null, string? channel = null, string? buildNumber = null, CancellationToken cancellationToken = default)
     {
+        if (_repoClient is null)
+        {
+            return new List<UpdateManifest>();
+        }
+
         var raw = await _repoClient.GetLatestReleaseAsync(string.Empty, cancellationToken).ConfigureAwait(false);
         if (string.IsNullOrWhiteSpace(raw))
         {
-            return Array.Empty<UpdateManifest>();
+            return new List<UpdateManifest>();
         }
 
         JsonNode? node;
@@ -89,39 +96,44 @@ public sealed class UpdateDistributionService
         }
         catch
         {
-            return Array.Empty<UpdateManifest>();
+            return new List<UpdateManifest>();
         }
 
         if (node is not JsonObject root || !root.TryGetPropertyValue("body", out var bodyNode) || bodyNode is not JsonValue)
         {
-            return Array.Empty<UpdateManifest>();
+            return new List<UpdateManifest>();
         }
 
         var body = bodyNode.AsValue().GetValue<string>();
         if (string.IsNullOrWhiteSpace(body))
         {
-            return Array.Empty<UpdateManifest>();
+            return new List<UpdateManifest>();
         }
 
         var manifest = TryParseManifest(body);
         if (manifest is null)
         {
-            return Array.Empty<UpdateManifest>();
+            return new List<UpdateManifest>();
         }
 
         if (!string.IsNullOrWhiteSpace(windowsVersion) && !string.Equals(manifest.WindowsVersion, windowsVersion, StringComparison.OrdinalIgnoreCase))
         {
-            return Array.Empty<UpdateManifest>();
+            return new List<UpdateManifest>();
         }
 
         if (!string.IsNullOrWhiteSpace(architecture) && !string.Equals(manifest.Architecture, architecture, StringComparison.OrdinalIgnoreCase))
         {
-            return Array.Empty<UpdateManifest>();
+            return new List<UpdateManifest>();
         }
 
         if (!string.IsNullOrWhiteSpace(channel) && !manifest.Channels.Contains(channel, StringComparer.OrdinalIgnoreCase))
         {
-            return Array.Empty<UpdateManifest>();
+            return new List<UpdateManifest>();
+        }
+
+        if (!string.IsNullOrWhiteSpace(buildNumber) && !string.Equals(manifest.BuildNumber, buildNumber, StringComparison.OrdinalIgnoreCase))
+        {
+            return new List<UpdateManifest>();
         }
 
         return new List<UpdateManifest> { manifest };
