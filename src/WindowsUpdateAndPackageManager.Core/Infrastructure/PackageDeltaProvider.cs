@@ -40,6 +40,7 @@ public sealed class PackageDeltaProvider : IPackageDeltaProvider
             : File.Create(partialPath);
         await sourceStream.CopyToAsync(target, cancellationToken).ConfigureAwait(false);
         await target.FlushAsync().ConfigureAwait(false);
+        await target.DisposeAsync().ConfigureAwait(false);
 
         Progress?.Invoke($"Applying delta for {packageId} ...");
         File.Move(partialPath, targetPath, overwrite: true);
@@ -49,6 +50,7 @@ public sealed class PackageDeltaProvider : IPackageDeltaProvider
         await using var hashStream = File.OpenRead(targetPath);
         var hash = sha.ComputeHash(hashStream);
         var actualHash = Convert.ToHexString(hash).ToLowerInvariant();
+        await hashStream.DisposeAsync().ConfigureAwait(false);
         if (!string.Equals(actualHash, delta.DeltaHash, StringComparison.OrdinalIgnoreCase))
         {
             File.Delete(targetPath);
