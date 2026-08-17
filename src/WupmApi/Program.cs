@@ -211,7 +211,7 @@ app.MapPost("/plugins/{name}/execute", async (IServiceProvider sp, string name, 
 
     try
     {
-        var output = $"Executed {command} on {name}";
+        var output = await plugin.ExecuteAsync(command, args);
         return Results.Ok(new { name, command, args, output });
     }
     catch (Exception ex)
