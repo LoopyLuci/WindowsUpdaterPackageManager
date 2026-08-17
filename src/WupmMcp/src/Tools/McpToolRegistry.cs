@@ -21,6 +21,7 @@ public sealed class McpToolRegistry
             ["cache_list"] = new CacheListTool(_api),
             ["cache_prune"] = new CachePruneTool(_api),
             ["plugins_list"] = new PluginsListTool(_api),
+            ["plugins_execute"] = new PluginsExecuteTool(_api),
             ["marketplace_search"] = new MarketplaceSearchTool(_api),
             ["gui_status"] = new GuiStatusTool(),
             ["gui_tab"] = new GuiTabTool(),

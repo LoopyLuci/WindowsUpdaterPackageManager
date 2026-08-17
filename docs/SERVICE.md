@@ -49,6 +49,15 @@ WUPM can run as a Windows service via `sc.exe create` or `nssm install`. This do
 - Cache prune, marketplace search, audit history, plugin toggle, and `/plugins` do **not** require admin.
 - Service install/uninstall buttons in Settings are disabled when elevation is missing.
 
+## GUI plugin execution
+
+- The Plugins tab exposes:
+  - **Toggle Selected** — enable/disable a plugin via `/plugins/{name}/toggle`
+  - **Execute Selected** — run a plugin command via `/plugins/{name}/execute` and shows the result in `StatusMessage`
+- Input/output shape:
+  - request: `{ "command": "hello", "args": "" }`
+  - response: `{ "command": "hello", "args": "", "output": "..." }`
+
 ## Troubleshooting
 
 - **Access denied**: rerun GUI/MCP/API from an elevated shell.
