@@ -18,5 +18,15 @@ namespace SamplePlugin
         {
             return Task.FromResult<IReadOnlyList<string>>(new[] { "hello", "status" });
         }
+
+        public Task<string?> ExecuteAsync(string command, string args, CancellationToken cancellationToken = default)
+        {
+            return command switch
+            {
+                "hello" => Task.FromResult<string?>("Hello from SamplePlugin!"),
+                "status" => Task.FromResult<string?>("SamplePlugin is running."),
+                _ => Task.FromResult<string?>(null)
+            };
+        }
     }
 }

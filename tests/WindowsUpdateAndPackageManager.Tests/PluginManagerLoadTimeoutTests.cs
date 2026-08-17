@@ -41,6 +41,23 @@ public class PluginManagerLoadTimeoutTests
         Assert.Equal(new[] { "help", "run" }, commands);
     }
 
+    [Fact]
+    public async Task Fake_plugin_execute_returns_expected_result()
+    {
+        var plugin = new FakePlugin();
+        var commands = await plugin.GetCommandsAsync();
+        Assert.Equal(2, commands.Count);
+
+        Assert.Equal("help", commands[0]);
+        Assert.Equal("run", commands[1]);
+
+        var helpResult = await plugin.ExecuteAsync("help", string.Empty);
+        Assert.Equal("Usage: help|run", helpResult);
+
+        var unknownResult = await plugin.ExecuteAsync("run", string.Empty);
+        Assert.Null(unknownResult);
+    }
+
     private sealed class FakePlugin : IPlugin
     {
         public string Name => "Fake";
@@ -48,5 +65,7 @@ public class PluginManagerLoadTimeoutTests
         public Task InitializeAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
         public Task<IReadOnlyList<string>> GetCommandsAsync(CancellationToken cancellationToken = default)
             => Task.FromResult<IReadOnlyList<string>>(new[] { "help", "run" });
+        public Task<string?> ExecuteAsync(string command, string args, CancellationToken cancellationToken = default)
+            => Task.FromResult<string?>(command == "help" ? "Usage: help|run" : null);
     }
 }
