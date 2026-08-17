@@ -58,6 +58,13 @@ WUPM can run as a Windows service via `sc.exe create` or `nssm install`. This do
   - request: `{ "command": "hello", "args": "" }`
   - response: `{ "command": "hello", "args": "", "output": "..." }`
 
+## Known limitation: in-memory API route tests
+
+- `WupmApiEndpointTests` live tests are gated behind `WUPM_API_TESTS=1`.
+- In-memory route tests using `Microsoft.AspNetCore.Mvc.Testing`/`WebApplicationFactory` or bare `WebApplication` hang during startup in this environment.
+- The root cause is the same environment-specific ASP.NET Core test-host issue that required removing `WupmApiTests`.
+- Workaround: validate `/plugins/{name}/execute` on a machine where the API can bind to port 5002, or rely on the existing plugin execution contract tests.
+
 ## Troubleshooting
 
 - **Access denied**: rerun GUI/MCP/API from an elevated shell.
