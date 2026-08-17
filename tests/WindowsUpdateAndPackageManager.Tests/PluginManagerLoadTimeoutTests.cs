@@ -28,4 +28,25 @@ public class PluginManagerLoadTimeoutTests
             }
         }
     }
+
+    [Fact]
+    public async Task Plugin_manager_commands_match_registered_plugin()
+    {
+        var plugin = new FakePlugin();
+        var manager = new PluginManager(Path.Combine(Path.GetTempPath(), "does-not-exist"));
+        typeof(PluginManager).GetField("_plugins", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!
+            .SetValue(manager, new List<IPlugin> { plugin });
+
+        var commands = await manager.Plugins.Single().GetCommandsAsync();
+        Assert.Equal(new[] { "help", "run" }, commands);
+    }
+
+    private sealed class FakePlugin : IPlugin
+    {
+        public string Name => "Fake";
+        public string Version => "1.0";
+        public Task InitializeAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
+        public Task<IReadOnlyList<string>> GetCommandsAsync(CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<string>>(new[] { "help", "run" });
+    }
 }

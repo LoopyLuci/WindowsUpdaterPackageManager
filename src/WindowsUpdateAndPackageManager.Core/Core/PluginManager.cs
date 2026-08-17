@@ -40,9 +40,6 @@ public sealed class PluginManager
         var pluginFiles = Directory.EnumerateFiles(_pluginsRoot, "*.dll", SearchOption.TopDirectoryOnly).ToList();
         foreach (var file in pluginFiles)
         {
-            var logPath = Path.Combine(AppContext.BaseDirectory, "plugins-debug.log");
-            File.AppendAllText(logPath, $"[Plugin] Loading {file} at {DateTime.UtcNow:O}{Environment.NewLine}");
-
             Assembly asm;
             try
             {
@@ -52,16 +49,13 @@ public sealed class PluginManager
             }
             catch (OperationCanceledException)
             {
-                File.AppendAllText(logPath, $"[Plugin] LoadFromAssemblyPath timed out for {file} at {DateTime.UtcNow:O}{Environment.NewLine}");
                 continue;
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                File.AppendAllText(logPath, $"[Plugin] LoadFromAssemblyPath failed: {ex.GetType().Name}: {ex.Message} at {DateTime.UtcNow:O}{Environment.NewLine}");
                 continue;
             }
 
-            File.AppendAllText(logPath, $"[Plugin] Loaded assembly {asm.FullName} at {DateTime.UtcNow:O}{Environment.NewLine}");
             Type[] types;
             try
             {
@@ -71,34 +65,28 @@ public sealed class PluginManager
             }
             catch (OperationCanceledException)
             {
-                File.AppendAllText(logPath, $"[Plugin] GetTypes timed out for {file} at {DateTime.UtcNow:O}{Environment.NewLine}");
                 continue;
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                File.AppendAllText(logPath, $"[Plugin] GetTypes failed: {ex.GetType().Name}: {ex.Message} at {DateTime.UtcNow:O}{Environment.NewLine}");
                 continue;
             }
 
             var pluginType = types.FirstOrDefault(t => typeof(IPlugin).IsAssignableFrom(t) && !t.IsAbstract);
-            File.AppendAllText(logPath, $"[Plugin] Found plugin type: {pluginType?.FullName ?? "null"} at {DateTime.UtcNow:O}{Environment.NewLine}");
             if (pluginType is null) continue;
 
             try
             {
                 if (Activator.CreateInstance(pluginType) is IPlugin plugin)
                 {
-                    File.AppendAllText(logPath, $"[Plugin] Initializing {plugin.Name} at {DateTime.UtcNow:O}{Environment.NewLine}");
                     using var initCts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
                     using var linkedInitCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, initCts.Token);
                     await plugin.InitializeAsync(linkedInitCts.Token).ConfigureAwait(false);
-                    File.AppendAllText(logPath, $"[Plugin] Initialized {plugin.Name} at {DateTime.UtcNow:O}{Environment.NewLine}");
                     _plugins.Add(plugin);
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                File.AppendAllText(logPath, $"[Plugin] Init failed: {ex.GetType().Name}: {ex.Message} at {DateTime.UtcNow:O}{Environment.NewLine}");
                 continue;
             }
         }
