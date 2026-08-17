@@ -1804,24 +1804,48 @@ public static class Cli
         }, publishTagOption, publishChangelogOption, publishDryRunOption, publishTokenOption, repoOption);
         root.AddCommand(publish);
 
-        var selfUpdate = new Command("self-update", "Update WUPM to the latest GitHub release");
-        var selfUpdateTagOption = new Option<string>("--tag");
-        var selfUpdateTokenOption = new Option<string>("--token");
-        selfUpdate.AddOption(selfUpdateTagOption);
-        selfUpdate.AddOption(selfUpdateTokenOption);
-        selfUpdate.SetHandler<string?, string?>(async (tag, token) =>
+        var selfUpdate = new Command("self-update", "Self-update WUPM from GitHub release updates");
+        var selfUpdateRepoOption = new Option<string?>("--repo") { Arity = ArgumentArity.ZeroOrOne };
+        selfUpdate.AddOption(selfUpdateRepoOption);
+        selfUpdate.AddOption(new Option<string?>("--for") { Arity = ArgumentArity.ZeroOrOne });
+        selfUpdate.AddOption(new Option<string?>("--channel") { Arity = ArgumentArity.ZeroOrOne });
+        selfUpdate.SetHandler(async ctx =>
         {
             try
             {
-                var updater = new SelfUpdater(githubToken: token);
-                var started = await updater.SelfUpdateAsync(tag);
-                Console.WriteLine(started ? "Self-update started. The new version will launch shortly." : "Self-update failed.");
+                var repo = ctx.ParseResult.GetValueForOption(selfUpdateRepoOption);
+                var forVersion = ctx.ParseResult.GetValueForOption(new Option<string?>("--for"));
+                var channel = ctx.ParseResult.GetValueForOption(new Option<string?>("--channel"));
+                var effectiveRepo = string.IsNullOrWhiteSpace(repo) ? "https://github.com/LoopyLuci/WindowsUpdatePackageManager" : repo;
+                var segments = new Uri(effectiveRepo).Segments.Select(x => x.TrimEnd('/')).Where(x => !string.IsNullOrWhiteSpace(x)).ToArray();
+                var owner = segments.Length >= 2 ? segments[^2] : "owner";
+                var repoName = segments.Length >= 2 ? segments[^1] : "repo";
+                var http = new HttpClient();
+                var client = new GitHubRepoClient(http, effectiveRepo);
+                var service = new UpdateDistributionService(client, new GitHubReleasePublisher(http), owner, repoName);
+                var updates = await service.PullUpdatesAsync(forVersion, architecture: null, channel).ConfigureAwait(false);
+                if (updates.Count == 0)
+                {
+                    Console.WriteLine("No matching updates.");
+                    return;
+                }
+
+                var update = updates[0];
+                var tempPath = Path.Combine(Path.GetTempPath(), $"wupm-selfupdate-{Guid.NewGuid():N}.wupkg");
+                await using var stream = await client.DownloadPackageAsync(update.SourceUrl).ConfigureAwait(false);
+                await using var file = File.Create(tempPath);
+                await stream.CopyToAsync(file).ConfigureAwait(false);
+
+                var current = Environment.ProcessPath ?? AppContext.BaseDirectory;
+                var target = Path.Combine(Path.GetDirectoryName(current) ?? AppContext.BaseDirectory, "wupm-new.exe");
+                File.Copy(tempPath, target, overwrite: true);
+                Console.WriteLine($"Update staged at {target}. Restart to apply.");
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Self-update failed: {ex.Message}");
             }
-        }, selfUpdateTagOption, selfUpdateTokenOption);
+        });
         root.AddCommand(selfUpdate);
 
         var deltaUpdate = new Command("delta-update", "Apply a delta update for a package");

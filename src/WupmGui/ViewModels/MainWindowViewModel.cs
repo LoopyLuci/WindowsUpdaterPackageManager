@@ -14,6 +14,7 @@ public class MainWindowViewModel : ViewModelBase
     public PluginsViewModel Plugins { get; }
     public MarketplaceViewModel Marketplace { get; }
     public CacheViewModel Cache { get; }
+    public UpdatesViewModel Updates { get; }
     public SettingsViewModel Settings { get; }
 
     private ViewModelBase _currentViewModel = null!;
@@ -47,6 +48,7 @@ public class MainWindowViewModel : ViewModelBase
         Plugins = new PluginsViewModel(api);
         Marketplace = new MarketplaceViewModel(api);
         Cache = new CacheViewModel(api);
+        Updates = new UpdatesViewModel(api);
         Settings = new SettingsViewModel(api);
         CurrentViewModel = Dashboard;
         File.AppendAllText("C:/Users/limpi/AppData/Local/WupmGui/startup.log", $"[GUI] MainWindowViewModel ctor end {DateTime.Now:O}{Environment.NewLine}");
@@ -81,6 +83,10 @@ public class MainWindowViewModel : ViewModelBase
         else if (string.Equals(tab, nameof(Cache), StringComparison.OrdinalIgnoreCase))
         {
             CurrentViewModel = Cache;
+        }
+        else if (string.Equals(tab, nameof(Updates), StringComparison.OrdinalIgnoreCase))
+        {
+            CurrentViewModel = Updates;
         }
         else if (string.Equals(tab, nameof(Settings), StringComparison.OrdinalIgnoreCase))
         {

@@ -23,6 +23,7 @@ public sealed class McpToolRegistry
             ["plugins_list"] = new PluginsListTool(_api),
             ["plugins_execute"] = new PluginsExecuteTool(_api),
             ["marketplace_search"] = new MarketplaceSearchTool(_api),
+            ["updates_list"] = new UpdatesListTool(),
             ["gui_status"] = new GuiStatusTool(),
             ["gui_tab"] = new GuiTabTool(),
             ["gui_action"] = new GuiActionTool()

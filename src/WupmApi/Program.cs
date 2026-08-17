@@ -239,6 +239,57 @@ app.MapGet("/plugins", async (IServiceProvider sp) =>
     return Results.Ok(result);
 });
 
+app.MapPost("/cli/execute", async (IServiceProvider sp, JsonNode body) =>
+{
+    var command = body["command"]?.ToString() ?? string.Empty;
+    var args = body["arguments"]?.ToString() ?? string.Empty;
+    var forVersion = body["for"]?.ToString() ?? string.Empty;
+    var channel = body["channel"]?.ToString() ?? string.Empty;
+    var repo = body["repo"]?.ToString() ?? "https://github.com/LoopyLuci/WindowsUpdatePackageManager";
+
+    if (string.Equals(command, "updates", StringComparison.OrdinalIgnoreCase))
+    {
+        var http = new HttpClient();
+        var client = new GitHubRepoClient(http, repo);
+        var publisher = new GitHubReleasePublisher(http);
+        var segments = repo.TrimEnd('/').Split('/').ToArray();
+        var owner = segments.Length >= 2 ? segments[^2] : "owner";
+        var repoName = segments.Length >= 2 ? segments[^1] : "repo";
+        var service = new UpdateDistributionService(client, publisher, owner, repoName);
+        var updates = await service.PullUpdatesAsync(forVersion, architecture: null, channel).ConfigureAwait(false);
+        return Results.Ok(updates);
+    }
+
+    if (string.Equals(command, "self-update", StringComparison.OrdinalIgnoreCase))
+    {
+        var http = new HttpClient();
+        var client = new GitHubRepoClient(http, repo);
+        var publisher = new GitHubReleasePublisher(http);
+        var segments = repo.TrimEnd('/').Split('/').ToArray();
+        var owner = segments.Length >= 2 ? segments[^2] : "owner";
+        var repoName = segments.Length >= 2 ? segments[^1] : "repo";
+        var service = new UpdateDistributionService(client, publisher, owner, repoName);
+        var updates = await service.PullUpdatesAsync(forVersion, architecture: null, channel).ConfigureAwait(false);
+        if (updates.Count == 0)
+        {
+            return Results.Ok(new { updated = false, message = "No matching updates." });
+        }
+
+        var update = updates[0];
+        var tempPath = Path.Combine(Path.GetTempPath(), $"wupm-selfupdate-{Guid.NewGuid():N}.wupkg");
+        await using var stream = await client.DownloadPackageAsync(update.SourceUrl).ConfigureAwait(false);
+        await using var file = File.Create(tempPath);
+        await stream.CopyToAsync(file).ConfigureAwait(false);
+
+        var current = Environment.ProcessPath ?? AppContext.BaseDirectory;
+        var target = Path.Combine(Path.GetDirectoryName(current) ?? AppContext.BaseDirectory, "wupm-new.exe");
+        File.Copy(tempPath, target, overwrite: true);
+        return Results.Ok(new { updated = true, message = $"Update staged at {target}. Restart to apply." });
+    }
+
+    return Results.BadRequest(new { error = $"Unknown CLI command: {command}" });
+});
+
 try
 {
     await using (var scope = app.Services.CreateAsyncScope())

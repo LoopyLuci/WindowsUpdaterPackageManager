@@ -69,9 +69,18 @@ WUPM can run as a Windows service via `sc.exe create` or `nssm install`. This do
 
 - Repo layout uses GitHub release tags: `updates/{packageId}/{version}`.
 - The release body is the manifest JSON. Assets are the packaged binaries.
-- `wupm update push --source <pkg> --id <id> --version <ver> --for <winVer> --token <token>`
-- `wupm update pull --for <winVer> --channel stable`
-- Push validates SHA256 and writes `UpdateManifest` with `WindowsVersion`, `Architecture`, `PackageId`, `Version`, `Sha256`, `SourceUrl`, `PublishedAt`, and `Channels`.
+- CLI: `wupm update push`, `wupm update pull`, `wupm self-update`.
+- API: `POST /cli/execute` accepts `{ "command": "updates|self-update", "for": "...", "channel": "...", "repo": "..." }`.
+- MCP: `updates_list` tool lists updates for a Windows version/channel.
+- Manifest fields: `WindowsVersion`, `Architecture`, `PackageId`, `Version`, `Sha256`, `SourceUrl`, `PublishedAt`, `Channels`, `DisplayName`, `BuildNumber`.
+
+## E2E validation
+
+1. Create a test release in the GitHub repo with tag `updates/<packageId>/<version>`.
+2. Run `wupm update push --source <pkg> --id <id> --version <ver> --for <winVer> --token <token>`.
+3. Verify the release body contains valid manifest JSON.
+4. Run `wupm update pull --for <winVer>` and confirm it surfaces the new update.
+5. Run `wupm self-update --for <winVer>` and verify it stages an update binary.
 
 ## Troubleshooting
 
