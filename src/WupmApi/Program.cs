@@ -222,7 +222,20 @@ app.MapPost("/plugins/{name}/execute", async (IServiceProvider sp, string name, 
 app.MapGet("/plugins", async (IServiceProvider sp) =>
 {
     var pluginManager = sp.GetRequiredService<PluginManager>();
-    var result = pluginManager.Plugins.Select(p => new { p.Name, p.Description, Commands = new string[0] });
+    var result = new List<object>();
+    foreach (var plugin in pluginManager.Plugins)
+    {
+        IReadOnlyList<string> commands = Array.Empty<string>();
+        try
+        {
+            commands = await plugin.GetCommandsAsync();
+        }
+        catch
+        {
+            commands = Array.Empty<string>();
+        }
+        result.Add(new { plugin.Name, plugin.Version, Commands = commands });
+    }
     return Results.Ok(result);
 });
 
