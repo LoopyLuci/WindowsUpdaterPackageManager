@@ -55,10 +55,9 @@ if (-not (Get-Command gh -ErrorAction SilentlyContinue)) {
     Write-Err "gh CLI is not installed."
     exit 1
 }
-$null = gh auth status 2>$null
+$null = gh auth status 2>&1 | Out-Null
 if ($LASTEXITCODE -ne 0) {
-    Write-Err "gh CLI is not authenticated."
-    exit 1
+    Write-Warn "gh CLI may not be authenticated or offline. Uploads may fail later."
 }
 
 $workRoot = if (Test-Path $WorkDir) { Resolve-Path $WorkDir } else { New-Item -ItemType Directory -Path $WorkDir -Force | ForEach-Object { $_.FullName } }
@@ -208,6 +207,23 @@ foreach ($pkg in $updates) {
         $downloadOk = $true
     } catch {
         Write-Warn "Direct download failed for $fileName : $_"
+    }
+
+    if (-not $downloadOk) {
+        Write-Info "Looking for cached download in SoftwareDistribution for $fileName ..."
+        try {
+            $candidateRoot = Join-Path $env:SystemRoot "SoftwareDistribution\Download"
+            $searchPattern = if ($pkg.Id -match '(?i)kb(\d+)') { "*$($matches[1])*" } else { "*$($pkg.Id)*" }
+            $cached = Get-ChildItem -Path $candidateRoot -Recurse -Filter $searchPattern -ErrorAction SilentlyContinue | Where-Object { $_.Extension -match '^\.(msu|cab)$' } | Select-Object -First 1
+            if ($cached) {
+                $localPath = $cached.FullName
+                Write-Ok "Found cached download: $localPath"
+                $downloaded += [pscustomobject]@{ Package = $pkg; LocalPath = $localPath }
+                $downloadOk = $true
+            }
+        } catch {
+            Write-Warn "SoftwareDistribution cache search failed: $_"
+        }
     }
 
     if (-not $downloadOk) {
@@ -378,7 +394,7 @@ foreach ($item in $wupkgFiles) {
             id            = $pkg.Id
             version       = $pkg.Version
             displayName   = $pkg.DisplayName
-            description   = $pkg.Description
+            description   = if ($pkg.PSObject.Properties['Description']) { $pkg.PSObject.Properties['Description'].Value } else { $pkg.DisplayName }
             architecture  = $pkg.Architecture
             osVersion     = $pkg.OsVersion
             channel       = "stable"
