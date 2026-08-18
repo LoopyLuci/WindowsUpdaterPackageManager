@@ -190,13 +190,15 @@ if ($updates.Count -eq 0) {
 
         # Look for any downloadable content
         # The catalog page contains hidden fields with update IDs
-        $updateIds = [regex]::Matches($searchHtml, 'updateIDs\.push\(\{id:\s*"(\d+)"') | ForEach-Object { $_.Groups[1].Value }
-        if (-not $updateIds) {
-            $updateIds = [regex]::Matches($searchHtml, '"id":\s*"(\d+)"') | ForEach-Object { $_.Groups[1].Value }
-        }
+        $matches1 = [regex]::Matches($searchHtml, 'updateIDs\.push\(\{id:\s*"(\d+)"')
+        $matches2 = [regex]::Matches($searchHtml, '"id":\s*"(\d+)"')
+        $updateIds = @()
+        foreach ($m in $matches1) { $updateIds += $m.Groups[1].Value }
+        foreach ($m in $matches2) { $updateIds += $m.Groups[1].Value }
+        $updateIds = $updateIds | Select-Object -Unique
 
         Write-Info "Found $($updateIds.Count) catalog entries from web search."
-        if (-not $updateIds -or $updateIds.Count -eq 0) {
+        if ($updateIds.Count -eq 0) {
             Write-Err "Could not find any updates. The catalog may require manual interaction."
             exit 1
         }
