@@ -28,7 +28,28 @@ if (!string.IsNullOrWhiteSpace(apiKey))
     app.Use(async (context, next) =>
     {
         var path = context.Request.Path;
-        if (path.Equals("/", StringComparison.OrdinalIgnoreCase))
+        var method = context.Request.Method;
+
+        bool IsRead()
+        {
+            if (path.Equals("/", StringComparison.OrdinalIgnoreCase) ||
+                path.Equals("/health", StringComparison.OrdinalIgnoreCase) ||
+                path.Equals("/packages", StringComparison.OrdinalIgnoreCase) ||
+                path.Equals("/installed", StringComparison.OrdinalIgnoreCase) ||
+                path.Equals("/updates", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            if (path.Value is not null && path.Value.StartsWith("/plugins/", StringComparison.OrdinalIgnoreCase) && method.Equals("GET", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            return false;
+        }
+
+        if (IsRead())
         {
             await next();
             return;
@@ -48,7 +69,7 @@ if (!string.IsNullOrWhiteSpace(apiKey))
 
         if (!string.Equals(token, apiKey, StringComparison.Ordinal))
         {
-            Log.Warning("Unauthorized request to {Path}", path);
+            Log.Warning("Unauthorized write request to {Path}", path);
             context.Response.StatusCode = StatusCodes.Status401Unauthorized;
             await context.Response.WriteAsJsonAsync(new { error = "Unauthorized" });
             return;
@@ -290,7 +311,7 @@ app.MapPost("/cli/execute", async (IServiceProvider sp, JsonNode body) =>
     return Results.BadRequest(new { error = $"Unknown CLI command: {command}" });
 });
 
-app.MapPost("/updates/install", async (IServiceProvider sp, JsonNode body) =>
+app.MapPost("/updates/install", async (IServiceProvider sp, JsonNode body, HttpResponse response) =>
 {
     var packageId = body["packageId"]?.ToString() ?? string.Empty;
     var version = body["version"]?.ToString() ?? string.Empty;
@@ -308,13 +329,20 @@ app.MapPost("/updates/install", async (IServiceProvider sp, JsonNode body) =>
         var tempPath = Path.Combine(Path.GetTempPath(), $"wupm-update-{Guid.NewGuid():N}.wupkg");
         await using var file = File.Create(tempPath);
         await stream.CopyToAsync(file);
+
+        response.ContentType = "text/event-stream";
+        await response.WriteAsync("data: {\"status\":\"installing\"}\n\n");
+
         var installer = sp.GetRequiredService<IPackageManager>();
         var manifest = new PackageManifest { Id = packageId, Version = version, SourceUrl = sourceUrl };
         var result = await installer.InstallAsync(manifest);
+
+        await response.WriteAsync($"data: {JsonSerializer.Serialize(new { status = "complete", result })}\n\n");
         return Results.Ok(result);
     }
     catch (Exception ex)
     {
+        await response.WriteAsync($"data: {JsonSerializer.Serialize(new { status = "error", error = ex.Message })}\n\n");
         return Results.Problem(ex.Message);
     }
 });

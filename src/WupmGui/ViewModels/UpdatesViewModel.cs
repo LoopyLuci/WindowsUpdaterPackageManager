@@ -59,12 +59,12 @@ public class UpdatesViewModel : ViewModelBase
         {
             if (SelectedUpdate is null) return;
             StatusMessage = $"Installing {SelectedUpdate.PackageId}@{SelectedUpdate.Version}...";
-            await _api.InstallUpdateAsync(SelectedUpdate, ct);
-            StatusMessage = "Install completed";
+            var result = await _api.InstallUpdateAsync(SelectedUpdate, ct);
+            StatusMessage = result.Success ? "Install completed" : $"Install failed: {result.Message}";
         }
-        catch
+        catch (Exception ex)
         {
-            StatusMessage = "Install failed";
+            StatusMessage = $"Install error: {ex.Message}";
         }
     }
 }

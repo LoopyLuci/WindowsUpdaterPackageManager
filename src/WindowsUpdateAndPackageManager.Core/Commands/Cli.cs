@@ -535,6 +535,63 @@ public static class Cli
         pull.SetHandler(ctx => HandleUpdatePullAsync(ctx));
         update.AddCommand(pull);
 
+        var init = new Command("init", "Initialize an update manifest from a package file");
+        var initSource = new Option<string?>("--source") { Arity = ArgumentArity.ExactlyOne };
+        var initId = new Option<string?>("--id") { Arity = ArgumentArity.ExactlyOne };
+        var initVersion = new Option<string?>("--version") { Arity = ArgumentArity.ExactlyOne };
+        var initFor = new Option<string?>("--for") { Arity = ArgumentArity.ExactlyOne };
+        var initChannel = new Option<string?>("--channel") { Arity = ArgumentArity.ZeroOrOne };
+        var initBuildNumber = new Option<string?>("--build-number") { Arity = ArgumentArity.ZeroOrOne };
+        var initDisplayName = new Option<string?>("--display-name") { Arity = ArgumentArity.ZeroOrOne };
+        init.AddOption(initSource);
+        init.AddOption(initId);
+        init.AddOption(initVersion);
+        init.AddOption(initFor);
+        init.AddOption(initChannel);
+        init.AddOption(initBuildNumber);
+        init.AddOption(initDisplayName);
+        init.SetHandler(async (string? source, string? id, string? version, string? forVersion, string? channel, string? buildNumber, string? displayName) =>
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(source) || string.IsNullOrWhiteSpace(id) || string.IsNullOrWhiteSpace(version) || string.IsNullOrWhiteSpace(forVersion))
+                {
+                    Console.WriteLine("update init requires --source, --id, --version, and --for.");
+                    return;
+                }
+
+                if (!File.Exists(source))
+                {
+                    Console.WriteLine($"Source not found: {source}");
+                    return;
+                }
+
+                using var sha = SHA256.Create();
+                await using var stream = File.OpenRead(source);
+                var hash = sha.ComputeHash(stream);
+                var sha256 = Convert.ToHexString(hash).ToLowerInvariant();
+
+                var manifest = new
+                {
+                    packageId = id,
+                    version = version,
+                    windowsVersion = forVersion,
+                    channel = channel ?? "stable",
+                    buildNumber = buildNumber,
+                    displayName = displayName ?? id,
+                    sha256 = sha256,
+                    publishedAt = DateTimeOffset.UtcNow.ToString("O")
+                };
+
+                Console.WriteLine(JsonSerializer.Serialize(manifest, new JsonSerializerOptions { WriteIndented = true }));
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"update init failed: {ex.Message}");
+            }
+        }, initSource, initId, initVersion, initFor, initChannel, initBuildNumber, initDisplayName);
+        update.AddCommand(init);
+
         root.AddCommand(update);
 
         async Task HandleUpdatePushAsync(InvocationContext ctx)
