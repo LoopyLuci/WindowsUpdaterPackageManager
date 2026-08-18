@@ -3,6 +3,19 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
   <DockPanel Margin="16">
     <TextBlock Text="Updates" FontSize="24" FontWeight="Bold" DockPanel.Dock="Top" Margin="0,0,0,12"/>
-    <TextBlock Text="Updates are pulled from the GitHub repository using the update distribution system." TextWrapping="Wrap"/>
+    <StackPanel Orientation="Horizontal" DockPanel.Dock="Top" Margin="0,0,0,12">
+      <Button Content="Refresh" Command="{Binding RefreshCommand}" Margin="0,0,8,0"/>
+    </StackPanel>
+    <DataGrid ItemsSource="{Binding Items}" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True">
+      <DataGrid.Columns>
+        <DataGridTextColumn Header="Name" Binding="{Binding DisplayName}" Width="*"/>
+        <DataGridTextColumn Header="Package" Binding="{Binding PackageId}" Width="160"/>
+        <DataGridTextColumn Header="Version" Binding="{Binding Version}" Width="120"/>
+        <DataGridTextColumn Header="Windows" Binding="{Binding WindowsVersion}" Width="100"/>
+        <DataGridTextColumn Header="Build" Binding="{Binding BuildNumber}" Width="80"/>
+        <DataGridTextColumn Header="Channel" Binding="{Binding Channel}" Width="100"/>
+        <DataGridTextColumn Header="SHA256" Binding="{Binding Sha256}" Width="260"/>
+      </DataGrid.Columns>
+    </DataGrid>
   </DockPanel>
 </UserControl>

@@ -29,6 +29,7 @@ public interface IWupmApiClient
     Task InvalidateCacheEntryAsync(string packageId, string version, CancellationToken cancellationToken = default);
     Task<JsonNode> GetServiceStatusAsync(CancellationToken cancellationToken = default);
     Task<IReadOnlyList<MarketplacePlugin>> MarketplaceSearchAsync(string query, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<UpdateItem>> GetUpdatesAsync(string windowsVersion, string? channel = null, CancellationToken cancellationToken = default);
 }
 
 public sealed class WupmApiClient : IWupmApiClient, IDisposable
@@ -156,6 +157,13 @@ public sealed class WupmApiClient : IWupmApiClient, IDisposable
         using var response = await _http.GetAsync($"/marketplace/search?query={Uri.EscapeDataString(query ?? string.Empty)}", cancellationToken).ConfigureAwait(false);
         response.EnsureSuccessStatusCode();
         return (await response.Content.ReadFromJsonAsync<List<MarketplacePlugin>>(cancellationToken).ConfigureAwait(false))!;
+    }
+
+    public async Task<IReadOnlyList<UpdateItem>> GetUpdatesAsync(string windowsVersion, string? channel = null, CancellationToken cancellationToken = default)
+    {
+        using var response = await _http.PostAsJsonAsync("/cli/execute", new { command = "updates", @for = windowsVersion, channel }, cancellationToken).ConfigureAwait(false);
+        response.EnsureSuccessStatusCode();
+        return (await response.Content.ReadFromJsonAsync<List<UpdateItem>>(cancellationToken).ConfigureAwait(false))!;
     }
 
     public void Dispose()

@@ -14,14 +14,14 @@ public sealed class UpdateDistributionService
     private readonly string? _token;
     private readonly HttpClient _http;
 
-    public UpdateDistributionService(IRepoClient? repoClient, GitHubReleasePublisher publisher, string owner, string repo, string? token = null)
+    public UpdateDistributionService(IRepoClient? repoClient, GitHubReleasePublisher publisher, string owner, string repo, string? token = null, HttpClient? http = null)
     {
         _repoClient = repoClient;
         _publisher = publisher;
         _owner = owner;
         _repo = repo;
         _token = token;
-        _http = new HttpClient();
+        _http = http ?? new HttpClient();
     }
 
     public async Task<bool> PushUpdateAsync(string packagePath, string packageId, string version, string windowsVersion, string architecture, string channel, string? buildNumber = null, bool isDriver = false, string? displayName = null, string? changelog = null, CancellationToken cancellationToken = default)

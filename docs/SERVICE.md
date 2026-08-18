@@ -82,6 +82,12 @@ WUPM can run as a Windows service via `sc.exe create` or `nssm install`. This do
 4. Run `wupm update pull --for <winVer>` and confirm it surfaces the new update.
 5. Run `wupm self-update --for <winVer>` and verify it stages an update binary.
 
+## CI
+
+- `.github/workflows/ci.yml` runs on push and PR.
+- Steps: `dotnet build` and `dotnet test`.
+- Workflow runs on `windows-latest` with `dotnet-version: 10.0.x`.
+
 ## Troubleshooting
 
 - **Access denied**: rerun GUI/MCP/API from an elevated shell.

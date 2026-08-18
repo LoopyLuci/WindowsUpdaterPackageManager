@@ -1,22 +1,15 @@
 # Changelog
 
-All notable changes to this project will be documented in this file.
-
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
-
-## [0.1.0-alpha] - 2026-08-10
+## [unreleased]
 
 ### Added
-- Initial repository scaffold with solution and project structure
-- Core engine stubs: Windows Update, Package, Driver, RepoSync, Auditor, Rollback
-- SQLite-backed state database and audit store
-- CLI surface: sync, install, installed, audit, rollback, windows-update, health
-- PowerShell module wrapper with manifest
-- xUnit tests with 3 passing scenarios
-- GitHub Actions CI workflow targeting Windows
-- Repo manifest format with JSON schema validation
-- Verification scripts and local build docs
+- GitHub release–tagged update distribution system
+- `wupm update push` with SHA256 validation and manifest generation
+- `wupm update pull` with filtering by Windows version, architecture, channel, and build number
+- `wupm self-update` path powered by GitHub releases
+- MCP `updates_list` tool
+- GUI Updates tab with live DataGrid and refresh command
+- `POST /cli/execute` API route for update and self-update commands
 
-### Notes
-- This is an alpha release. Offline package acquisition and Windows Update engine hooks are stubbed and will be implemented in upcoming milestones.
+### Documentation
+- `docs/SERVICE.md` now includes update distribution workflow and E2E validation steps
