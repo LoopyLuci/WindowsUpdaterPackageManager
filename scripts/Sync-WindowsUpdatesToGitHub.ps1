@@ -426,8 +426,14 @@ foreach ($item in $wupkgFiles) {
     $tag = Safe-Tag $pkg.Id $pkg.Version
 
     Write-Info "Ensuring release exists for tag: $tag"
-    $releaseExists = gh release view $tag --repo $GitHubRepo 2>&1 | Out-Null
-    if ($LASTEXITCODE -ne 0) {
+    $releaseExists = $false
+    try {
+        $null = gh release view $tag --repo $GitHubRepo 2>&1 | Out-Null
+        $releaseExists = $LASTEXITCODE -eq 0
+    } catch {
+        $releaseExists = $false
+    }
+    if (-not $releaseExists) {
         $notesPath = Join-Path $workRoot "notes-$($pkg.Id).md"
         $mdLines = @()
         $mdLines += "## $($pkg.DisplayName)"
