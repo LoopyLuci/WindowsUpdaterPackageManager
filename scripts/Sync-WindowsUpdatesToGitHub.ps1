@@ -142,11 +142,15 @@ if ($Source -eq "WUA") {
             }
 
             if (-not $downloadUrl) {
-                foreach ($file in $update.DownloadUrls) {
-                    if ($file) {
-                        $downloadUrl = $file
-                        break
+                try {
+                    foreach ($file in $update.DownloadUrls) {
+                        if ($file) {
+                            $downloadUrl = $file
+                            break
+                        }
                     }
+                } catch {
+                    # DownloadUrls property not available on this update object
                 }
             }
 
@@ -240,11 +244,15 @@ if ($Source -eq "Online") {
             }
 
             if (-not $downloadUrl) {
-                foreach ($file in $update.DownloadUrls) {
-                    if ($file) {
-                        $downloadUrl = $file
-                        break
+                try {
+                    foreach ($file in $update.DownloadUrls) {
+                        if ($file) {
+                            $downloadUrl = $file
+                            break
+                        }
                     }
+                } catch {
+                    # DownloadUrls property not available on this update object
                 }
             }
 
