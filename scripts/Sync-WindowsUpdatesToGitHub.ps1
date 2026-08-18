@@ -371,7 +371,7 @@ foreach ($item in $wupkgFiles) {
     $releaseExists = gh release view $tag --repo $GitHubRepo 2>&1 | Out-Null
     if ($LASTEXITCODE -ne 0) {
         $notesPath = Join-Path $workRoot "notes-$($pkg.Id).md"
-        @"
+        $notes = @"
 ## $($pkg.DisplayName)
 
 - **ID:** $($pkg.Id)
@@ -385,7 +385,8 @@ foreach ($item in $wupkgFiles) {
 ```powershell
 wusa.exe $($pkg.Id).wupkg /quiet /norestart
 ```
-"@ | Set-Content -Path $notesPath -Encoding UTF8
+"@
+        $notes | Set-Content -Path $notesPath -Encoding UTF8
         gh release create $tag --repo $GitHubRepo --title "$($pkg.Id) $($pkg.Version)" --notes-file $notesPath 2>&1 | Out-Null
         Write-Ok "Created release $tag"
     } else {
