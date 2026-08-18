@@ -227,15 +227,11 @@ foreach ($pkg in $updates) {
 
                 $downloader = $dlSession.CreateUpdateDownloader()
                 $downloader.Updates = $dlCollection
-                try {
+                if ($update2.IsDownloaded) {
+                    Write-Info "WUA reports update already downloaded/cached."
+                    $dlResult = $null
+                } else {
                     $dlResult = $downloader.Download()
-                } catch {
-                    if ($_ -match '0x80240032') {
-                        Write-Info "WUA reports update already downloaded/cached."
-                        $dlResult = $null
-                    } else {
-                        throw
-                    }
                 }
 
                 if ($null -ne $dlResult -and $dlResult.ResultCode -ne 2) {
