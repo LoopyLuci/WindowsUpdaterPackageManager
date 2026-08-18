@@ -81,7 +81,11 @@ if (-not (Get-Command gh -ErrorAction SilentlyContinue)) {
     Write-Err "gh CLI is not installed. Install it from https://cli.github.com/ and run 'gh auth login'."
     exit 1
 }
-gh auth status 2>&1 | Out-Null
+$null = gh auth status 2>$null
+if ($LASTEXITCODE -ne 0) {
+    Write-Err "gh CLI is not authenticated. Run 'gh auth login' first."
+    exit 1
+}
 
 # ---------------------------------------------------------------------------
 # Prepare work directories
