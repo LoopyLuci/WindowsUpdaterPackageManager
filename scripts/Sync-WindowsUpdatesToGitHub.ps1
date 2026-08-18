@@ -17,7 +17,7 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory=$false)]
-    [ValidateSet("WUA","Manifest")]
+    [ValidateSet("WUA","Online","Manifest")]
     [string]$Source = "WUA",
 
     [Parameter(Mandatory=$false)]
@@ -186,6 +186,105 @@ if ($Source -eq "WUA") {
         }
     } else {
         Write-Warn "No uninstalled updates found from WUA. This machine may be fully patched."
+    }
+}
+
+if ($Source -eq "Online") {
+    Write-Info "Querying online Microsoft Update service for $OSVersion updates..."
+
+    $updateSession = New-Object -ComObject Microsoft.Update.Session
+    $updateSearcher = $updateSession.CreateUpdateSearcher()
+
+    # Server selection: 2 = Microsoft Update, 1 = Windows Update, 0 = WSUS
+    $updateSearcher.ServerSelection = 2
+
+    $searchQuery = switch ($OSVersion) {
+        "Windows 10" { "IsInstalled=0 and Type='Software' and IsHidden=0" }
+        "Windows 11" { "IsInstalled=0 and Type='Software' and IsHidden=0" }
+        default { "IsInstalled=0 and Type='Software' and IsHidden=0" }
+    }
+
+    try {
+        Write-Info "Searching online Microsoft Update service..."
+        $searchResult = $updateSearcher.Search($searchQuery)
+    } catch {
+        Write-Warn "Online WUA search failed: $_"
+        $searchResult = $null
+    }
+
+    if ($searchResult -and $searchResult.Updates.Count -gt 0) {
+        Write-Info "Found $($searchResult.Updates.Count) available updates from Microsoft Update service."
+
+        foreach ($update in $searchResult.Updates) {
+            if ($updates.Count -ge $MaxPackages) { break }
+
+            if ($Architecture -ne "all") {
+                $archMatch = $false
+                foreach ($string in $update.SupportedArchitectures) {
+                    if ($string -match $Architecture) {
+                        $archMatch = $true
+                        break
+                    }
+                }
+                if (-not $archMatch) { continue }
+            }
+
+            $downloadUrl = ""
+            $fileSize = 0
+            foreach ($file in $update.DownloadContents) {
+                if ($file.DownloadUrl) {
+                    $downloadUrl = $file.DownloadUrl
+                    $fileSize = $file.FileSize
+                    break
+                }
+            }
+
+            if (-not $downloadUrl) {
+                foreach ($file in $update.DownloadUrls) {
+                    if ($file) {
+                        $downloadUrl = $file
+                        break
+                    }
+                }
+            }
+
+            if (-not $downloadUrl) { continue }
+
+            $kbNumber = "unknown"
+            if ($update.Title -match '(?i)kb\d{6,}') {
+                $kbNumber = $matches[0].Value.ToLowerInvariant()
+            } elseif ($update.KBArticleIDs.Count -gt 0) {
+                $kbNumber = $update.KBArticleIDs.Item(0).ToLowerInvariant()
+            }
+
+            $osVersionDetected = $OSVersion
+            if ($update.Title -match "Windows 11") { $osVersionDetected = "Windows 11" }
+            elseif ($update.Title -match "Windows 10") { $osVersionDetected = "Windows 10" }
+
+            $version = if ($update.LastDeploymentChangeTime) {
+                $update.LastDeploymentChangeTime.ToString("yyyy-MM")
+            } else {
+                (Get-Date).ToString("yyyy-MM")
+            }
+
+            $updates += [pscustomobject]@{
+                Id            = $kbNumber
+                Version       = $version
+                DisplayName   = $update.Title
+                OsVersion     = $osVersionDetected
+                Architecture  = $Architecture
+                ReleaseDate   = if ($update.LastDeploymentChangeTime) { $update.LastDeploymentChangeTime.ToString("MMMM d, yyyy") } else { (Get-Date).ToString("MMMM d, yyyy") }
+                DownloadUrl   = $downloadUrl
+                SizeBytes     = $fileSize
+                SourceUrl     = "https://www.catalog.update.microsoft.com/Home/Search?q=$([Uri]::EscapeDataString($update.Title))"
+                SupportUrl    = "https://support.microsoft.com/help/?kb=$($kbNumber -replace 'kb','')"
+            }
+
+            Write-Info "Found: $kbNumber - $($update.Title)"
+        }
+    } else {
+        Write-Warn "No updates found from online WUA for $OSVersion. This service requires internet access and Windows Update service enabled."
+        Write-Warn "Falling back to manifest mode or manual KB list."
     }
 }
 
