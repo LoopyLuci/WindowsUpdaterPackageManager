@@ -1,13 +1,14 @@
 <#
 .SYNOPSIS
-    Bulk-retrieve Windows update packages from the Microsoft Update Catalog,
+    Bulk-retrieve Windows update packages via Windows Update Agent,
     wrap them as WUPM .wupkg packages, and upload to GitHub with proper tagging.
 #>
 
 [CmdletBinding()]
 param(
     [Parameter(Mandatory=$false)]
-    [string]$SearchQuery = "Windows 10 cumulative",
+    [ValidateSet("Windows 10","Windows 11","Windows Server 2019","Windows Server 2022")]
+    [string]$OSVersion = "Windows 10",
 
     [Parameter(Mandatory=$false)]
     [ValidateSet("x86","x64","arm64","all")]
@@ -74,191 +75,170 @@ Ensure-Directory "$workRoot\packages"
 Ensure-Directory "$workRoot\manifests"
 
 # ---------------------------------------------------------------------------
-# Step 1: Search the Microsoft Update Catalog via official search endpoint
+# Step 1: Search Windows Update Agent for available updates
 # ---------------------------------------------------------------------------
-Write-Info "Searching Microsoft Update Catalog for '$SearchQuery' (arch=$Architecture, max=$MaxPackages)"
+Write-Info "Querying Windows Update Agent for $OSVersion updates..."
 
-$catalogSearchUrl = "https://www.catalog.update.microsoft.com/Home/Search"
+$updateSession = New-Object -ComObject Microsoft.Update.Session
+$updateSearcher = $updateSession.CreateUpdateSearcher()
 
-$session = New-Object Microsoft.PowerShell.Commands.WebRequestSession
-$session.UserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+# Build search query based on OS version
+$searchQuery = switch ($OSVersion) {
+    "Windows 10" { "IsInstalled=0 and Type='Software' and IsHidden=0" }
+    "Windows 11" { "IsInstalled=0 and Type='Software' and IsHidden=0" }
+    default { "IsInstalled=0 and Type='Software' and IsHidden=0" }
+}
 
-# Try POST search first
-$searchBody = @{ searchText = $SearchQuery } | ConvertTo-Json
-$searchHeaders = @{ "Content-Type" = "application/json; charset=utf-8" }
-
-$searchHtml = ""
 try {
-    $searchResponse = Invoke-RestMethod -Uri $catalogSearchUrl -Method POST -Body $searchBody -ContentType "application/json" -WebSession $session -TimeoutSec 60
-    $searchHtml = $searchResponse | Out-String
+    $searchResult = $updateSearcher.Search($searchQuery)
 } catch {
-    Write-Warn "POST search failed: $_"
-    # Try the search API endpoint
-    try {
-        $escapedQuery = [Uri]::EscapeDataString($SearchQuery)
-        $apiResponse = Invoke-RestMethod -Uri "https://www.catalog.update.microsoft.com/Home/Search?q=$escapedQuery" -WebSession $session -TimeoutSec 60
-        $searchHtml = $apiResponse | Out-String
-    } catch {
-        Write-Warn "API search failed: $_"
-    }
+    Write-Warn "WUA search failed: $_"
+    Write-Info "Falling back to Microsoft Update Catalog web search..."
+    $searchResult = $null
 }
 
-# If REST failed, try web request
-if (-not $searchHtml) {
-    try {
-        $escapedQuery = [Uri]::EscapeDataString($SearchQuery)
-        $searchResponse = Invoke-WebRequest -Uri "https://www.catalog.update.microsoft.com/Search.aspx?q=$escapedQuery" -WebSession $session -UseBasicParsing -TimeoutSec 60
-        $searchHtml = $searchResponse.Content
-    } catch {
-        Write-Warn "Web search failed: $_"
-    }
-}
+$updates = @()
+if ($searchResult -and $searchResult.Updates.Count -gt 0) {
+    Write-Info "Found $($searchResult.Updates.Count) available updates from WUA."
 
-if (-not $searchHtml) {
-    Write-Err "Could not retrieve catalog search results. The catalog may be blocking automated requests."
-    exit 1
-}
+    foreach ($update in $searchResult.Updates) {
+        if ($updates.Count -ge $MaxPackages) { break }
 
-# Try multiple patterns to find update IDs
-$resultIds = @()
-$patterns = @(
-    'updateIDs\.push\(\{id:\s*"(\d+)"',
-    '"updateId"\s*:\s*"(\d+)"',
-    'dlgId_(\d+)',
-    'DownloadForm\.aspx\?(\d+)',
-    'data-id="(\d+)"'
-)
-
-foreach ($pattern in $patterns) {
-    $matches = [regex]::Matches($searchHtml, $pattern) | ForEach-Object { $_.Groups[1].Value }
-    if ($matches) {
-        $resultIds += $matches
-    }
-}
-
-$resultIds = $resultIds | Select-Object -Unique
-Write-Info "Found $($resultIds.Count) catalog results."
-
-if ($resultIds.Count -eq 0) {
-    Write-Warn "No results found from catalog. Try a different search query or check network access."
-    exit 0
-}
-
-$selected = $resultIds | Select-Object -First $MaxPackages
-Write-Info "Selected $($selected.Count) packages for processing."
-
-# ---------------------------------------------------------------------------
-# Step 2: Resolve download URLs from catalog detail pages
-# ---------------------------------------------------------------------------
-$packages = @()
-
-foreach ($id in $selected) {
-    try {
-        # Try to get update details via catalog API
-        $detailUrl = "https://www.catalog.update.microsoft.com/Home/GetUpdateDetails/$id"
-        $detailResponse = $null
-        try {
-            $detailResponse = Invoke-RestMethod -Uri $detailUrl -WebSession $session -TimeoutSec 60
-        } catch {
-            # Fallback to DownloadForm
-            $detailUrl = "https://www.catalog.update.microsoft.com/DownloadForm.aspx?$id"
-            $detailResponse = Invoke-WebRequest -Uri $detailUrl -WebSession $session -UseBasicParsing -TimeoutSec 60
-        }
-
-        $detailHtml = ""
-        if ($detailResponse -is [string]) {
-            $detailHtml = $detailResponse
-        } elseif ($detailResponse -is [System.Management.Automation.PSObject]) {
-            $detailHtml = $detailResponse | Out-String
-        } else {
-            $detailHtml = $detailResponse.ToString()
-        }
-
-        # Look for download links
-        $downloadLinks = @()
-        $patterns = @(
-            'https://download\.microsoft\.com/download/[^''"]+\.(msu|cab|exe)',
-            'href="(https://[^"]+\.(msu|cab|exe))"',
-            'href=''([^'']+\.(msu|cab|exe))'''
-        )
-
-        foreach ($pattern in $patterns) {
-            $matches = [regex]::Matches($detailHtml, $pattern) | ForEach-Object { $_.Groups[1].Value }
-            if ($matches) {
-                $downloadLinks += $matches
-            }
-        }
-        $downloadLinks = $downloadLinks | Select-Object -Unique
-
-        if (-not $downloadLinks) {
-            Write-Warn "No download link found for catalog ID $id, skipping."
-            continue
-        }
-
-        # Filter by architecture
-        $filtered = @($downloadLinks)
+        # Filter by architecture if specified
         if ($Architecture -ne "all") {
-            $filtered = $downloadLinks | Where-Object { $_ -match $Architecture }
-            if (-not $filtered) {
-                Write-Warn "No $Architecture link for catalog ID $id, skipping."
-                continue
+            $archMatch = $false
+            foreach ($string in $update.SupportedArchitectures) {
+                if ($string -match $Architecture) {
+                    $archMatch = $true
+                    break
+                }
+            }
+            if (-not $archMatch) { continue }
+        }
+
+        # Get download URL
+        $downloadUrl = ""
+        $fileSize = 0
+        foreach ($file in $update.DownloadContents) {
+            if ($file.DownloadUrl) {
+                $downloadUrl = $file.DownloadUrl
+                $fileSize = $file.FileSize
+                break
             }
         }
 
-        $downloadUrl = $filtered[0]
-
-        # Extract metadata
-        $kbNumber = if ($downloadUrl -match '(?i)kb\d+') { $matches[0].Value.ToUpperInvariant() } else { "KB$id" }
-        if (-not $kbNumber -or $kbNumber -eq "KB$id") {
-            $kbMatch = [regex]::Match($detailHtml, '(?i)kb\d{6,}')
-            if ($kbMatch.Success) { $kbNumber = $kbMatch.Value.ToUpperInvariant() }
+        if (-not $downloadUrl) {
+            foreach ($file in $update.DownloadUrls) {
+                if ($file) {
+                    $downloadUrl = $file
+                    break
+                }
+            }
         }
 
-        $title = if ($detailHtml -match '<title>([^<]+)</title>') { $matches[1].Value.Trim() } else { "$kbNumber Update" }
-        if (-not $title) { $title = "$kbNumber Update" }
+        if (-not $downloadUrl) { continue }
 
-        $osVersion = "Windows 10"
-        if ($title -match "Windows 11") { $osVersion = "Windows 11" }
-        if ($title -match "Server 2019") { $osVersion = "Windows Server 2019" }
-        if ($title -match "Server 2022") { $osVersion = "Windows Server 2022" }
+        # Extract KB number
+        $kbNumber = "unknown"
+        if ($update.Title -match '(?i)kb\d{6,}') {
+            $kbNumber = $matches[0].Value.ToLowerInvariant()
+        } elseif ($update.KBArticleIDs.Count -gt 0) {
+            $kbNumber = $update.KBArticleIDs.Item(0).ToLowerInvariant()
+        }
 
-        $version = if ($downloadUrl -match '(\d{4}-\d{2})') { $matches[1] } else { (Get-Date).ToString("yyyy-MM") }
+        # Get OS version from update
+        $osVersion = $OSVersion
+        if ($update.Title -match "Windows 11") { $osVersion = "Windows 11" }
+        elseif ($update.Title -match "Windows 10") { $osVersion = "Windows 10" }
 
-        $packages += [pscustomobject]@{
-            Id            = $kbNumber.ToLowerInvariant()
+        $version = if ($update.LastDeploymentChangeTime) {
+            $update.LastDeploymentChangeTime.ToString("yyyy-MM")
+        } else {
+            (Get-Date).ToString("yyyy-MM")
+        }
+
+        $updates += [pscustomobject]@{
+            Id            = $kbNumber
             Version       = $version
-            DisplayName   = $title
+            DisplayName   = $update.Title
             OsVersion     = $osVersion
             Architecture  = $Architecture
-            ReleaseDate   = (Get-Date).ToString("MMMM d, yyyy")
+            ReleaseDate   = if ($update.LastDeploymentChangeTime) { $update.LastDeploymentChangeTime.ToString("MMMM d, yyyy") } else { (Get-Date).ToString("MMMM d, yyyy") }
             DownloadUrl   = $downloadUrl
-            CatalogId     = $id
-            SourceUrl     = "https://www.catalog.update.microsoft.com/DownloadForm.aspx?$id"
+            SizeBytes     = $fileSize
+            SourceUrl     = "https://www.catalog.update.microsoft.com/Home/Search?q=$([Uri]::EscapeDataString($update.Title))"
             SupportUrl    = "https://support.microsoft.com/help/?kb=$($kbNumber -replace 'kb','')"
         }
 
-        Write-Info "Resolved: $kbNumber - $title"
-    } catch {
-        Write-Warn "Failed to process catalog ID $id : $_"
+        Write-Info "Found: $kbNumber - $($update.Title)"
     }
 }
 
-Write-Info "Resolved $($packages.Count) downloadable packages."
+if ($updates.Count -eq 0) {
+    Write-Warn "No updates found from WUA for $OSVersion. Trying Microsoft Update Catalog web search..."
 
-if ($packages.Count -eq 0) {
-    Write-Warn "No packages resolved. Exiting."
-    exit 0
+    # Fallback to web search
+    $session = New-Object Microsoft.PowerShell.Commands.WebRequestSession
+    $session.UserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+
+    $escapedQuery = [Uri]::EscapeDataString("$OSVersion cumulative update $Architecture")
+    $searchUrl = "https://www.catalog.update.microsoft.com/Search.aspx?q=$escapedQuery"
+
+    try {
+        $searchResponse = Invoke-WebRequest -Uri $searchUrl -WebSession $session -UseBasicParsing -TimeoutSec 120
+        $searchHtml = $searchResponse.Content
+
+        # Look for any downloadable content
+        # The catalog page contains hidden fields with update IDs
+        $updateIds = [regex]::Matches($searchHtml, 'updateIDs\.push\(\{id:\s*"(\d+)"') | ForEach-Object { $_.Groups[1].Value }
+        if (-not $updateIds) {
+            $updateIds = [regex]::Matches($searchHtml, '"id":\s*"(\d+)"') | ForEach-Object { $_.Groups[1].Value }
+        }
+
+        Write-Info "Found $($updateIds.Count) catalog entries from web search."
+        if ($updateIds.Count -eq 0) {
+            Write-Err "Could not find any updates. The catalog may require manual interaction."
+            exit 1
+        }
+
+        $selected = $updateIds | Select-Object -First $MaxPackages
+        Write-Info "Selected $($selected.Count) packages from catalog."
+
+        # Process selected IDs
+        foreach ($id in $selected) {
+            $updates += [pscustomobject]@{
+                Id            = "kb$id"
+                Version       = (Get-Date).ToString("yyyy-MM")
+                DisplayName   = "Windows Update $id"
+                OsVersion     = $OSVersion
+                Architecture  = $Architecture
+                ReleaseDate   = (Get-Date).ToString("MMMM d, yyyy")
+                DownloadUrl   = "https://www.catalog.update.microsoft.com/DownloadForm.aspx?$id"
+                SizeBytes     = 0
+                SourceUrl     = "https://www.catalog.update.microsoft.com/DownloadForm.aspx?$id"
+                SupportUrl    = "https://support.microsoft.com"
+            }
+            Write-Info "Added catalog entry: $id"
+        }
+    } catch {
+        Write-Err "Catalog search failed: $_"
+        exit 1
+    }
+}
+
+Write-Info "Total updates to process: $($updates.Count)"
+
+if ($updates.Count -eq 0) {
+    Write-Err "No updates found. Exiting."
+    exit 1
 }
 
 # ---------------------------------------------------------------------------
-# Step 3: Download packages
+# Step 2: Download packages
 # ---------------------------------------------------------------------------
 $downloaded = @()
-foreach ($pkg in $packages) {
-    $fileName = [System.IO.Path]::GetFileName($pkg.DownloadUrl)
-    if (-not $fileName -or $fileName.Length -lt 5) {
-        $fileName = "$($pkg.Id)_$($pkg.Version).msu"
-    }
+foreach ($pkg in $updates) {
+    $fileName = if ($pkg.DownloadUrl -match '\/([^\/]+\.(msu|cab|exe))') { $matches[1] } else { "$($pkg.Id).msu" }
     $localPath = Join-Path "$workRoot\downloads" $fileName
 
     if ($SkipDownload -and (Test-Path $localPath)) {
@@ -283,8 +263,13 @@ foreach ($pkg in $packages) {
 
 Write-Info "Successfully downloaded $($downloaded.Count) packages."
 
+if ($downloaded.Count -eq 0) {
+    Write-Err "No packages downloaded. Exiting."
+    exit 1
+}
+
 # ---------------------------------------------------------------------------
-# Step 4: Create WUPM .wupkg packages
+# Step 3: Create WUPM .wupkg packages
 # ---------------------------------------------------------------------------
 $wupkgFiles = @()
 foreach ($item in $downloaded) {
@@ -343,7 +328,7 @@ foreach ($item in $downloaded) {
 }
 
 # ---------------------------------------------------------------------------
-# Step 5: Update local repo/index.json
+# Step 4: Update local repo/index.json
 # ---------------------------------------------------------------------------
 $repoIndexPath = Join-Path $workRoot "..\repo\index.json"
 if (-not (Test-Path $repoIndexPath)) {
@@ -394,7 +379,7 @@ $index | ConvertTo-Json -Depth 10 | Set-Content $repoIndexPath -Encoding UTF8
 Write-Ok "Updated repo/index.json with $($index.packages.Count) packages."
 
 # ---------------------------------------------------------------------------
-# Step 6: Upload to GitHub Releases
+# Step 5: Upload to GitHub Releases
 # ---------------------------------------------------------------------------
 if ($WhatIf) {
     Write-Warn "WhatIf mode: skipping GitHub upload."
@@ -440,7 +425,7 @@ foreach ($item in $wupkgFiles) {
 }
 
 # ---------------------------------------------------------------------------
-# Step 7: Commit and push repo changes
+# Step 6: Commit and push repo changes
 # ---------------------------------------------------------------------------
 if (-not $WhatIf) {
     Push-Location (Split-Path $repoIndexPath -Parent)
