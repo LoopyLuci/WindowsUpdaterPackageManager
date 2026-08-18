@@ -15,4 +15,7 @@ jobs:
         with:
           dotnet-version: 10.0.x
       - run: dotnet build src/WindowsUpdateAndPackageManager.Core/WindowsUpdateAndPackageManager.csproj -c Release
+      - run: dotnet build src/WupmApi/WupmApi.csproj -c Release
+      - run: dotnet build src/Wupm.Cli/Wupm.Cli.csproj -c Release
+      - run: dotnet build src/WupmGui/WupmGui.csproj -c Release
       - run: dotnet test tests/WindowsUpdateAndPackageManager.Tests/WindowsUpdateAndPackageManager.Tests.csproj -c Release --verbosity quiet

@@ -9,7 +9,7 @@
 - `wupm update init` to scaffold manifest JSON from a local package
 - `wupm self-update` path powered by GitHub releases with rollback/logging
 - MCP `updates_list` tool
-- GUI Updates tab with live DataGrid, status feedback, refresh, and install actions
+- GUI Updates tab with live DataGrid, status feedback, progress bar, refresh, install actions, and error dialogs
 - `POST /updates/install` API route with SSE-style progress events
 - `POST /cli/execute` API route for update and self-update commands
 - Delta update support via `IPackageDeltaProvider`/`PackageDeltaProvider`
@@ -17,9 +17,10 @@
 - GitHub Actions CI workflow in `.github/workflows/ci.yml`
 - Update authoring and self-update prerequisites docs in `docs/SERVICE.md`
 - README CI badge pointing to GitHub Actions
-- Tests: `UpdateCommandTests`, `UpdateCliParsingTests`, `UpdateIntegrationTests`, `UpdateInitTests`
+- Tests: `UpdateCommandTests`, `UpdateCliParsingTests`, `UpdateIntegrationTests`, `UpdateInitTests`, `AuthMiddlewareTests`, `PluginContractTests`, `SelfUpdaterE2ETests`, `DeltaE2ETests`
 
 ### Changed
 - `/plugins/{name}/execute` route remains wired in `WupmApi.Program`
 - `UpdateItem` moved to shared `WindowsUpdateAndPackageManager.Models` namespace
 - Auth middleware explicitly exempts read paths when `WUPM_API_KEY` is set
+- `/updates/install` returns `401` when `WUPM_API_KEY` is set and unauthenticated
