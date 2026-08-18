@@ -227,34 +227,45 @@ foreach ($pkg in $updates) {
 
                 $downloader = $dlSession.CreateUpdateDownloader()
                 $downloader.Updates = $dlCollection
-                $dlResult = $downloader.Download()
-
-                if ($dlResult.ResultCode -eq 2) {
-                    $update2.Refresh()
-                    $cachedPath = $null
-                    for ($i=0; $i -lt $update2.DownloadContents.Count; $i++) {
-                        $dc = $update2.DownloadContents.Item($i)
-                        try {
-                            $url = $dc.DownloadUrl
-                            if ($url) {
-                                $fname = [System.IO.Path]::GetFileName($url.Split('?')[0])
-                                if (-not $fname) { $fname = "$($pkg.Id).msu" }
-                                $candidate = Join-Path $env:TEMP $fname
-                                if (Test-Path $candidate) { $cachedPath = $candidate; break }
-                                $candidate2 = Join-Path $workRoot "downloads" $fname
-                                if (Test-Path $candidate2) { $cachedPath = $candidate2; break }
-                            }
-                        } catch {}
-                    }
-
-                    if ($cachedPath) {
-                        Write-Ok "WUA downloaded to $cachedPath"
-                        $downloaded += [pscustomobject]@{ Package = $pkg; LocalPath = $cachedPath }
+                try {
+                    $dlResult = $downloader.Download()
+                } catch {
+                    if ($_ -match '0x80240032') {
+                        Write-Info "WUA reports update already downloaded/cached."
+                        $dlResult = $null
                     } else {
-                        Write-Warn "WUA download completed but cached file path unknown for $($pkg.Id)"
+                        throw
                     }
-                } else {
+                }
+
+                if ($null -ne $dlResult -and $dlResult.ResultCode -ne 2) {
                     Write-Warn "WUA download result code: $($dlResult.ResultCode) for $($pkg.Id)"
+                }
+
+                $update2.Refresh()
+                $cachedPath = $null
+                for ($i=0; $i -lt $update2.DownloadContents.Count; $i++) {
+                    $dc = $update2.DownloadContents.Item($i)
+                    try {
+                        $url = $dc.DownloadUrl
+                        if ($url) {
+                            $fname = [System.IO.Path]::GetFileName($url.Split('?')[0])
+                            if (-not $fname) { $fname = "$($pkg.Id).msu" }
+                            $candidate = Join-Path $env:TEMP $fname
+                            if (Test-Path $candidate) { $cachedPath = $candidate; break }
+                            $candidate2 = Join-Path $workRoot "downloads" $fname
+                            if (Test-Path $candidate2) { $cachedPath = $candidate2; break }
+                            $candidate3 = Join-Path $env:SystemRoot "SoftwareDistribution\Download\$fname"
+                            if (Test-Path $candidate3) { $cachedPath = $candidate3; break }
+                        }
+                    } catch {}
+                }
+
+                if ($cachedPath) {
+                    Write-Ok "WUA downloaded to $cachedPath"
+                    $downloaded += [pscustomobject]@{ Package = $pkg; LocalPath = $cachedPath }
+                } else {
+                    Write-Warn "WUA download completed but cached file path unknown for $($pkg.Id)"
                 }
             } else {
                 Write-Warn "WUA fallback found 0 results for $fileName"
