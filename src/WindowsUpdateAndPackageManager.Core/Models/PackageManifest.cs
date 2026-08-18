@@ -19,6 +19,7 @@ public class PackageManifest
     public bool RequiresReboot { get; set; }
     public string[]? Dependencies { get; set; }
     public DateTimeOffset PublishedAt { get; set; }
+    public DateTimeOffset Created { get; set; }
     public bool IsDeprecated { get; set; }
     public string? DeprecationReason { get; set; }
     public string[]? Changelog { get; set; }
