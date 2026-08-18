@@ -370,7 +370,8 @@ foreach ($item in $wupkgFiles) {
     Write-Info "Ensuring release exists for tag: $tag"
     $releaseExists = gh release view $tag --repo $GitHubRepo 2>&1 | Out-Null
     if ($LASTEXITCODE -ne 0) {
-        $notes = @"
+        $notesPath = Join-Path $workRoot "notes-$($pkg.Id).md"
+        @"
 ## $($pkg.DisplayName)
 
 - **ID:** $($pkg.Id)
@@ -384,8 +385,8 @@ foreach ($item in $wupkgFiles) {
 ```powershell
 wusa.exe $($pkg.Id).wupkg /quiet /norestart
 ```
-"@
-        gh release create $tag --repo $GitHubRepo --title "$($pkg.Id) $($pkg.Version)" --notes $notes 2>&1 | Out-Null
+"@ | Set-Content -Path $notesPath -Encoding UTF8
+        gh release create $tag --repo $GitHubRepo --title "$($pkg.Id) $($pkg.Version)" --notes-file $notesPath 2>&1 | Out-Null
         Write-Ok "Created release $tag"
     } else {
         Write-Info "Release $tag already exists, updating assets."
