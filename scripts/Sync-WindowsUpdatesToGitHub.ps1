@@ -357,22 +357,99 @@ foreach ($pkg in $updates) {
     }
 
     Write-Info "Downloading $fileName ..."
+    $downloadOk = $false
     try {
-        curl.exe -L --retry 3 --retry-delay 5 -o $localPath $pkg.DownloadUrl 2>&1 | Out-Null
+        curl.exe -L --max-time 600 --connect-timeout 30 --retry 5 --retry-delay 10 -A "Microsoft-Windows-Client-OS/10.0" -o $localPath $pkg.DownloadUrl 2>&1 | Out-Null
         if (-not (Test-Path $localPath)) { throw "Download failed: file not created" }
         $size = (Get-Item $localPath).Length
         if ($size -lt 1024) { throw "Downloaded file is too small ($size bytes), probably an HTML error page." }
 
         Write-Ok "Downloaded $fileName ($size bytes)"
         $downloaded += [pscustomobject]@{ Package = $pkg; LocalPath = $localPath }
+        $downloadOk = $true
     } catch {
-        Write-Warn "Failed to download $fileName : $_"
+        Write-Warn "Direct download failed for $fileName : $_"
+    }
+
+    if (-not $downloadOk) {
+        Write-Info "Attempting download via Windows Update Agent for $fileName ..."
+        try {
+            $updateSession2 = New-Object -ComObject Microsoft.Update.Session
+            $updateSearcher2 = $updateSession2.CreateUpdateSearcher()
+            $updateSearcher2.ServerSelection = 2
+
+            $kbQuery = if ($pkg.Id -match '(?i)kb(\d+)') { "KBArticleIDs='$($matches[1])'" } else { "Title='$($pkg.DisplayName)'" }
+            $searchResult2 = $updateSearcher2.Search($kbQuery)
+
+            if ($searchResult2.Updates.Count -gt 0) {
+                $update2 = $searchResult2.Updates.Item(0)
+                $downloaded += [pscustomobject]@{ Package = $pkg; LocalPath = $null; Update = $update2; DownloadMethod = "wua" }
+                Write-Info "WUA download queued for $fileName"
+            } else {
+                Write-Warn "WUA fallback found 0 results for $fileName"
+            }
+        } catch {
+            Write-Warn "WUA fallback failed for $fileName : $_"
+        }
     }
 }
 
-Write-Info "Successfully downloaded $($downloaded.Count) packages."
+# WUA actual download for queued items
+$finalDownloads = @()
+foreach ($item in $downloaded) {
+    if ($item.LocalPath) {
+        $finalDownloads += $item
+        continue
+    }
 
-if ($downloaded.Count -eq 0) {
+    if ($item.DownloadMethod -eq "wua" -and $item.Update) {
+        Write-Info "Downloading $($item.Package.Id) via WUA..."
+        try {
+            $dlSession = New-Object -ComObject Microsoft.Update.Session
+            $dlSearcher = $dlSession.CreateUpdateSearcher()
+            $dlSearcher.ServerSelection = 2
+
+            $kbQuery = if ($item.Package.Id -match '(?i)kb(\d+)') { "KBArticleIDs='$($matches[1])'" } else { "Title='$($item.Package.DisplayName)'" }
+            $dlResult = $dlSearcher.Search($kbQuery)
+            if ($dlResult.Updates.Count -eq 0) { throw "WUA download search returned 0 results" }
+
+            $updateToDownload = $dlResult.Updates.Item(0)
+            $dlObj = $updateToDownload.Updates
+            if ($dlObj.Count -eq 0) { $dlObj = $updateToDownload }
+
+            $downloader = $dlSession.CreateUpdateDownloader()
+            $downloader.Updates = $dlObj
+            $dlResult2 = $downloader.Download()
+
+            $cachedPath = $null
+            for ($i=0; $i -lt $updateToDownload.DownloadContents.Count; $i++) {
+                $dc = $updateToDownload.DownloadContents.Item($i)
+                try {
+                    $url = $dc.DownloadUrl
+                    if ($url) {
+                        $fname = [System.IO.Path]::GetFileName($url.Split('?')[0])
+                        if (-not $fname) { $fname = "$($item.Package.Id).msu" }
+                        $cachedPath = Join-Path $env:TEMP $fname
+                        if (-not (Test-Path $cachedPath)) { $cachedPath = Join-Path $workRoot "downloads" $fname }
+                    }
+                } catch {}
+            }
+
+            if ($cachedPath -and (Test-Path $cachedPath)) {
+                Write-Ok "WUA downloaded to $cachedPath"
+                $finalDownloads += [pscustomobject]@{ Package = $item.Package; LocalPath = $cachedPath }
+            } else {
+                Write-Warn "WUA download completed but file path unknown for $($item.Package.Id)"
+            }
+        } catch {
+            Write-Warn "WUA download failed for $($item.Package.Id) : $_"
+        }
+    }
+}
+
+Write-Info "Successfully downloaded $($finalDownloads.Count) packages."
+
+if ($finalDownloads.Count -eq 0) {
     Write-Err "No packages downloaded. Exiting."
     exit 1
 }
@@ -381,7 +458,7 @@ if ($downloaded.Count -eq 0) {
 # Step 3: Create WUPM .wupkg packages
 # ---------------------------------------------------------------------------
 $wupkgFiles = @()
-foreach ($item in $downloaded) {
+foreach ($item in $finalDownloads) {
     $pkg = $item.Package
     $localPath = $item.LocalPath
     $pkgDir = Join-Path "$workRoot\packages" $pkg.Id
