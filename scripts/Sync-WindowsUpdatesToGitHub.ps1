@@ -163,7 +163,7 @@ if ($Source -eq "WUA") {
 
             $kbNumber = "unknown"
             if ($update.Title -match '(?i)kb\d{6,}') {
-                $kbNumber = $matches[0].Value.ToLowerInvariant()
+                $kbNumber = $matches[0].ToLowerInvariant()
             } elseif ($update.KBArticleIDs.Count -gt 0) {
                 $kbNumber = $update.KBArticleIDs.Item(0).ToLowerInvariant()
             }
@@ -270,7 +270,7 @@ if ($Source -eq "Online") {
 
             $kbNumber = "unknown"
             if ($update.Title -match '(?i)kb\d{6,}') {
-                $kbNumber = $matches[0].Value.ToLowerInvariant()
+                $kbNumber = $matches[0].ToLowerInvariant()
             } elseif ($update.KBArticleIDs.Count -gt 0) {
                 $kbNumber = $update.KBArticleIDs.Item(0).ToLowerInvariant()
             }
