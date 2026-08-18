@@ -133,12 +133,17 @@ if ($Source -eq "WUA") {
 
             $downloadUrl = ""
             $fileSize = 0
-            foreach ($file in $update.DownloadContents) {
-                if ($file.DownloadUrl) {
-                    $downloadUrl = $file.DownloadUrl
-                    $fileSize = $file.FileSize
-                    break
+            try {
+                foreach ($file in $update.DownloadContents) {
+                    $url = $null
+                    try { $url = $file.DownloadUrl } catch {}
+                    if ($url) {
+                        $downloadUrl = $url
+                        break
+                    }
                 }
+            } catch {
+                # DownloadContents collection not enumerable on this update object
             }
 
             if (-not $downloadUrl) {
@@ -235,12 +240,17 @@ if ($Source -eq "Online") {
 
             $downloadUrl = ""
             $fileSize = 0
-            foreach ($file in $update.DownloadContents) {
-                if ($file.DownloadUrl) {
-                    $downloadUrl = $file.DownloadUrl
-                    $fileSize = $file.FileSize
-                    break
+            try {
+                foreach ($file in $update.DownloadContents) {
+                    $url = $null
+                    try { $url = $file.DownloadUrl } catch {}
+                    if ($url) {
+                        $downloadUrl = $url
+                        break
+                    }
                 }
+            } catch {
+                # DownloadContents collection not enumerable on this update object
             }
 
             if (-not $downloadUrl) {
