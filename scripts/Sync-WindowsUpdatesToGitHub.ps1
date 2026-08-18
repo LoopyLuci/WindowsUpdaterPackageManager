@@ -196,7 +196,7 @@ if ($updates.Count -eq 0) {
         }
 
         Write-Info "Found $($updateIds.Count) catalog entries from web search."
-        if ($updateIds.Count -eq 0) {
+        if (-not $updateIds -or $updateIds.Count -eq 0) {
             Write-Err "Could not find any updates. The catalog may require manual interaction."
             exit 1
         }
