@@ -7,7 +7,6 @@ using Microsoft.Extensions.Http;
 using WindowsUpdateAndPackageManager.Models;
 using WindowsUpdateAndPackageManager.Core;
 using WindowsUpdateAndPackageManager.Infrastructure;
-using WupmGui.Models;
 
 namespace WupmGui.Services;
 
@@ -17,6 +16,7 @@ public interface IWupmApiClient
     Task<IReadOnlyList<PackageManifest>> GetPackagesAsync(CancellationToken cancellationToken = default);
     Task<IReadOnlyList<PackageManifest>> GetInstalledAsync(CancellationToken cancellationToken = default);
     Task<InstallResult> InstallAsync(PackageManifest manifest, CancellationToken cancellationToken = default);
+    Task<InstallResult> InstallUpdateAsync(UpdateItem update, CancellationToken cancellationToken = default);
     Task<ScanResult> ScanAsync(bool offlineScan, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<AuditEntry>> GetAuditAsync(DateTimeOffset? from, DateTimeOffset? to, string? action, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<CacheEntry>> GetCacheEntriesAsync(CancellationToken cancellationToken = default);
@@ -164,6 +164,13 @@ public sealed class WupmApiClient : IWupmApiClient, IDisposable
         using var response = await _http.PostAsJsonAsync("/cli/execute", new { command = "updates", @for = windowsVersion, channel }, cancellationToken).ConfigureAwait(false);
         response.EnsureSuccessStatusCode();
         return (await response.Content.ReadFromJsonAsync<List<UpdateItem>>(cancellationToken).ConfigureAwait(false))!;
+    }
+
+    public async Task<InstallResult> InstallUpdateAsync(UpdateItem update, CancellationToken cancellationToken = default)
+    {
+        using var response = await _http.PostAsJsonAsync("/updates/install", update, cancellationToken).ConfigureAwait(false);
+        response.EnsureSuccessStatusCode();
+        return (await response.Content.ReadFromJsonAsync<InstallResult>(cancellationToken).ConfigureAwait(false))!;
     }
 
     public void Dispose()

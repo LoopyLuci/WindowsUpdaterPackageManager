@@ -50,7 +50,7 @@ public sealed class SelfUpdater : ISelfUpdater
             var latestRelease = await _fetchReleaseAsync(releaseUrl, cancellationToken).ConfigureAwait(false);
             if (latestRelease is null) return false;
 
-            var tempDir = Path.Combine(Path.GetTempPath(), "wupm-selfupdate", Guid.NewGuid().ToString("N"));
+            var tempDir = Path.Combine(Path.GetTempPath(), $"wupm-selfupdate-{Guid.NewGuid():N}");
             Directory.CreateDirectory(tempDir);
             var zipPath = Path.Combine(tempDir, _assetName);
 
@@ -63,21 +63,42 @@ public sealed class SelfUpdater : ISelfUpdater
             var newExe = FindExecutable(extractDir);
             if (newExe is null)
             {
+                Directory.Delete(tempDir, recursive: true);
                 return false;
             }
+
+            var backupPath = _currentExePath + ".bak";
+            if (File.Exists(backupPath)) File.Delete(backupPath);
 
             var updaterScript = Path.Combine(tempDir, "apply-update.ps1");
             await File.WriteAllTextAsync(updaterScript, $@"
 $ErrorActionPreference = 'Stop'
 $new = '{Escape(newExe)}'
 $old = '{Escape(_currentExePath)}'
-$backup = '{Escape(_currentExePath + ".bak")}'
+$backup = '{Escape(backupPath)}'
+$log = '{Escape(Path.Combine(tempDir, "apply-update.log"))}'
 
-if (Test-Path $backup) {{ Remove-Item $backup -Force }}
-Move-Item $old $backup -Force
-Move-Item $new $old -Force
-Start-Process -FilePath $old -ArgumentList 'self-update-complete'
-Remove-Item $backup -Force
+try {{
+    if (Test-Path $backup) {{ Remove-Item $backup -Force }}
+    Move-Item $old $backup -Force
+    Move-Item $new $old -Force
+
+    $args = @('self-update-complete')
+    Start-Process -FilePath $old -ArgumentList $args -Wait -NoNewWindow
+    if (Test-Path $backup) {{ Remove-Item $backup -Force }}
+    'SUCCESS' | Out-File -FilePath $log
+}}
+catch {{
+    $_ | Out-File -FilePath $log
+    if (Test-Path $old) {{
+        if (Test-Path $backup) {{
+            if (Test-Path $old) {{ Remove-Item $old -Force }}
+            Move-Item $backup $old -Force
+        }}
+    }}
+    'FAILED' | Out-File -FilePath $log -Append
+    exit 1
+}}
 ", cancellationToken).ConfigureAwait(false);
 
             var psi = new ProcessStartInfo
@@ -88,7 +109,14 @@ Remove-Item $backup -Force
                 CreateNoWindow = true
             };
 
-            return await _processStartAsync(psi).ConfigureAwait(false);
+            var started = await _processStartAsync(psi).ConfigureAwait(false);
+            if (!started)
+            {
+                Directory.Delete(tempDir, recursive: true);
+                return false;
+            }
+
+            return true;
         }
         catch (Exception)
         {

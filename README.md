@@ -1,6 +1,6 @@
 # Windows Update and Package Manager (WUPM)
 
-[![CI](https://img.shields.io/badge/CI-local%20PowerShell-blue)](docs/CI.md)
+[![CI](https://img.shields.io/badge/CI-GitHub%20Actions-blue)](https://github.com/LoopyLuci/WindowsUpdaterPackageManager/actions/workflows/ci.yml/badge.svg)
 [![Chocolatey](https://img.shields.io/badge/Chocolatey-available-green)](https://community.chocolatey.org/packages/wupm-cli)
 [![Winget](https://img.shields.io/badge/Winget-manifest%20ready-green)](docs/CI.md#winget-manifest)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
@@ -92,7 +92,28 @@ Recommended production deployment pattern:
 
 ## CI/CD
 
-This repo uses local PowerShell CI/release scripts instead of GitHub Actions workflows.
+This repo uses GitHub Actions for CI and local PowerShell release scripts for packaging and deployment.
+
+### GitHub Actions
+
+`.github/workflows/ci.yml` runs on push and pull request to `main`:
+
+```yaml
+name: CI
+on: [push, pull_request]
+jobs:
+  build-test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with: { dotnet-version: '10.0.x' }
+      - run: dotnet restore
+      - run: dotnet build -c Release --no-restore
+      - run: dotnet test -c Release --no-build --verbosity quiet
+```
+
+### Local PowerShell scripts
 
 ```powershell
 # Run CI locally

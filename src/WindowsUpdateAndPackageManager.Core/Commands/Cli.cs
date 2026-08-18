@@ -21,6 +21,12 @@ public static class Cli
 {
     public static Task<int> Run(string[] args, IServiceProvider services)
     {
+        var root = BuildCommand(services);
+        return root.InvokeAsync(args);
+    }
+
+    public static RootCommand BuildCommand(IServiceProvider services)
+    {
         var root = new RootCommand("Windows Update and Package Manager")
         {
             Description = "Personal-first, offline-capable update and package manager for Windows."
@@ -2254,15 +2260,7 @@ public static class Cli
         });
         root.AddCommand(doctor);
 
-        try
-        {
-            return root.InvokeAsync(args);
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Command failed: {ex.Message}");
-            return Task.FromResult(1);
-        }
+        return root;
     }
 
     public static async Task PackPackage(IServiceProvider services, string sourceDir, string outputDir)

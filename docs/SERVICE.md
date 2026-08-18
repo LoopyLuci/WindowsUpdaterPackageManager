@@ -88,6 +88,42 @@ WUPM can run as a Windows service via `sc.exe create` or `nssm install`. This do
 - Steps: `dotnet build` and `dotnet test`.
 - Workflow runs on `windows-latest` with `dotnet-version: 10.0.x`.
 
+## Updates and self-update
+
+### Update authoring
+
+To publish an update through the WUPM distribution system:
+
+1. Package your release artifact as a `.zip` or `.wupkg`.
+2. Compute its SHA256 hash.
+3. Create a GitHub release with tag `updates/{packageId}/{version}`.
+4. Place the artifact as a release asset.
+5. Include a manifest JSON in the release body:
+
+```json
+{
+  "windowsVersion": "10.0",
+  "architecture": "x64",
+  "packageId": "MyPackage",
+  "version": "1.0.0",
+  "sha256": "<hex>",
+  "sourceUrl": "https://github.com/owner/repo/releases/download/updates/MyPackage/1.0.0/MyPackage-1.0.0.zip",
+  "publishedAt": "2026-01-01T00:00:00Z",
+  "channel": "stable",
+  "buildNumber": "19045",
+  "displayName": "My Package",
+  "channels": ["stable", "beta"]
+}
+```
+
+`UpdateDistributionService.PushUpdateAsync` can generate and publish this manifest automatically.
+
+### Self-update prerequisites
+
+- Run from an account with permission to write to the install directory.
+- Ensure the temp path is writable; the updater stages files under `%TEMP%`.
+- If the running executable is locked, the updater will roll back from `.bak` and report failure in `apply-update.log`.
+
 ## Troubleshooting
 
 - **Access denied**: rerun GUI/MCP/API from an elevated shell.

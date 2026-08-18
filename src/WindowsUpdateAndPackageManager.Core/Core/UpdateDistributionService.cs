@@ -31,6 +31,11 @@ public sealed class UpdateDistributionService
             throw new FileNotFoundException("Package file is missing.", packagePath);
         }
 
+        if (!IsVersionSupported(windowsVersion, buildNumber))
+        {
+            throw new NotSupportedException($"Windows version {windowsVersion} build {buildNumber} is not supported by this package.");
+        }
+
         await using var stream = File.OpenRead(packagePath);
         using var sha = SHA256.Create();
         var hash = await sha.ComputeHashAsync(stream, cancellationToken).ConfigureAwait(false);
@@ -164,5 +169,32 @@ public sealed class UpdateDistributionService
         {
             return null;
         }
+    }
+
+    private static bool IsVersionSupported(string windowsVersion, string? buildNumber)
+    {
+        if (string.IsNullOrWhiteSpace(windowsVersion))
+        {
+            return true;
+        }
+
+        if (string.Equals(windowsVersion, "10.0", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        if (string.Equals(windowsVersion, "11.0", StringComparison.OrdinalIgnoreCase))
+        {
+            if (string.IsNullOrWhiteSpace(buildNumber))
+            {
+                return true;
+            }
+
+            return buildNumber.StartsWith("22000", StringComparison.OrdinalIgnoreCase) ||
+                   buildNumber.StartsWith("22621", StringComparison.OrdinalIgnoreCase) ||
+                   buildNumber.StartsWith("19045", StringComparison.OrdinalIgnoreCase);
+        }
+
+        return false;
     }
 }

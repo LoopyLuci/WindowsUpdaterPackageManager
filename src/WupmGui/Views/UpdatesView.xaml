@@ -5,7 +5,9 @@
     <TextBlock Text="Updates" FontSize="24" FontWeight="Bold" DockPanel.Dock="Top" Margin="0,0,0,12"/>
     <StackPanel Orientation="Horizontal" DockPanel.Dock="Top" Margin="0,0,0,12">
       <Button Content="Refresh" Command="{Binding RefreshCommand}" Margin="0,0,8,0"/>
+      <Button Content="Install Selected" Command="{Binding InstallSelectedCommand}" Margin="0,0,8,0"/>
     </StackPanel>
+    <TextBlock Text="{Binding StatusMessage}" DockPanel.Dock="Top" Margin="0,0,0,8" Foreground="Gray"/>
     <DataGrid ItemsSource="{Binding Items}" AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True">
       <DataGrid.Columns>
         <DataGridTextColumn Header="Name" Binding="{Binding DisplayName}" Width="*"/>

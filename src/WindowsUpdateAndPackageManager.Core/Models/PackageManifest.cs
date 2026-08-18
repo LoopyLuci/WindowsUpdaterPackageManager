@@ -22,4 +22,5 @@ public class PackageManifest
     public bool IsDeprecated { get; set; }
     public string? DeprecationReason { get; set; }
     public string[]? Changelog { get; set; }
+    public string? SourceUrl { get; set; }
 }

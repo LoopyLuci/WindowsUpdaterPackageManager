@@ -290,6 +290,35 @@ app.MapPost("/cli/execute", async (IServiceProvider sp, JsonNode body) =>
     return Results.BadRequest(new { error = $"Unknown CLI command: {command}" });
 });
 
+app.MapPost("/updates/install", async (IServiceProvider sp, JsonNode body) =>
+{
+    var packageId = body["packageId"]?.ToString() ?? string.Empty;
+    var version = body["version"]?.ToString() ?? string.Empty;
+    var sourceUrl = body["sourceUrl"]?.ToString() ?? string.Empty;
+    if (string.IsNullOrWhiteSpace(packageId) || string.IsNullOrWhiteSpace(sourceUrl))
+    {
+        return Results.BadRequest(new { error = "packageId and sourceUrl are required." });
+    }
+
+    try
+    {
+        var http = new HttpClient();
+        var repoClient = sp.GetRequiredService<IRepoClient>();
+        await using var stream = await repoClient.DownloadPackageAsync(sourceUrl);
+        var tempPath = Path.Combine(Path.GetTempPath(), $"wupm-update-{Guid.NewGuid():N}.wupkg");
+        await using var file = File.Create(tempPath);
+        await stream.CopyToAsync(file);
+        var installer = sp.GetRequiredService<IPackageManager>();
+        var manifest = new PackageManifest { Id = packageId, Version = version, SourceUrl = sourceUrl };
+        var result = await installer.InstallAsync(manifest);
+        return Results.Ok(result);
+    }
+    catch (Exception ex)
+    {
+        return Results.Problem(ex.Message);
+    }
+});
+
 try
 {
     await using (var scope = app.Services.CreateAsyncScope())
