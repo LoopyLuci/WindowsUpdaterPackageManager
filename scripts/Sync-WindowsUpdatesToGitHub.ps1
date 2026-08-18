@@ -366,6 +366,7 @@ if ($WhatIf) {
 foreach ($item in $wupkgFiles) {
     $pkg = $item.Package
     $tag = Safe-Tag $pkg.Id $pkg.Version
+    $title = "$($pkg.Id) $($pkg.Version)"
 
     Write-Info "Ensuring release exists for tag: $tag"
     $releaseExists = gh release view $tag --repo $GitHubRepo 2>&1 | Out-Null
@@ -383,7 +384,7 @@ foreach ($item in $wupkgFiles) {
         $notes += "wusa.exe $($pkg.Id).wupkg /quiet /norestart`n"
         $notes += "```"
         Set-Content -Path $notesPath -Value $notes -Encoding UTF8
-        gh release create $tag --repo $GitHubRepo --title "$($pkg.Id) $($pkg.Version)" --notes-file $notesPath 2>&1 | Out-Null
+        gh release create $tag --repo $GitHubRepo --title $title --notes-file $notesPath 2>&1 | Out-Null
         Write-Ok "Created release $tag"
     } else {
         Write-Info "Release $tag already exists, updating assets."
