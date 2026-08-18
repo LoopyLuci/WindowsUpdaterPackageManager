@@ -1,11 +1,25 @@
 <#
 .SYNOPSIS
-    Bulk-retrieve Windows update packages via Windows Update Agent,
+    Bulk-retrieve Windows update packages from Windows Update Agent or a known KB manifest list,
     wrap them as WUPM .wupkg packages, and upload to GitHub with proper tagging.
+
+.EXAMPLE
+    # Discover updates from local WUA and download them
+    .\scripts\Sync-WindowsUpdatesToGitHub.ps1 -Source WUA -OSVersion "Windows 10" -Architecture all -MaxPackages 20
+
+    # Use known KB manifest list
+    .\scripts\Sync-WindowsUpdatesToGitHub.ps1 -Source Manifest -KbManifestPath .\scripts\known-kbs.json -MaxPackages 50
+
+    # Dry run to see what would happen
+    .\scripts\Sync-WindowsUpdatesToGitHub.ps1 -Source WUA -WhatIf
 #>
 
 [CmdletBinding()]
 param(
+    [Parameter(Mandatory=$false)]
+    [ValidateSet("WUA","Manifest")]
+    [string]$Source = "WUA",
+
     [Parameter(Mandatory=$false)]
     [ValidateSet("Windows 10","Windows 11","Windows Server 2019","Windows Server 2022")]
     [string]$OSVersion = "Windows 10",
@@ -25,6 +39,9 @@ param(
 
     [Parameter(Mandatory=$false)]
     [string]$WorkDir = ".\\wupm-sync-work",
+
+    [Parameter(Mandatory=$false)]
+    [string]$KbManifestPath = "",
 
     [Parameter(Mandatory=$false)]
     [switch]$WhatIf,
@@ -75,165 +92,134 @@ Ensure-Directory "$workRoot\packages"
 Ensure-Directory "$workRoot\manifests"
 
 # ---------------------------------------------------------------------------
-# Step 1: Search Windows Update Agent for available updates
+# Step 1: Discover updates
 # ---------------------------------------------------------------------------
-Write-Info "Querying Windows Update Agent for $OSVersion updates..."
-
-$updateSession = New-Object -ComObject Microsoft.Update.Session
-$updateSearcher = $updateSession.CreateUpdateSearcher()
-
-# Build search query based on OS version
-$searchQuery = switch ($OSVersion) {
-    "Windows 10" { "IsInstalled=0 and Type='Software' and IsHidden=0" }
-    "Windows 11" { "IsInstalled=0 and Type='Software' and IsHidden=0" }
-    default { "IsInstalled=0 and Type='Software' and IsHidden=0" }
-}
-
-try {
-    $searchResult = $updateSearcher.Search($searchQuery)
-} catch {
-    Write-Warn "WUA search failed: $_"
-    Write-Info "Falling back to Microsoft Update Catalog web search..."
-    $searchResult = $null
-}
-
 $updates = @()
-if ($searchResult -and $searchResult.Updates.Count -gt 0) {
-    Write-Info "Found $($searchResult.Updates.Count) available updates from WUA."
 
-    foreach ($update in $searchResult.Updates) {
-        if ($updates.Count -ge $MaxPackages) { break }
+if ($Source -eq "WUA") {
+    Write-Info "Querying Windows Update Agent for $OSVersion updates..."
 
-        # Filter by architecture if specified
-        if ($Architecture -ne "all") {
-            $archMatch = $false
-            foreach ($string in $update.SupportedArchitectures) {
-                if ($string -match $Architecture) {
-                    $archMatch = $true
-                    break
-                }
-            }
-            if (-not $archMatch) { continue }
-        }
+    $updateSession = New-Object -ComObject Microsoft.Update.Session
+    $updateSearcher = $updateSession.CreateUpdateSearcher()
 
-        # Get download URL
-        $downloadUrl = ""
-        $fileSize = 0
-        foreach ($file in $update.DownloadContents) {
-            if ($file.DownloadUrl) {
-                $downloadUrl = $file.DownloadUrl
-                $fileSize = $file.FileSize
-                break
-            }
-        }
-
-        if (-not $downloadUrl) {
-            foreach ($file in $update.DownloadUrls) {
-                if ($file) {
-                    $downloadUrl = $file
-                    break
-                }
-            }
-        }
-
-        if (-not $downloadUrl) { continue }
-
-        # Extract KB number
-        $kbNumber = "unknown"
-        if ($update.Title -match '(?i)kb\d{6,}') {
-            $kbNumber = $matches[0].Value.ToLowerInvariant()
-        } elseif ($update.KBArticleIDs.Count -gt 0) {
-            $kbNumber = $update.KBArticleIDs.Item(0).ToLowerInvariant()
-        }
-
-        # Get OS version from update
-        $osVersion = $OSVersion
-        if ($update.Title -match "Windows 11") { $osVersion = "Windows 11" }
-        elseif ($update.Title -match "Windows 10") { $osVersion = "Windows 10" }
-
-        $version = if ($update.LastDeploymentChangeTime) {
-            $update.LastDeploymentChangeTime.ToString("yyyy-MM")
-        } else {
-            (Get-Date).ToString("yyyy-MM")
-        }
-
-        $updates += [pscustomobject]@{
-            Id            = $kbNumber
-            Version       = $version
-            DisplayName   = $update.Title
-            OsVersion     = $osVersion
-            Architecture  = $Architecture
-            ReleaseDate   = if ($update.LastDeploymentChangeTime) { $update.LastDeploymentChangeTime.ToString("MMMM d, yyyy") } else { (Get-Date).ToString("MMMM d, yyyy") }
-            DownloadUrl   = $downloadUrl
-            SizeBytes     = $fileSize
-            SourceUrl     = "https://www.catalog.update.microsoft.com/Home/Search?q=$([Uri]::EscapeDataString($update.Title))"
-            SupportUrl    = "https://support.microsoft.com/help/?kb=$($kbNumber -replace 'kb','')"
-        }
-
-        Write-Info "Found: $kbNumber - $($update.Title)"
+    $searchQuery = "IsInstalled=0 and Type='Software' and IsHidden=0"
+    try {
+        $searchResult = $updateSearcher.Search($searchQuery)
+    } catch {
+        Write-Warn "WUA search failed: $_"
+        $searchResult = $null
     }
+
+    if ($searchResult -and $searchResult.Updates.Count -gt 0) {
+        Write-Info "Found $($searchResult.Updates.Count) available updates from WUA."
+
+        foreach ($update in $searchResult.Updates) {
+            if ($updates.Count -ge $MaxPackages) { break }
+
+            if ($Architecture -ne "all") {
+                $archMatch = $false
+                foreach ($string in $update.SupportedArchitectures) {
+                    if ($string -match $Architecture) {
+                        $archMatch = $true
+                        break
+                    }
+                }
+                if (-not $archMatch) { continue }
+            }
+
+            $downloadUrl = ""
+            $fileSize = 0
+            foreach ($file in $update.DownloadContents) {
+                if ($file.DownloadUrl) {
+                    $downloadUrl = $file.DownloadUrl
+                    $fileSize = $file.FileSize
+                    break
+                }
+            }
+
+            if (-not $downloadUrl) {
+                foreach ($file in $update.DownloadUrls) {
+                    if ($file) {
+                        $downloadUrl = $file
+                        break
+                    }
+                }
+            }
+
+            if (-not $downloadUrl) { continue }
+
+            $kbNumber = "unknown"
+            if ($update.Title -match '(?i)kb\d{6,}') {
+                $kbNumber = $matches[0].Value.ToLowerInvariant()
+            } elseif ($update.KBArticleIDs.Count -gt 0) {
+                $kbNumber = $update.KBArticleIDs.Item(0).ToLowerInvariant()
+            }
+
+            $osVersionDetected = $OSVersion
+            if ($update.Title -match "Windows 11") { $osVersionDetected = "Windows 11" }
+            elseif ($update.Title -match "Windows 10") { $osVersionDetected = "Windows 10" }
+
+            $version = if ($update.LastDeploymentChangeTime) {
+                $update.LastDeploymentChangeTime.ToString("yyyy-MM")
+            } else {
+                (Get-Date).ToString("yyyy-MM")
+            }
+
+            $updates += [pscustomobject]@{
+                Id            = $kbNumber
+                Version       = $version
+                DisplayName   = $update.Title
+                OsVersion     = $osVersionDetected
+                Architecture  = $Architecture
+                ReleaseDate   = if ($update.LastDeploymentChangeTime) { $update.LastDeploymentChangeTime.ToString("MMMM d, yyyy") } else { (Get-Date).ToString("MMMM d, yyyy") }
+                DownloadUrl   = $downloadUrl
+                SizeBytes     = $fileSize
+                SourceUrl     = "https://www.catalog.update.microsoft.com/Home/Search?q=$([Uri]::EscapeDataString($update.Title))"
+                SupportUrl    = "https://support.microsoft.com/help/?kb=$($kbNumber -replace 'kb','')"
+            }
+
+            Write-Info "Found: $kbNumber - $($update.Title)"
+        }
+    } else {
+        Write-Warn "No uninstalled updates found from WUA. This machine may be fully patched."
+    }
+}
+
+if ($Source -eq "Manifest") {
+    Write-Info "Loading KB manifest from $KbManifestPath..."
+    if (-not (Test-Path $KbManifestPath)) {
+        Write-Err "KbManifestPath not found: $KbManifestPath"
+        exit 1
+    }
+    $manifestItems = Get-Content $KbManifestPath -Raw | ConvertFrom-Json
+    foreach ($item in $manifestItems) {
+        if ($updates.Count -ge $MaxPackages) { break }
+        $updates += $item
+    }
+    Write-Info "Loaded $($updates.Count) items from manifest."
 }
 
 if ($updates.Count -eq 0) {
-    Write-Warn "No updates found from WUA for $OSVersion. Trying Microsoft Update Catalog web search..."
-
-    # Fallback to web search
-    $session = New-Object Microsoft.PowerShell.Commands.WebRequestSession
-    $session.UserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-
-    $escapedQuery = [Uri]::EscapeDataString("$OSVersion cumulative update $Architecture")
-    $searchUrl = "https://www.catalog.update.microsoft.com/Search.aspx?q=$escapedQuery"
-
-    try {
-        $searchResponse = Invoke-WebRequest -Uri $searchUrl -WebSession $session -UseBasicParsing -TimeoutSec 120
-        $searchHtml = $searchResponse.Content
-
-        # Look for any downloadable content
-        # The catalog page contains hidden fields with update IDs
-        $matches1 = [regex]::Matches($searchHtml, 'updateIDs\.push\(\{id:\s*"(\d+)"')
-        $matches2 = [regex]::Matches($searchHtml, '"id":\s*"(\d+)"')
-        $updateIds = @()
-        foreach ($m in $matches1) { $updateIds += $m.Groups[1].Value }
-        foreach ($m in $matches2) { $updateIds += $m.Groups[1].Value }
-        $updateIds = $updateIds | Select-Object -Unique
-
-        Write-Info "Found $($updateIds.Count) catalog entries from web search."
-        if ($updateIds.Count -eq 0) {
-            Write-Err "Could not find any updates. The catalog may require manual interaction."
-            exit 1
-        }
-
-        $selected = $updateIds | Select-Object -First $MaxPackages
-        Write-Info "Selected $($selected.Count) packages from catalog."
-
-        # Process selected IDs
-        foreach ($id in $selected) {
-            $updates += [pscustomobject]@{
-                Id            = "kb$id"
-                Version       = (Get-Date).ToString("yyyy-MM")
-                DisplayName   = "Windows Update $id"
-                OsVersion     = $OSVersion
-                Architecture  = $Architecture
-                ReleaseDate   = (Get-Date).ToString("MMMM d, yyyy")
-                DownloadUrl   = "https://www.catalog.update.microsoft.com/DownloadForm.aspx?$id"
-                SizeBytes     = 0
-                SourceUrl     = "https://www.catalog.update.microsoft.com/DownloadForm.aspx?$id"
-                SupportUrl    = "https://support.microsoft.com"
-            }
-            Write-Info "Added catalog entry: $id"
-        }
-    } catch {
-        Write-Err "Catalog search failed: $_"
-        exit 1
-    }
+    Write-Warn "No updates discovered. Create a KB manifest file or run on a machine with pending updates."
+    Write-Info "Example KB manifest format:"
+    Write-Info @'
+[
+  {
+    "Id": "kb5034441",
+    "Version": "2024-01",
+    "DisplayName": "Windows 10 KB5034441",
+    "OsVersion": "Windows 10",
+    "Architecture": "x64",
+    "ReleaseDate": "January 9, 2024",
+    "DownloadUrl": "https://download.microsoft.com/.../windows10.0-kb5034441-x64.msu",
+    "SupportUrl": "https://support.microsoft.com/help/5034441"
+  }
+]
+'@
+    exit 0
 }
 
 Write-Info "Total updates to process: $($updates.Count)"
-
-if ($updates.Count -eq 0) {
-    Write-Err "No updates found. Exiting."
-    exit 1
-}
 
 # ---------------------------------------------------------------------------
 # Step 2: Download packages
