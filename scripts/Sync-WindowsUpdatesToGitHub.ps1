@@ -261,7 +261,21 @@ foreach ($pkg in $updates) {
                     Write-Ok "WUA downloaded to $cachedPath"
                     $downloaded += [pscustomobject]@{ Package = $pkg; LocalPath = $cachedPath }
                 } else {
-                    Write-Warn "WUA download completed but cached file path unknown for $($pkg.Id)"
+                    $candidate4 = Join-Path $env:SystemRoot "SoftwareDistribution\Download"
+                    if (Test-Path $candidate4) {
+                        $kbDigits = if ($pkg.Id -match '(?i)kb(\d+)') { $matches[1] } else { '' }
+                        $searchPattern = if ($kbDigits) { "*$kbDigits*" } else { "*$($pkg.Id)*" }
+                        $found = Get-ChildItem -Path $candidate4 -Recurse -Filter $searchPattern -ErrorAction SilentlyContinue | Where-Object { $_.Extension -match '^\.(msu|cab)$' } | Select-Object -First 1
+                        if ($found) {
+                            $cachedPath = $found.FullName
+                            Write-Ok "Found cached update in SoftwareDistribution: $cachedPath"
+                            $downloaded += [pscustomobject]@{ Package = $pkg; LocalPath = $cachedPath }
+                        } else {
+                            Write-Warn "WUA download completed but cached file path unknown for $($pkg.Id)"
+                        }
+                    } else {
+                        Write-Warn "WUA download completed but cached file path unknown for $($pkg.Id)"
+                    }
                 }
             } else {
                 Write-Warn "WUA fallback found 0 results for $fileName"
