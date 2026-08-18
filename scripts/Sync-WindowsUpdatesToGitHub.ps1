@@ -371,22 +371,18 @@ foreach ($item in $wupkgFiles) {
     $releaseExists = gh release view $tag --repo $GitHubRepo 2>&1 | Out-Null
     if ($LASTEXITCODE -ne 0) {
         $notesPath = Join-Path $workRoot "notes-$($pkg.Id).md"
-        $notes = @"
-## $($pkg.DisplayName)
-
-- **ID:** $($pkg.Id)
-- **Version:** $($pkg.Version)
-- **OS:** $($pkg.OsVersion) ($($pkg.Architecture))
-- **Published:** $($pkg.ReleaseDate)
-- **SHA256:** $((Get-FileHashSha256 $item.WupkgPath))
-- **Source:** [$($pkg.SourceUrl)]($($pkg.SourceUrl))
-
-### Install
-```powershell
-wusa.exe $($pkg.Id).wupkg /quiet /norestart
-```
-"@
-        $notes | Set-Content -Path $notesPath -Encoding UTF8
+        $notes = ""
+        $notes += "## $($pkg.DisplayName)`n`n"
+        $notes += "- **ID:** $($pkg.Id)`n"
+        $notes += "- **Version:** $($pkg.Version)`n"
+        $notes += "- **OS:** $($pkg.OsVersion) ($($pkg.Architecture))`n"
+        $notes += "- **Published:** $($pkg.ReleaseDate)`n"
+        $notes += "- **SHA256:** $((Get-FileHashSha256 $item.WupkgPath))`n"
+        $notes += "- **Source:** [$($pkg.SourceUrl)]($($pkg.SourceUrl))`n`n"
+        $notes += "### Install`n```powershell`n"
+        $notes += "wusa.exe $($pkg.Id).wupkg /quiet /norestart`n"
+        $notes += "```"
+        Set-Content -Path $notesPath -Value $notes -Encoding UTF8
         gh release create $tag --repo $GitHubRepo --title "$($pkg.Id) $($pkg.Version)" --notes-file $notesPath 2>&1 | Out-Null
         Write-Ok "Created release $tag"
     } else {
