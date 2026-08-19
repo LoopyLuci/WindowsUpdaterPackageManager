@@ -6,7 +6,7 @@
 
 [CmdletBinding()]
 param(
-    [ValidateSet("WUA","Online","Manifest")]
+    [ValidateSet("WUA","Online","Internet","WSUS","Manifest")]
     [string]$Source = "Online",
 
     [ValidateSet("Windows 10","Windows 11","Windows Server 2019","Windows Server 2022")]
@@ -55,9 +55,45 @@ if (-not (Get-Command gh -ErrorAction SilentlyContinue)) {
     Write-Err "gh CLI is not installed."
     exit 1
 }
-$null = gh auth status 2>&1 | Out-Null
+try { $null = gh auth status 2>&1 | Out-Null } catch {}
 if ($LASTEXITCODE -ne 0) {
     Write-Warn "gh CLI may not be authenticated or offline. Uploads may fail later."
+}
+
+function Build-PackageManifest($Package, $PayloadPath, $Sha256, $SizeBytes) {
+    $manifest = @{
+        id            = $Package.Id
+        version       = $Package.Version
+        displayName   = $Package.DisplayName
+        description   = if ($Package.PSObject.Properties['Description'] -and $Package.Description) { $Package.Description } else { $Package.DisplayName }
+        publisher     = "Microsoft"
+        osVersion     = $Package.OsVersion
+        architecture  = $Package.Architecture
+        channel       = "stable"
+        publishedAt   = $Package.ReleaseDate
+        created       = (Get-Date).ToString("yyyy-MM-dd")
+        sizeBytes     = $SizeBytes
+        sha256        = $Sha256
+        sourceUrl     = if ($PayloadPath) { $Package.DownloadUrl } else { $Package.SourceUrl }
+        supportUrl    = $Package.SupportUrl
+        tags          = @("windows-update", $Package.Id, $Package.OsVersion.ToLowerInvariant())
+        install       = if ($PayloadPath) {
+            @{
+                type     = "wusa"
+                command  = "wusa.exe"
+                args     = @($PayloadPath, "/quiet", "/norestart")
+                requiresReboot = $true
+            }
+        } else { @{} }
+        rollback      = if ($PayloadPath) {
+            @{
+                type     = "wusa"
+                command  = "wusa.exe"
+                args     = @("/uninstall", "/kb:$($Package.Id -replace 'kb','')", "/quiet", "/norestart")
+            }
+        } else { @{} }
+    } | ConvertTo-Json -Depth 10
+    return $manifest
 }
 
 $workRoot = if (Test-Path $WorkDir) { Resolve-Path $WorkDir } else { New-Item -ItemType Directory -Path $WorkDir -Force | ForEach-Object { $_.FullName } }
@@ -156,6 +192,150 @@ if ($Source -eq "Online") {
     }
 }
 
+function Get-KbDownloadUrl($kbNumber) {
+    $cleanKb = $kbNumber -replace '(?i)^kb',''
+    $urls = @(
+        "https://www.microsoft.com/en-us/download/details.aspx?id=$cleanKb",
+        "https://support.microsoft.com/help/$cleanKb",
+        "https://www.microsoft.com/download/details.aspx?id=$cleanKb",
+        "https://www.catalog.update.microsoft.com/DownloadForm.aspx?q=$cleanKb"
+    )
+    foreach ($url in $urls) {
+        try {
+            $resp = Invoke-WebRequest -Uri $url -UseBasicParsing -TimeoutSec 60
+            $m = [regex]::Match($resp.Content, 'https://download\.microsoft\.com/download/[^"'')\s]+', 'IgnoreCase')
+            if ($m.Success) { return $m.Value }
+            $m2 = [regex]::Match($resp.Content, 'href="([^"]*download\.microsoft\.com[^"]*)"', 'IgnoreCase')
+            if ($m2.Success) { return $m2.Groups[1].Value }
+            $m3 = [regex]::Match($resp.Content, 'href="([^"]*catalog\.update\.microsoft\.com[^"]*)"', 'IgnoreCase')
+            if ($m3.Success) { return $m3.Groups[1].Value }
+        } catch {}
+    }
+    return ""
+}
+
+if ($Source -eq "Internet") {
+    Write-Info "Discovering updates from public MSRC metadata..."
+    $msrcUpdatesUrl = "https://api.msrc.microsoft.com/cvrf/v3.0/Updates"
+    try {
+        $msrcResponse = Invoke-RestMethod -Uri $msrcUpdatesUrl -Method Get -ContentType "application/json"
+    } catch {
+        Write-Err "Failed to query MSRC API: $_"
+        exit 1
+    }
+
+    $releases = @($msrcResponse.value | Where-Object { $_.DocumentTitle -match "Security Updates" } | Sort-Object InitialReleaseDate -Descending | Select-Object -First 6)
+    Write-Info "Found $($releases.Count) recent security update releases from MSRC."
+
+    foreach ($release in $releases) {
+        if ($updates.Count -ge $MaxPackages) { break }
+        Write-Info "Fetching release: $($release.ID) - $($release.DocumentTitle)"
+        try {
+            $cvrfXml = Invoke-WebRequest -Uri $release.CvrfUrl -UseBasicParsing
+        } catch {
+            Write-Warn "Failed to fetch CVRF for $($release.ID): $_"
+            continue
+        }
+
+        $kbNumbers = [regex]::Matches($cvrfXml.Content, '(?i)KB\d{6,}') | ForEach-Object { $_.Value.ToUpperInvariant() } | Select-Object -Unique
+        Write-Info "Found $($kbNumbers.Count) KB references in $($release.ID)"
+
+        foreach ($kb in $kbNumbers) {
+            if ($updates.Count -ge $MaxPackages) { break }
+            $query = $kb
+            $searchUrl = "https://www.catalog.update.microsoft.com/Search.aspx?q=$([Uri]::EscapeDataString($query))"
+            $supportUrl = "https://support.microsoft.com/help/?kb=$($kb -replace 'kb','')"
+            $downloadUrl = Get-KbDownloadUrl $kb
+            $updates += [pscustomobject]@{
+                Id = $kb.ToLowerInvariant()
+                Version = $release.ID
+                DisplayName = "$kb - $($release.DocumentTitle)"
+                OsVersion = $OSVersion
+                Architecture = $Architecture
+                ReleaseDate = $release.InitialReleaseDate
+                DownloadUrl = $downloadUrl
+                SizeBytes = 0
+                SourceUrl = $searchUrl
+                SupportUrl = $supportUrl
+            }
+            Write-Info "Queued: $kb"
+        }
+    }
+}
+
+if ($Source -eq "WSUS") {
+    Write-Info "Fetching WSUS offline scan catalog from download.windowsupdate.com ..."
+    $scanCab = Join-Path $workRoot "wsusscn2.cab"
+    $scanXml = Join-Path $workRoot "index.xml"
+    if (-not (Test-Path $scanCab)) {
+        Write-Info "Downloading wsusscn2.cab (~665 MB). This can take several minutes..."
+        curl.exe -s -S -L --max-time 3600 --connect-timeout 120 -A "Microsoft-Windows-Client-OS/10.0" -o $scanCab "http://download.windowsupdate.com/microsoftupdate/v6/wsusscan/wsusscn2.cab" 2>&1 | Out-Null
+        if (-not (Test-Path $scanCab)) { Write-Err "Failed to download wsusscn2.cab"; exit 1 }
+        Write-Ok "Downloaded wsusscn2.cab ($((Get-Item $scanCab).Length) bytes)"
+    }
+    if (-not (Test-Path $scanXml)) {
+        Write-Info "Extracting WSUS catalog XML from CAB..."
+        $nativeExpand = Join-Path $env:SystemRoot "System32\expand.exe"
+        $expand = $nativeExpand
+        if (-not (Test-Path $expand)) { $expand = "expand.exe" }
+        if ($expand) {
+            & $expand $scanCab -F:index.xml (Split-Path $scanXml -Parent) 2>&1 | Out-Null
+        } else {
+            Write-Err "expand.exe not found; cannot extract wsusscn2.cab."
+            exit 1
+        }
+        if (-not (Test-Path $scanXml)) { Write-Err "Extraction did not produce index.xml"; exit 1 }
+        Write-Ok "Extracted index.xml ($((Get-Item $scanXml).Length) bytes)"
+    }
+
+    Write-Info "Streaming WSUS catalog for $OSVersion $Architecture ..."
+    $osPattern = "windows 10"
+    if ($OSVersion -match "11") { $osPattern = "windows 11" }
+    elseif ($OSVersion -match "Server 2019") { $osPattern = "server 2019" }
+    elseif ($OSVersion -match "Server 2022") { $osPattern = "server 2022" }
+    $archPattern = if ($Architecture -eq "all") { "x64|amd64|arm64|x86" } elseif ($Architecture -eq "x64") { "x64|amd64" } else { $Architecture }
+
+    $xmlReader = [System.Xml.XmlReader]::Create($scanXml)
+    $parsed = 0
+    try {
+        while ($xmlReader.Read()) {
+            if ($xmlReader.NodeType -eq [System.Xml.XmlNodeType]::Element -and $xmlReader.LocalName -eq "Update") {
+                $inner = $xmlReader.ReadInnerXml()
+                $parsed++
+                if ($parsed % 10000 -eq 0) { Write-Info "Scanned $parsed updates..." }
+                $title = ""
+                $m = [regex]::Match($inner, '<Title[^>]*>(.*?)</Title>', 'Singleline,IgnoreCase')
+                if ($m.Success) { $title = $m.Groups[1].Value }
+                if (-not $title -or $title -notmatch "(?i)$osPattern" -or $title -notmatch "(?i)$archPattern") { continue }
+                $kb = ""
+                $m2 = [regex]::Match($inner, '(?i)KB\d{6,}')
+                if ($m2.Success) { $kb = $m2.Value.ToLowerInvariant() } else { continue }
+                $url = ""
+                $m3 = [regex]::Match($inner, '<Url[^>]*>(.*?)</Url>', 'Singleline,IgnoreCase')
+                if ($m3.Success) { $url = $m3.Groups[1].Value.Trim() }
+                if (-not $url) { continue }
+                if ($updates.Count -ge $MaxPackages) { break }
+                $updates += [pscustomobject]@{
+                    Id = $kb
+                    Version = (Get-Date).ToString("yyyy-MM")
+                    DisplayName = $title
+                    OsVersion = $OSVersion
+                    Architecture = $Architecture
+                    ReleaseDate = (Get-Date).ToString("MMMM d, yyyy")
+                    DownloadUrl = $url
+                    SizeBytes = 0
+                    SourceUrl = "http://download.windowsupdate.com/microsoftupdate/v6/wsusscan/wsusscn2.cab"
+                    SupportUrl = "https://support.microsoft.com/help/?kb=$($kb -replace 'kb','')"
+                }
+                Write-Info "Queued: $kb - $title"
+            }
+        }
+    } finally {
+        $xmlReader.Close()
+    }
+    Write-Info "Scanned $parsed update records total."
+}
+
 if ($Source -eq "Manifest") {
     Write-Info "Loading KB manifest from $KbManifestPath..."
     if (-not (Test-Path $KbManifestPath)) {
@@ -193,11 +373,15 @@ foreach ($pkg in $updates) {
     $downloadOk = $false
     try {
         $urlToTry = $pkg.DownloadUrl
+        if (-not $urlToTry) {
+            Write-Warn "Skipping download for $fileName because no DownloadUrl is available."
+            continue
+        }
         if ($urlToTry -match '^http://tlu\.dl\.delivery') {
             $urlToTry = $urlToTry -replace '^http://', 'https://'
         }
         $cookieFile = Join-Path $workRoot "cookies.txt"
-        curl.exe -L --max-time 900 --connect-timeout 60 --retry 5 --retry-delay 15 -A "Microsoft-Windows-Client-OS/10.0" -c $cookieFile -b $cookieFile -o $localPath $urlToTry 2>&1 | Out-Null
+        Invoke-WebRequest -Uri $urlToTry -UseBasicParsing -OutFile $localPath -TimeoutSec 900 -Headers @{ "User-Agent" = "Microsoft-Windows-Client-OS/10.0" }
         if (-not (Test-Path $localPath)) { throw "Download failed: file not created" }
         $size = (Get-Item $localPath).Length
         if ($size -lt 1024) { throw "Downloaded file is too small ($size bytes), probably an HTML error page." }
@@ -365,6 +549,17 @@ foreach ($item in $downloaded) {
     $wupkgFiles += [pscustomobject]@{ Package = $pkg; WupkgPath = $wupkgPath; ManifestPath = $manifestPath }
 }
 
+foreach ($pkg in $updates) {
+    if ($downloaded.Package -contains $pkg) { continue }
+    $pkgDir = Join-Path "$workRoot\packages" $pkg.Id
+    Ensure-Directory $pkgDir
+    $manifestPath = Join-Path $pkgDir "manifest.json"
+    $manifest = Build-PackageManifest -Package $pkg -PayloadPath "" -Sha256 "" -SizeBytes 0
+    Set-Content -Path $manifestPath -Value $manifest -Encoding UTF8
+    $wupkgFiles += [pscustomobject]@{ Package = $pkg; WupkgPath = ""; ManifestPath = $manifestPath }
+    Write-Ok "Created manifest-only entry for $($pkg.Id)"
+}
+
 $repoIndexPath = Join-Path $workRoot "..\repo\index.json"
 if (-not (Test-Path $repoIndexPath)) {
     $repoIndexPath = Join-Path (Get-Location) "repo\index.json"
@@ -388,7 +583,9 @@ foreach ($item in $wupkgFiles) {
         Write-Info "Updating existing entry for $($pkg.Id) $($pkg.Version)"
         $existing.displayName = $pkg.DisplayName
         $existing.architecture = $pkg.Architecture
-        $existing.sha256 = (Get-FileHashSha256 $item.WupkgPath)
+        if ($item.WupkgPath) {
+            $existing.sha256 = (Get-FileHashSha256 $item.WupkgPath)
+        }
     } else {
         $index.packages += [pscustomobject]@{
             id            = $pkg.Id
@@ -399,8 +596,8 @@ foreach ($item in $wupkgFiles) {
             osVersion     = $pkg.OsVersion
             channel       = "stable"
             publishedAt   = $pkg.ReleaseDate
-            sizeBytes     = (Get-Item $item.WupkgPath).Length
-            sha256        = (Get-FileHashSha256 $item.WupkgPath)
+            sizeBytes     = if ($item.WupkgPath) { (Get-Item $item.WupkgPath).Length } else { 0 }
+            sha256        = if ($item.WupkgPath) { (Get-FileHashSha256 $item.WupkgPath) } else { "" }
             sourceUrl     = $pkg.SourceUrl
             supportUrl    = $pkg.SupportUrl
             tags          = @("windows-update", $pkg.Id)
@@ -442,12 +639,12 @@ foreach ($item in $wupkgFiles) {
         $mdLines += "- **Version:** $($pkg.Version)"
         $mdLines += "- **OS:** $($pkg.OsVersion) ($($pkg.Architecture))"
         $mdLines += "- **Published:** $($pkg.ReleaseDate)"
-        $mdLines += "- **SHA256:** $(Get-FileHashSha256 $item.WupkgPath)"
+        $mdLines += "- **SHA256:** $(if ($item.WupkgPath) { Get-FileHashSha256 $item.WupkgPath } else { 'n/a' })"
         $mdLines += "- **Source:** $($pkg.SourceUrl)"
         $mdLines += ""
         $mdLines += "### Install"
         $mdLines += "```powershell"
-        $mdLines += "wusa.exe $($pkg.Id).wupkg /quiet /norestart"
+        $mdLines += if ($item.WupkgPath) { "wusa.exe $($pkg.Id).wupkg /quiet /norestart" } else { "wusa.exe $($pkg.Id).msu /quiet /norestart" }
         $mdLines += '```'
         Set-Content -Path $notesPath -Value ($mdLines -join "`r`n") -Encoding UTF8
         gh release create $tag --repo $GitHubRepo --title $tag --notes-file $notesPath 2>&1 | Out-Null
@@ -456,14 +653,21 @@ foreach ($item in $wupkgFiles) {
         Write-Info "Release $tag already exists, updating assets."
     }
 
-    Write-Info "Uploading $($pkg.Id).wupkg ..."
-    gh release upload $tag $item.WupkgPath --repo $GitHubRepo 2>&1 | Out-Null
-    Write-Host $("OK_   Uploaded {0}.wupkg" -f $pkg.Id) -ForegroundColor Green
+    if ($item.WupkgPath -and (Test-Path $item.WupkgPath)) {
+        Write-Info "Uploading $($pkg.Id).wupkg ..."
+        gh release upload $tag $item.WupkgPath --repo $GitHubRepo --clobber 2>&1 | Out-Null
+        Write-Host $("OK_   Uploaded {0}.wupkg" -f $pkg.Id) -ForegroundColor Green
+    } else {
+        Write-Warn "Skipping .wupkg upload for $($pkg.Id); no payload available."
+    }
 
-    $manifestAsset = $item.WupkgPath -replace '\.wupkg$','.manifest.json'
-    Copy-Item $item.ManifestPath $manifestAsset -Force
-    gh release upload $tag $manifestAsset --repo $GitHubRepo 2>&1 | Out-Null
-    Write-Host $("OK_   Uploaded {0}.manifest.json" -f $pkg.Id) -ForegroundColor Green
+    Write-Info "Uploading $($pkg.Id).manifest.json ..."
+    if ($item.ManifestPath -and (Test-Path $item.ManifestPath)) {
+        gh release upload $tag $item.ManifestPath --repo $GitHubRepo --clobber 2>&1 | Out-Null
+        Write-Host $("OK_   Uploaded {0}.manifest.json" -f $pkg.Id) -ForegroundColor Green
+    } else {
+        Write-Warn "Skipping manifest.json upload for $($pkg.Id); manifest not available."
+    }
 }
 
 if (-not $WhatIf) {

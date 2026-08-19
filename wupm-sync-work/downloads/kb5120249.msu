@@ -1,0 +1,1025 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" dir="ltr" html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta http-equiv="X-UA-Compatible" content="IE=7" />
+    
+    
+<noscript>
+    <div id="thanksNoScripting" visible="true">
+        <div id="thanksNoScriptingIntro" class="textContentPageBottomSpacer">
+            <span id="ctl00_catalogHead_noscript_textScriptingError" class="contentTextItemSpacerNoBreak"><span class="contentTextInline">To obtain updates from this website, scripting must be enabled.</span></span>
+        </div>
+        <div id="thanksNoScriptingHowTo" class="textContentPageBottomSpacer">
+            <span id="ctl00_catalogHead_noscript_textScriptingIntroError" class="contentTextItemSpacerNoBreak">To use this site to find and download updates, you need to change your security settings to allow ActiveX controls and active scripting. To get updates but allow your security settings to continue blocking potentially harmful ActiveX controls and scripting from other sites, make this site a trusted website:</span>
+            <div id="listNoScriptDiv" class="listOrdered">
+                <span class="listItem">
+                    <span id="ctl00_catalogHead_noscript_textScriptingHowToError" class="contentTextItemSpacerNoBreak">In Internet Explorer, click <span class="contentTextInline">Tools</span>, and then click <span class="contentTextInline">Internet Options</span>.</span>
+                </span><span class="listItem">
+                    <span id="ctl00_catalogHead_noscript_textScriptingHowToError2" class="contentTextItemSpacerNoBreak">On the <span class="contentTextInline">Security</span> tab, click the <span class="contentTextInline">Trusted Sites</span> icon. </span>
+                </span><span class="listItem">
+                    <span id="ctl00_catalogHead_noscript_textScriptingHowToError3" class="contentTextItemSpacerNoBreak">Click <span class="contentTextInline">Sites</span> and then add these website addresses one at a time to the list:
+You can only add one address at a time and you must click <span class="contentTextInline">Add</span> after each one:</span>
+                </span>
+                <div id="listSubNoScriptDiv" class="listUnOrderedSub">
+                    <span class="listItem">
+                        <span id="ctl00_catalogHead_noscript_textScriptingHowToError3a" class="contentTextItemSpacerNoBreak">http://*.update.microsoft.com </span>
+                    </span><span class="listItem">
+                        <span id="ctl00_catalogHead_noscript_textScriptingHowToError3b" class="contentTextItemSpacerNoBreak">https://*.update.microsoft.com </span>
+                    </span><span class="listItem">
+                        <span id="ctl00_catalogHead_noscript_textScriptingHowToError3c" class="contentTextItemSpacerNoBreak">http://download.windowsupdate.com</span>
+                    </span>
+                </div>
+            </div>
+        </div>
+        <div id="thanksNoScriptingNote" class="textContentPageBottomSpacer">
+            <span id="ctl00_catalogHead_noscript_textScriptingNoteError" class="contentTextItemSpacerNoBreak"><span class="contentTextInline">Note:</span> 
+ You might have to uncheck the <span class="contentTextInline"> Require server verification (https:) for all sites in the zone </span> option to enter all the addresses.</span>
+        </div>
+        <div id="errorNoScriptHelpOptions" class="listUnOrdered">
+            <span class="listItem"><a href="Faq.aspx" class="footerLink" >
+                <span id="ctl00_catalogHead_noscript_textSelfHelpOption1" class="contentTextItemSpacerNoBreak">Frequently Asked Questions</span>
+            </a></span><span class="listItem"><a href="Support.aspx" class="footerLink">
+                <span id="ctl00_catalogHead_noscript_textSelfHelpOption2" class="contentTextItemSpacerNoBreak">Help and Support</span>
+            </a></span>
+        </div>
+    </div>
+</noscript>
+  
+    
+
+    <title>Microsoft Update Catalog</title>
+    <link rel="stylesheet" type="text/css" href="Style/catalog.css" />
+    <link rel="search" type="application/opensearchdescription+xml" href="OpenSearch.aspx" 
+        title='Microsoft Update Catalog' />
+    <!-- <script type="text/javascript">
+	function supressError(message, url, line)
+	{
+	  var re = /^function\s*([^(]*)\s*\(([^)]*)\)/;
+	  var matches = null;
+	  if (arguments.caller != null) {
+	    matches = re.exec(arguments.caller.callee);
+	  }
+	  var argArray = new Array();
+	  var fName = 'unknown';
+	  if(matches)
+	  {
+	    if(matches[1] && matches[1].toString().length > 0)
+	       fName = matches[1].toString();
+	    if(matches[2] && matches[2].toString().length > 0)
+	    {
+	       var cleanMatches = new String(matches[2]).replace(/\s*/g,'');
+	       argArray = cleanMatches.split(',');
+	    }
+	  }
+	  var args = (argArray.length>0)?'':'none';
+	  for(var i=0; i<argArray.length; i++)
+	  {
+	    args += ((args=='')?'':', ') + argArray[i] + '(' + typeof(arguments.caller[i]) + '):';
+	    args += arguments.caller[i];
+	  }
+	  if(typeof(logger) != typeof(undefined) && logger != null)
+	    logger.log(logger.logLevelFatal, 'JavaScript Error: MESSAGE='+ message + '. URL=' + url + '. LINE='+ line + '. FUNCTION_NAME=' + fName +'. ARGUMENTS=' + args);
+	  else if(typeof(console) != typeof(undefined) && console != null)
+	    console.log('JavaScript Error: MESSAGE='+ message + '. URL=' + url + '. LINE='+ line + '. FUNCTION_NAME=' + fName +'. ARGUMENTS=' + args);
+	  var location = window.location.href.toLowerCase();
+	  if(location.indexOf('Error.aspx'.toLowerCase()) == -1)
+	    window.location.href = 'Error.aspx'  + '?id=' + Microsoft.UpdateServices.Catalog.Constants.ErrorScriptError;
+	  return true;
+	}
+	window.onerror = supressError;
+</script> -->
+    <script type="text/javascript">
+        var internetExplorer = false;
+        var basket;
+
+        function setBasketCount() {
+            basket.syncCache();
+            var basketCount = basket.get_count();
+            headerBasketCount.innerText = basketCount;
+            if (basketCount > 0) {
+                basketControl.className = "basketControl";
+                basketImageSpan.className = "basketControl";
+            }
+            else {
+                basketControl.className = "basketControlInActive";
+                basketImageSpan.className = "basketControlInActive";
+            }
+        }
+
+        function goToBasket() {
+            var updateIDs = getUpdateIds(basket.getAllUpdates());
+            if (updateIDs.replace(/^\s+|\s+$/g, '') == "") return;
+            basketForm.updateIDs.value = updateIDs;
+            var qs = new Microsoft.UpdateServices.Catalog.QueryString(window.location.search);
+            basketForm.action = Microsoft.UpdateServices.Catalog.Constants.PageViewBasket + qs.appendErrorsQS();
+            basketForm.submit();
+            return false;
+        }
+
+        function getUpdateIds(aUpdateIds) {
+            var basketUpdateIds = "";
+            for (i = 0; i < aUpdateIds.length; i++) {
+                basketUpdateIds += aUpdateIds[i].get_uid() + ",";
+            }
+
+            return basketUpdateIds;
+        }
+
+        function goToDetails(updateID) {
+            var windowName = updateID.replace(/-/g, Microsoft.UpdateServices.Catalog.Constants.EmptyString);
+            var qs = new Microsoft.UpdateServices.Catalog.QueryString(window.location.search);
+            var detailsDialog = window.open(Microsoft.UpdateServices.Catalog.Constants.PageScopedViewInline + qs.appendErrorsQS("?updateid=" + updateID),
+                                            windowName, 'height=560,width=740,status=no,toolbar=no,menubar=no,location=no,scrollbars=yes,resizable=1 ');
+            if (detailsDialog == null) {
+                detailsPopup.style.display = "block";
+            }
+            else {
+                detailsDialog.focus();
+            }
+            return false;
+        }
+
+        function propogateBasketState(url) {
+            var qs = new Microsoft.UpdateServices.Catalog.QueryString(window.location.search);
+            basketForm.action = url + qs.appendErrorsQS();
+            basketForm.submit();
+            event.cancelBubble = true;
+            event.returnValue = false;
+            return false;
+        }
+
+        function createMasterPageComponents(prerequisiteChecksPassed) {
+            var searchLink = $get('searchButtonLink');
+            var basketLink = $get('basketControl');
+            var basketImage = $get('basketImageSpan');
+            var searchBox = $get('ctl00$searchTextBox'.replace('$', '_'));
+            var masterContext = null;
+
+            if (navigator.language == "fr" || navigator.language == "fr-FR") {
+                document.getElementById("supportLinkBoxFrench").style.visibility = "visible";
+            }
+
+            else
+            {
+                document.getElementById("supportLinkBoxFrench").style.visibility = "hidden";
+            }
+
+            //separating out code block which requires all prerequisites checks to pass            
+            if (prerequisiteChecksPassed) {
+                var searchTextBox = new Microsoft.UpdateServices.Catalog.UI.SearchTextBox($get('ctl00$searchTextBox'.replace('$', '_')),
+                    'start your search...',
+                    searchBox.value,
+                    searchLink,
+                    'defaultSearchText'
+                    );
+                searchTextBox.initialize();
+
+                if (internetExplorer) {
+                    $addHandler(basketLink, "click", goToBasket);
+                    $addHandler(basketImage, "click", goToBasket);
+                    $addHandler(window, "focus", setBasketCount);
+                }
+
+                $addHandler(searchLink, "click", function (event) {
+                    event = event || window.event;
+                    event.cancelBubble = true;
+                    event.returnValue = false;
+                    var searchText = searchTextBox.get_searchText();
+                    if (searchText.replace(/^\s+|\s+$/g, '') == "") return false;
+                    var qs = new Microsoft.UpdateServices.Catalog.QueryString(window.location.search);
+                    var searchUrl = 'Search.aspx' + qs.appendErrorsQS('?q=' + encodeURIComponent(searchText));
+                    basketForm.action = searchUrl;
+                    basketForm.submit();
+                    return false;
+                });
+
+                masterContext = new Microsoft.UpdateServices.Catalog.UI.MasterPageContext(basketForm);
+                masterContext.initialize();
+
+                if (internetExplorer) {
+                    basket = Microsoft.UpdateServices.Catalog.DownloadBasket.get_instance();
+                    basket.contentChanged.add(setBasketCount);
+                    setBasketCount();
+                }
+
+                //cancel the enter key click for the mainform so it will not do a postback
+                var mainFormElement = $get('aspnetForm');
+                mainFormElement.onkeydown = function (event) {
+                    event = event || window.event;
+                    if ((event.which || event.keyCode) == Microsoft.UpdateServices.Catalog.Constants.EnterButtonKeyCode && (event.target || event.srcElement).id == 'ctl00$searchTextBox'.replace('$', '_')) {
+                        event.cancelBubble = true;
+                        event.returnValue = false;
+                        return false;
+                    }
+                    return true;
+                }
+
+                if (Microsoft.UpdateServices.Catalog.Constants.DownloadInformation != 'search') {
+                    window.focus();
+                    (searchTextBox.get_element()).focus();
+                }
+            }
+
+            return masterContext;
+        }
+    </script>
+
+</head>
+
+<body id="ltr"><div class="noDisplay" id="outerDivID">   
+    <form id="basketForm" method ="post" action="">
+        <input type="hidden" id="updateIDs" name="updateIDs" />
+        <input type="hidden" id="updateIDsBlockedForImport" name="updateIDsBlockedForImport" />        
+        <input type="hidden" id="contentImport" name="contentImport" value=""/>
+        <input type="hidden" id="sku" name="sku" value="" />
+        <input type="hidden" id="serverName" name="serverName" value=""/>
+        <input type="hidden" id="ssl" name="ssl" value=""/>
+        <input type="hidden" id="portNumber" name="portNumber" value=""/>
+        <input type="hidden" id="version" name="version" value=""/>    
+        <input type="hidden" id="protocol" name="protocol" value=""/>                
+    </form>
+   <form method="post" action="./Search.aspx?q=KB5120249" id="aspnetForm">
+<input type="hidden" name="__VIEWSTATE" id="__VIEWSTATE" value="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" />
+
+
+<script src="/ScriptResource.axd?d=uHIkleVeDJf4xS50Krz-yOvETAogYhzSliAjRFtKedXzVv49ZC6QOZhsWovAHgmz8tWZz7gUgD4oKFH8QtJEAAnBmaSZ9diIdbcP1hVITaTx0CjTf6nFI04IB_X4oqoSozLG9p3XWo2B6dT3MMCWI3iv7S3RUasXKEENt1BnEoc1&amp;t=5c0e0825" type="text/javascript"></script>
+<script src="SiteConstants.aspx?6" type="text/javascript"></script>
+<script src="Script/CommonTypes.js?6" type="text/javascript"></script>
+<script src="Script/DownloadBasket.js?6" type="text/javascript"></script>
+<script src="Script/MasterComponents.js?6" type="text/javascript"></script>
+<script src="Script/Search.js?6" type="text/javascript"></script>
+<script src="Script/CommonScroll.js?6" type="text/javascript"></script>
+<input type="hidden" name="__VIEWSTATEGENERATOR" id="__VIEWSTATEGENERATOR" value="BBBC20B8" />
+<input type="hidden" name="__EVENTVALIDATION" id="__EVENTVALIDATION" value="VUF9m9wDOQeovAXtctMYDtZFR3cWdyLmX/X9hwuRgoEGpaMDMRgwhIP62JxxsziYbb+txdKpYytsi2q+JJlLpYg+7WgjipfsI8rCvgjU4H1uDxJ3zK7FsXa2Y4a3ldXH9++3YPE+2T0Wv8jlIwEuTdpTCpIj6pPUZyKlBz+hRFE/WvRtuYoBK3GZtqMGjFD3cLm3jxYiJqnIvxpJ1gkmpsa+dfTLAtOggt5K3wJaaub/CrZcCBchaAQxd96QQH4m" />
+   <div id="mainBoxMaster" >
+        <table id="layoutTable" cellpadding="0" cellspacing="0" border="0" style="height:100%" role="presentation">
+            <tr style="height:90%" valign="top">
+                <td>
+                    <div id="mainBox">
+                        <table id="headerBox" cellpadding="0" cellspacing="0" border="0" role="presentation">
+                            <tr>
+                                <td id="headerLinkBox" rowspan="2" role="banner">
+                                    <a class="masterHomeLink" href="home.aspx" onclick="propogateBasketState('home.aspx')"><div id="masterFormTitle" class="masterBodyTitle headerNavLink"><span id="ctl00_textTitleMaster">Microsoft<span class="titleTrademark">&reg;</span>Update Catalog</span></div></a>
+                                    <a href="Faq.aspx" id="faqNavLink" onclick="propogateBasketState('Faq.aspx')" class="headerNavLink"><span id="ctl00_faqResource">FAQ</span></a>|<a href="Support.aspx" id="helpNavLink" onclick="propogateBasketState('Support.aspx')" class="headerNavLink"><span id="ctl00_helpResource">help</span></a>
+                                </td>
+                                <td align="right" valign="bottom" id="rightTopHeaderBox" role="search">
+                                    <table align="right" cellpadding="0" cellspacing="0" border="0" id="searchBox" role="presentation">
+                                        <tr>
+                                            <td id="searchGlowTopBox" colspan="4"><img id="searchGlowPart1" src="Images/bg_SearchGlow_part1.gif" alt="" /><img id="searchGlowPart3" src="Images/bg_SearchGlow_part3.gif" alt="" /></td>
+                                        </tr>
+                                        <tr>
+                                            <td id="searchGlowPart8bBox"><img src="Images/bg_SearchGlow_part8b.gif" id="ctl00_searchGlowPart8b" alt="" /></td>
+                                            <td rowspan="2" id="searchTextboxBox"><input name="ctl00$searchTextBox" type="text" id="ctl00_searchTextBox" aria-labelledby="searchBox" class="searchTextBox" maxlength="100" value="KB5120249" /></td>
+                                            <td rowspan="2" id="searchButtonBox">
+                                                <input id="searchButtonLink" class="transparentButtonWithNoBorder" type="button" value='Search' />
+                                            </td>
+                                            <td id="searchGlowPart4aBox"><img src="Images/bg_SearchGlow_part4a.gif" id="ctl00_searchGlowPart4a" alt="" /></td>
+                                        </tr>
+                                        <tr>
+                                            <td id="searchGlowPart8aBox"><img src="Images/bg_SearchGlow_part8a.gif" id="ctl00_searchGlowPart8a" alt="" /></td>
+                                            <td id="searchGlowPart4bBox"><img src="Images/bg_SearchGlow_part4b.gif" id="ctl00_searchGlowPart4b" alt="" /></td>
+                                        </tr>
+                                        <tr>
+                                            <td id="searchGlowBottomBox" colspan="4"><img id="searchGlowPart7" src="Images/bg_SearchGlow_part7.gif" alt="" /><img id="searchGlowPart5" src="Images/bg_SearchGlow_part5.gif" alt="" /></td>
+                                        </tr>
+                                    </table>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td align="right" valign="bottom" id="rightBottomHeaderBox">
+                                    <table align="right" cellpadding="0" cellspacing="0" border="0" id="headerStatusBox" role="presentation">
+                                        
+                                            <tr style="display: none">
+                                        
+                                            <td id="basketBox"><a id="basketControl" href="javascript:void(0);" class="basketControlInActive">view basket (<span id="headerBasketCount">0</span>)</a></td>
+                                            <td id="basketImage"><a id="basketImageSpan" href="javascript:void(0);" class="basketControlInActive" ><img src="Images/decor_Basket.jpg" border="0" alt="" /></a></td>
+                                        </tr>
+                                    </table>
+                                </td>
+                            </tr>
+                        </table>
+                        <div id="contentBox" role="main">
+                            
+    <script type="text/javascript">
+	function checkOSVersion()
+	{
+	    return true;
+	}
+	function checkValidBrowserOnWin10Plus()
+	{
+	    return true;
+	}
+	function getRedirectURLAfterControlInstallation(currentURL)
+	{
+	    var redirectURL=null;
+	    var location = window.location.href.toLowerCase();
+	    if (location.indexOf(Microsoft.UpdateServices.Catalog.Constants.PageSearch.toLowerCase()) != -1 ||
+	        location.indexOf(Microsoft.UpdateServices.Catalog.Constants.PageScopedView.toLowerCase()) != -1 ||
+	        location.indexOf(Microsoft.UpdateServices.Catalog.Constants.PageScopedViewRedirect.toLowerCase()) != -1 ||
+	        location.indexOf(Microsoft.UpdateServices.Catalog.Constants.PageHome.toLowerCase()) != -1 ||
+	        location.indexOf(Microsoft.UpdateServices.Catalog.Constants.PageViewBasket.toLowerCase()) != -1 ||
+	        location.indexOf(Microsoft.UpdateServices.Catalog.Constants.PageDownloadInformation.toLowerCase()) != -1)
+	    {
+	         redirectURL = Microsoft.UpdateServices.Catalog.Constants.PageInstall;
+	         if (location.indexOf(Microsoft.UpdateServices.Catalog.Constants.PageViewBasket.toLowerCase())==-1 &&
+	             location.indexOf(Microsoft.UpdateServices.Catalog.Constants.PageDownloadInformation.toLowerCase())== -1) {
+	             if (window.location.search) {
+	                  redirectURL +=  window.location.search;
+	                  redirectURL += '&' + Microsoft.UpdateServices.Catalog.Constants.QueryStringReferringPage + '=' + 'Search.aspx';
+	             } else {
+	                  redirectURL+= '?' + Microsoft.UpdateServices.Catalog.Constants.QueryStringReferringPage + '=' + 'Search.aspx';
+	             }
+	         }
+	    } else {
+	         redirectURL = Microsoft.UpdateServices.Catalog.Constants.PageThanks +'?id='+Microsoft.UpdateServices.Catalog.Constants.ThanksControlNotInstalled;
+	    }
+	    return(redirectURL);
+	}
+	function checkActiveX()
+	{
+	    var activeXEnabled=true;
+	    try
+	    {
+	        var xmlDOM = new ActiveXObject('Msxml2.XMLHTTP');
+	    }
+	    catch(e)
+	    {
+	        activeXEnabled=false;
+	    }
+	    return activeXEnabled;
+	}
+	function checkCPU()
+	{
+	    var validCPU=false;
+	    var cpuClass = navigator.cpuClass.toLowerCase();
+	    if(Microsoft.UpdateServices.Catalog.Constants.x86 == cpuClass || Microsoft.UpdateServices.Catalog.Constants.x64 ==cpuClass)
+	    {
+	        validCPU=true;
+	    }
+	    return validCPU;
+	}
+	function checkControlInstalled()
+	{
+	    return true;
+	}
+	function checkUserDataAccess()
+	{
+	    var checkPassed=true;
+	    try
+	    {
+	        var storageElement = document.createElement("input");
+	        storageElement.type = "hidden";
+	        storageElement.style.behavior = "url(#default#userData)";
+	        storageElement.setAttribute('name','1');
+	        document.body.appendChild(storageElement);
+	        storageElement.save('StorageKey');
+	    }
+	    catch(e)
+	    {
+	        checkPassed=false;
+	    }
+	    return checkPassed;
+	}
+	function detectRedirectionCycle()
+	{
+	    var redirectionCycle=true;
+	    if(window.location.href.indexOf('Thanks.aspx') == -1)
+	    {
+	        redirectionCycle=false;
+	    }
+	    return(redirectionCycle);
+	}
+	function makePageVisible(){
+	   var elt = document.getElementById("outerDivID");
+	   if (elt)
+	   {
+	       elt.style.display = "block";
+	   }
+	   var bodyElt=document.getElementsByTagName("body")[0];
+	   if(bodyElt)
+	   {
+	       bodyElt.className="mainBody";
+	   }
+	}
+	function clientPrereqChecks()
+	{
+	    var osVersionCheckPassed=false;
+	    var validBrowserOnWin10PlusCheckPassed=false;
+	    var cpuCheckPassed=false;
+	    var userDataCheckPassed=false;
+	    var activeXCheckPassed=false;
+	    var controlInstalledCheckPassed=false;
+	    osVersionCheckPassed=checkOSVersion();
+	    if(osVersionCheckPassed) {
+	        validBrowserOnWin10PlusCheckPassed=checkValidBrowserOnWin10Plus();
+	    }
+	    if(validBrowserOnWin10PlusCheckPassed)
+	    {
+	        cpuCheckPassed=checkCPU();
+	    }
+	    if(cpuCheckPassed)
+	    {
+	        userDataCheckPassed=checkUserDataAccess();
+	    }
+	    if(userDataCheckPassed)
+	    {
+	        activeXCheckPassed=checkActiveX();
+	    }
+	    if(activeXCheckPassed)
+	    {
+	        controlInstalledCheckPassed=checkControlInstalled();
+	    }
+	    var checksPassed=osVersionCheckPassed && validBrowserOnWin10PlusCheckPassed && userDataCheckPassed && cpuCheckPassed && controlInstalledCheckPassed && activeXCheckPassed;
+	    var canRedirect=!checksPassed && !detectRedirectionCycle();
+	if(canRedirect)
+	{
+	    if(!osVersionCheckPassed)
+	    {
+	         window.location.href = 'Thanks.aspx' + '?id=' + Microsoft.UpdateServices.Catalog.Constants.ThanksUnsupportedOs;
+	    }
+	    else if(!validBrowserOnWin10PlusCheckPassed)
+	    {
+	         window.location.href = 'Thanks.aspx' + '?id=' + Microsoft.UpdateServices.Catalog.Constants.ThanksUnsupportedBrowser;
+	    }
+	    else if(!cpuCheckPassed)
+	    {
+	         window.location.href = 'Thanks.aspx' + '?id=' + Microsoft.UpdateServices.Catalog.Constants.ThanksUnsupportedCPU;
+	    }
+	    else if(!userDataCheckPassed)
+	    {
+	        window.location.href = 'Thanks.aspx' + '?id=' + Microsoft.UpdateServices.Catalog.Constants.ThanksUserDataDisabled;
+	    }
+	    else if(!activeXCheckPassed)
+	    {
+	          window.location.href = 'Thanks.aspx' + '?id=' + Microsoft.UpdateServices.Catalog.Constants.ThanksNoActiveX;
+	    }
+	    else if(!controlInstalledCheckPassed)
+	    {
+	          window.location.href = getRedirectURLAfterControlInstallation(window.location.href);
+	    }
+	}
+	else
+	{
+	    makePageVisible();
+	}
+	return checksPassed;
+	}
+
+</script>
+    
+
+    <link rel="stylesheet" type="text/css" href="Style/Search.css" />
+    <link rel="stylesheet" type="text/css" href="Style/CommonStyle.css" />
+
+    <script type="text/javascript" language="javascript">
+        var internetExplorer = false;
+        var searchComponent;
+
+        ///<summary>
+        ///     This function is called automatically by ASP.NET AJAX framework when the page finishes loading
+        ///</summary>
+        function pageLoad() {
+            var clientChecksPassed = false;
+            if (internetExplorer) {
+                clientChecksPassed = clientPrereqChecks();
+            } else {
+                makePageVisible();
+                clientChecksPassed = true;
+            }
+
+            if (clientChecksPassed == false) {
+                return;
+            }
+
+            if (internetExplorer) {
+                var clientValidator = new Microsoft.UpdateServices.Catalog.UI.ClientValidator($get('MuCatWebCtl'));
+                if ($get('MuCatWebCtl').object != null) {
+                    if (!clientValidator.checkWsusAPI($get('sku').value))
+                        return;
+                }
+            }
+
+            // Get the MasterPageContext object
+            var masterPageContext = createMasterPageComponents(true);
+            if (masterPageContext == null) {
+                return;
+            }
+
+            var updateDiv = $get('tableContainer');
+                        
+            // Attach onclick events to all the buttons in the data grid.
+            // The event handler for add all/remove all is different from the 
+            // remaining buttons.
+            var inputElments = updateDiv.getElementsByTagName("input"); 
+            var addRemoveButtons = new Array();
+            var sizeElements = new Array();
+            var elemtCount = 0;
+
+            for (i = 0; i < inputElments.length; i++) {
+                if (inputElments[i].id == "allButton" || inputElments[i].type != "button") {
+                    continue;
+                }
+
+                addRemoveButtons.push(inputElments[i]);
+                sizeElements[elemtCount] = new Object();
+                sizeElements[elemtCount].pageElement = $get(inputElments[i].id + "_Size");
+                sizeElements[elemtCount++].originalSize = $get(inputElments[i].id + "_originalSize").innerText;
+                attachEventToInput(inputElments[i], masterPageContext);
+            }
+            var headerButtons = updateDiv.querySelectorAll("th a");
+
+            for (headerButton of headerButtons) {
+                attachSortEvent(headerButton);
+            }
+            
+            var allButton = null;
+            if (internetExplorer) {
+                allButton = $get('allButton');
+                if (typeof (allButton) != typeof (Microsoft.UpdateServices.Catalog.Constants.UndefinedValue) && allButton != null) {
+                    allButton.attachEvent('onclick', function () { searchComponent.allBasket(); });
+                }
+            }
+
+            $addHandler(window, "focus", function () { searchComponent.initialize(); });
+
+            searchComponent = new Microsoft.UpdateServices.Catalog.UI.Search(updateDiv,
+                addRemoveButtons,
+                allButton,
+                addButtonText.innerText,
+                addAllButtonText.innerText,
+                removeButtonText.innerText,
+                removeAllButtonText.innerText,
+                sizeElements,
+                internetExplorer);
+
+            function updateSortOrderImage() {
+                var updateDiv = $get('tableContainer');
+                if (updateDiv) {
+                    let url = new URL(window.location.href);
+                    let sortCol = url.searchParams.get(SORT_COLUMN);
+                    if (sortCol) {
+                        let sortDir = url.searchParams.get(SORT_DIR) || "";
+                        let headerButtons = updateDiv.querySelectorAll("th a");
+                        if (headerButtons && headerButtons.length > 0) {
+                            let currentSortCol = headerButtons.entries().find(function (item) {
+                                return item[1].dataset.commandname.toLowerCase() === sortCol.toLowerCase();
+                            });
+                            currentSortCol[1].lastElementChild.src = `Images/button_Sort${sortDir.toLowerCase() === "asc" ? "Ascending" : "Descending"}Arrow.gif`;
+                        }
+                    }
+                }
+            }
+            updateSortOrderImage();
+        }
+        
+        ///<summary>
+        ///     Attaches an event handler to an input element
+        ///</summary>
+        function attachEventToInput(inputElement, masterContext) {
+            // If in IE, then the update will be added to the basket, otherwise the download dialog will be opened.
+            if (internetExplorer) {
+                inputElement.attachEvent('onclick', function () {
+                    var sizeElement = $get(inputElement.id + "_size");
+                    var originalSize = $get(inputElement.id + "_originalSize").innerText;
+                    searchComponent.manageBasket(inputElement, inputElement.id, "true", sizeElement, originalSize);
+                });
+            } else {
+                $addHandler(inputElement, "click", function () {
+                    var updates = inputElement.id;
+                    var serializedUpdatesList = Sys.Serialization.JavaScriptSerializer.serialize([new Microsoft.UpdateServices.Catalog.Update(updates)]);
+
+                    masterContext.get_basketForm().updateIDs.value = serializedUpdatesList;
+                    masterContext.get_basketForm().sku.value = Microsoft.UpdateServices.Catalog.Constants.EmptyString;
+
+                    var qs = new Microsoft.UpdateServices.Catalog.QueryString(window.location.search);
+                    var downloadDialog = window.open(Microsoft.UpdateServices.Catalog.Constants.PageDownloadDialog + qs.appendErrorsQS(), Microsoft.UpdateServices.Catalog.Constants.EmptyString, 'height=460,width=640,status=no,toolbar=no,menubar=no,location=no,scrollbars=yes,resizable=1 ');
+                });
+            }
+        }
+        
+        var titleHeaderButton = $get('titleHeaderLink');
+        function changeSortDir(currentDir) {
+            if (currentDir === "asc") {
+                return "desc";
+            }
+            return "asc";
+        }
+
+        const SORT_COLUMN = Microsoft.UpdateServices.Catalog.Constants.QueryStringSortColumn;
+        const SORT_DIR = Microsoft.UpdateServices.Catalog.Constants.QueryStringSortDirection;
+        const PAGE_INDEX = Microsoft.UpdateServices.Catalog.Constants.QueryStringPageIndex;
+        ///<summary>
+        ///Attaches sort event to target column header. Make sure the header has data-columnName attribute.
+        ///</summary>
+        function attachSortEvent(target) {
+            if (target) {
+                $addHandler(target, "click", function (e) {
+                    e.preventDefault();
+                    var url = new URL(window.location.href);
+                    var alreadySorted = url.searchParams.get(SORT_COLUMN);
+                    var currentSortDir = url.searchParams.get(SORT_DIR);
+                    var sortDir = alreadySorted ? changeSortDir(currentSortDir) : "asc";
+                    var sortColumn = target.dataset.commandname;
+                    url.searchParams.set(SORT_COLUMN, sortColumn);
+                    url.searchParams.set(SORT_DIR, sortDir);
+                    location.assign(url.search);
+                    return false;
+                });
+            }
+        }
+
+        function detailsHandler(updateID)
+        {
+            var inputElement = $get(updateID);
+            if(inputElement != null)
+            {
+                var sizeElement = $get(updateID + "_size");
+                var originalSize = $get(updateID + "_originalSize").innerText;
+                searchComponent.manageBasket(inputElement, updateID, "false",sizeElement,originalSize);
+            }
+            setBasketCount();
+        }
+
+        /**
+            * Below function are related to page change events handling
+         */
+        function getTotalPages() {
+            let div = document.getElementById('numberOfUpdates');
+            if (div) {
+                let labels = div.getElementsByTagName('span');
+                if (labels && labels.length > 1) {
+                    let updatesText = labels[1].innerText;
+                    if (updatesText && updatesText.length > 0) {
+                        let spaceLastIndex = updatesText.lastIndexOf(" ");
+                        let pageCountStr = updatesText.substring(spaceLastIndex + 1, updatesText.length - 1);
+                        pageCountStr = pageCountStr || "0";
+                        return parseInt(pageCountStr);
+                    }
+                }
+            }
+            return 0;
+        }
+        
+        let pageCount = getTotalPages();
+
+        function handlePageChange(e) {
+            
+            let target = e.target || e;
+            if (target) {
+                let pageChangeType = target.dataset.commandname;
+                if (pageChangeType) {
+                    pageChangeType = pageChangeType.toLowerCase();
+                    var url = new URL(window.location.href);
+                    var currentPageIndexString = url.searchParams.get(PAGE_INDEX);
+                    var pageIndex = 0;
+                    if (currentPageIndexString && !isNaN(currentPageIndexString)) {
+                        var currentPageIndex = parseInt(currentPageIndexString);
+                        if (currentPageIndex >= 0)
+                            pageIndex = currentPageIndex;
+                    }
+
+                    if (pageCount == 0) {
+                        pageCount = getTotalPages();
+                    }
+
+                    if (pageChangeType === "next" && pageIndex < pageCount) {
+                        pageIndex++;
+                    }
+                    if (pageChangeType === "prev" && pageIndex > 0) {
+                        pageIndex--;
+                    }
+
+                    url.searchParams.set(PAGE_INDEX, pageIndex);
+                    location.assign(url.search);
+                    return false;
+                } else {
+                    throw Error("No data-commandName attribute found for paging button.");
+                }
+            }
+        }
+        function bindPageChangeEvents() {
+            var contentSection = $get('contentSection');
+            var navLinksTd = contentSection.querySelector('table.resultsNavigation td.textAlignRight');
+            var links = navLinksTd.querySelectorAll('a');
+            var pagingButtons = navLinksTd.querySelectorAll('a, input[type="image"]');
+            for (var btn of pagingButtons) {
+                $addHandler(btn, "click", handlePageChange);
+            }
+        }
+
+    </script>
+
+    <div id="contentSection">
+        <div class="textSubHeadingColor textBold" id="searchSubHeading">
+            <table id="ctl00_catalogBody_ResultsHeaderTable" role="presentation">
+	<tr>
+		<td>
+                        
+                        
+                        <span id="ctl00_catalogBody_searchString">"KB5120249"</span>
+                    </td>
+	</tr>
+</table>
+
+        </div>
+        
+        <table id="ctl00_catalogBody_navigationLinks" cellpadding="0" cellspacing="0" border="0" class="resultsNavigation">
+	<tr>
+		<td>
+                    <div id="numberOfUpdates" role="status">
+                        <span id="ctl00_catalogBody_labelUpdates_Separator">Updates:</span>
+                        <span id="ctl00_catalogBody_searchDuration">1 - 9 of 9 (page 1 of 1)</span><br />
+                    </div>
+                </td>
+		<td valign="middle" class="textAlignRight" role="presentation">
+                    <span id="ctl00_catalogBody_prevPage">
+                        <img src="Images/button_PreviousArrow_disabled.gif" id="ctl00_catalogBody_prevImage" alt="" align="middle" />
+                        <span>Previous</span>
+                    </span><span>|</span> <span id="ctl00_catalogBody_nextPage">
+                        <span class="contentTextItemSpacerNoBreakLink">Next</span>
+                        <img src="Images/button_NextArrow_disabled.gif" id="ctl00_catalogBody_nextImage" alt="" align="middle" /></span>
+                </td>
+	</tr>
+</table>
+
+    </div>
+    
+    <div id="tableContainer" class="resultsBackGround">
+        <table class="resultsBorder resultsBackGround" cellspacing="0" cellpadding="0" rules="all" bordercolor="Gray" id="ctl00_catalogBody_updateMatches">
+	<tr class="dataGridFixedHeader1" id="headerRow">
+		<th class="headerText ResultsHeaderTD resultsNOBorder" scope="col" id="header_C0" role="columnheader">
+                        &nbsp;
+                    </th><th class="headerText resultsHeaderpadding ResultsHeaderTD resultsBorderRight" scope="col" id="header_C1" role="columnheader" aria-label="Title Column. Activate to sort column ascending">
+                        <a onclick="return false;" id="ctl00_catalogBody_updateMatches_ctl02_titleHeaderLink" data-commandName="Title" href="javascript:__doPostBack(&#39;ctl00$catalogBody$updateMatches$ctl02$titleHeaderLink&#39;,&#39;&#39;)"><span>Title</span><img id="ctl00_catalogBody_updateMatches_ctl02_TitleSortArrow" class="hideSortArrow sortImagePadding" src="Images/button_SortAscendingArrow.gif" align="right" /></a>
+                    </th><th class="headerText resultsHeaderpadding ResultsHeaderTD resultsBorderRight" scope="col" id="header_C2" role="columnheader" aria-label="Products Column. Activate to sort column ascending">
+                        <a onclick="return false;" id="ctl00_catalogBody_updateMatches_ctl02_productsHeaderLink" data-commandName="Products" href="javascript:__doPostBack(&#39;ctl00$catalogBody$updateMatches$ctl02$productsHeaderLink&#39;,&#39;&#39;)"><span>Products</span><img id="ctl00_catalogBody_updateMatches_ctl02_ProductsSortArrow" class="hideSortArrow sortImagePadding" src="Images/button_SortAscendingArrow.gif" align="middle" /></a>
+                    </th><th class="headerText resultsHeaderpadding ResultsHeaderTD resultsBorderRight" scope="col" id="header_C3" role="columnheader" aria-label="Classification Column. Activate to sort column ascending">
+                        <a onclick="return false;" id="ctl00_catalogBody_updateMatches_ctl02_classificationComputedHeaderLink" data-commandName="ClassificationComputed" href="javascript:__doPostBack(&#39;ctl00$catalogBody$updateMatches$ctl02$classificationComputedHeaderLink&#39;,&#39;&#39;)"><span>Classification</span><img id="ctl00_catalogBody_updateMatches_ctl02_ClassificationComputedSortArrow" class="hideSortArrow sortImagePadding" src="Images/button_SortAscendingArrow.gif" align="right" /></a>
+                    </th><th class="headerText resultsHeaderpadding ResultsHeaderTD resultsBorderRight resultsDateWidth" scope="col" id="header_C4" role="columnheader" aria-label="Last Updated Column. Activate to sort column ascending">
+                        <a onclick="return false;" id="ctl00_catalogBody_updateMatches_ctl02_dateComputedHeaderLink" data-commandName="DateComputed" href="javascript:__doPostBack(&#39;ctl00$catalogBody$updateMatches$ctl02$dateComputedHeaderLink&#39;,&#39;&#39;)"><span>Last Updated</span><img id="ctl00_catalogBody_updateMatches_ctl02_DateComputedSortArrow" class="hideSortArrow sortImagePadding" src="Images/button_SortAscendingArrow.gif" align="right" /></a>
+                    </th><th class="headerText resultsHeaderpadding ResultsHeaderTD resultsBorderRight" scope="col" id="header_C5" role="columnheader" aria-label="Version Column. Activate to sort column ascending">
+                        <a onclick="return false;" id="ctl00_catalogBody_updateMatches_ctl02_driverVerVersionHeaderLink" data-commandName="DriverVerVersion" href="javascript:__doPostBack(&#39;ctl00$catalogBody$updateMatches$ctl02$driverVerVersionHeaderLink&#39;,&#39;&#39;)"><span>Version</span><img id="ctl00_catalogBody_updateMatches_ctl02_DriverVerVersionSortArrow" class="hideSortArrow sortImagePadding" src="Images/button_SortAscendingArrow.gif" align="right" /></a>
+                    </th><th class="headerText resultsHeaderpadding ResultsHeaderTD  resultsBorderRight" scope="col" id="header_C6" role="columnheader" aria-label="Size Column. Activate to sort column ascending">
+                        <a onclick="return false;" id="ctl00_catalogBody_updateMatches_ctl02_sizeInBytesHeaderLink" data-commandName="SizeInBytes" href="javascript:__doPostBack(&#39;ctl00$catalogBody$updateMatches$ctl02$sizeInBytesHeaderLink&#39;,&#39;&#39;)"><span>Size</span><img id="ctl00_catalogBody_updateMatches_ctl02_SizeInBytesSortArrow" class="hideSortArrow sortImagePadding" src="Images/button_SortAscendingArrow.gif" align="right" /></a>
+                    </th><th class="headerText ResultsHeaderTD resultsButtonWidth" scope="col" id="header_C7" role="columnheader" aria-label="Download Column">
+                    <HeaderTemplate>
+                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                    </HeaderTemplate>
+                        <span>Download</span>
+                        </th>
+	</tr><tr id="95c1d5e4-3c02-4fc9-b30f-1041b8793dab_R0">
+		<td class="resultsbottomBorder resultspadding resultsIconWidth " id="95c1d5e4-3c02-4fc9-b30f-1041b8793dab_C0_R0">
+                    </td><td class="resultsbottomBorder resultspadding" id="95c1d5e4-3c02-4fc9-b30f-1041b8793dab_C1_R0">
+                        <a id='95c1d5e4-3c02-4fc9-b30f-1041b8793dab_link' href= "javascript:void(0);" onclick='goToDetails("95c1d5e4-3c02-4fc9-b30f-1041b8793dab");' class="contentTextItemSpacerNoBreakLink">
+                            2026-08 Dynamic Cumulative Update for Windows 10 Version 21H2 for x64-based Systems (KB5120249)
+                        </a>
+                    </td><td class="resultsbottomBorder resultspadding" id="95c1d5e4-3c02-4fc9-b30f-1041b8793dab_C2_R0">
+                        Windows 10 and later GDR-DU
+                    </td><td class="resultsbottomBorder resultspadding" id="95c1d5e4-3c02-4fc9-b30f-1041b8793dab_C3_R0">
+                        Security Updates
+                    </td><td class="resultsbottomBorder resultspadding " id="95c1d5e4-3c02-4fc9-b30f-1041b8793dab_C4_R0">
+                        8/11/2026
+                    </td><td class="resultsbottomBorder resultspadding" id="95c1d5e4-3c02-4fc9-b30f-1041b8793dab_C5_R0">
+                        n/a
+                    </td><td class="resultsbottomBorder resultspadding resultsSizeWidth" id="95c1d5e4-3c02-4fc9-b30f-1041b8793dab_C6_R0">
+                       <span id="95c1d5e4-3c02-4fc9-b30f-1041b8793dab_size">878.9 MB</span> 
+                       <span class="noDisplay" id="95c1d5e4-3c02-4fc9-b30f-1041b8793dab_originalSize">921624505</span>
+                    </td><td class="resultsbottomBorder resultsButtonWidth" id="95c1d5e4-3c02-4fc9-b30f-1041b8793dab_C7_R0">
+                        
+                            <input id="95c1d5e4-3c02-4fc9-b30f-1041b8793dab" class="flatBlueButtonDownload focus-only" type="button" value='Download' />
+                        </td>
+	</tr><tr id="b598db6b-bfea-4168-a833-d51c6ff23f08_R1">
+		<td class="resultsbottomBorder resultspadding resultsIconWidth " id="b598db6b-bfea-4168-a833-d51c6ff23f08_C0_R1">
+                    </td><td class="resultsbottomBorder resultspadding" id="b598db6b-bfea-4168-a833-d51c6ff23f08_C1_R1">
+                        <a id='b598db6b-bfea-4168-a833-d51c6ff23f08_link' href= "javascript:void(0);" onclick='goToDetails("b598db6b-bfea-4168-a833-d51c6ff23f08");' class="contentTextItemSpacerNoBreakLink">
+                            2026-08 Dynamic Cumulative Update for Windows 10 Version 21H2 for x86-based Systems (KB5120249)
+                        </a>
+                    </td><td class="resultsbottomBorder resultspadding" id="b598db6b-bfea-4168-a833-d51c6ff23f08_C2_R1">
+                        Windows 10 and later GDR-DU
+                    </td><td class="resultsbottomBorder resultspadding" id="b598db6b-bfea-4168-a833-d51c6ff23f08_C3_R1">
+                        Security Updates
+                    </td><td class="resultsbottomBorder resultspadding " id="b598db6b-bfea-4168-a833-d51c6ff23f08_C4_R1">
+                        8/11/2026
+                    </td><td class="resultsbottomBorder resultspadding" id="b598db6b-bfea-4168-a833-d51c6ff23f08_C5_R1">
+                        n/a
+                    </td><td class="resultsbottomBorder resultspadding resultsSizeWidth" id="b598db6b-bfea-4168-a833-d51c6ff23f08_C6_R1">
+                       <span id="b598db6b-bfea-4168-a833-d51c6ff23f08_size">545.7 MB</span> 
+                       <span class="noDisplay" id="b598db6b-bfea-4168-a833-d51c6ff23f08_originalSize">572220584</span>
+                    </td><td class="resultsbottomBorder resultsButtonWidth" id="b598db6b-bfea-4168-a833-d51c6ff23f08_C7_R1">
+                        
+                            <input id="b598db6b-bfea-4168-a833-d51c6ff23f08" class="flatBlueButtonDownload focus-only" type="button" value='Download' />
+                        </td>
+	</tr><tr id="a6cadc4e-71dc-4047-b321-1bd722e6480b_R2">
+		<td class="resultsbottomBorder resultspadding resultsIconWidth " id="a6cadc4e-71dc-4047-b321-1bd722e6480b_C0_R2">
+                    </td><td class="resultsbottomBorder resultspadding" id="a6cadc4e-71dc-4047-b321-1bd722e6480b_C1_R2">
+                        <a id='a6cadc4e-71dc-4047-b321-1bd722e6480b_link' href= "javascript:void(0);" onclick='goToDetails("a6cadc4e-71dc-4047-b321-1bd722e6480b");' class="contentTextItemSpacerNoBreakLink">
+                            2026-08 Cumulative Update for Windows 10 Version 22H2 for ARM64-based Systems (KB5120249)
+                        </a>
+                    </td><td class="resultsbottomBorder resultspadding" id="a6cadc4e-71dc-4047-b321-1bd722e6480b_C2_R2">
+                        Windows 10,  version 1903 and later
+                    </td><td class="resultsbottomBorder resultspadding" id="a6cadc4e-71dc-4047-b321-1bd722e6480b_C3_R2">
+                        Security Updates
+                    </td><td class="resultsbottomBorder resultspadding " id="a6cadc4e-71dc-4047-b321-1bd722e6480b_C4_R2">
+                        8/11/2026
+                    </td><td class="resultsbottomBorder resultspadding" id="a6cadc4e-71dc-4047-b321-1bd722e6480b_C5_R2">
+                        n/a
+                    </td><td class="resultsbottomBorder resultspadding resultsSizeWidth" id="a6cadc4e-71dc-4047-b321-1bd722e6480b_C6_R2">
+                       <span id="a6cadc4e-71dc-4047-b321-1bd722e6480b_size">849.7 MB</span> 
+                       <span class="noDisplay" id="a6cadc4e-71dc-4047-b321-1bd722e6480b_originalSize">891025554</span>
+                    </td><td class="resultsbottomBorder resultsButtonWidth" id="a6cadc4e-71dc-4047-b321-1bd722e6480b_C7_R2">
+                        
+                            <input id="a6cadc4e-71dc-4047-b321-1bd722e6480b" class="flatBlueButtonDownload focus-only" type="button" value='Download' />
+                        </td>
+	</tr><tr id="16644b72-7795-403d-99a7-af6612eb434f_R3">
+		<td class="resultsbottomBorder resultspadding resultsIconWidth " id="16644b72-7795-403d-99a7-af6612eb434f_C0_R3">
+                    </td><td class="resultsbottomBorder resultspadding" id="16644b72-7795-403d-99a7-af6612eb434f_C1_R3">
+                        <a id='16644b72-7795-403d-99a7-af6612eb434f_link' href= "javascript:void(0);" onclick='goToDetails("16644b72-7795-403d-99a7-af6612eb434f");' class="contentTextItemSpacerNoBreakLink">
+                            2026-08 Cumulative Update for Windows 10 Version 22H2 for x64-based Systems (KB5120249)
+                        </a>
+                    </td><td class="resultsbottomBorder resultspadding" id="16644b72-7795-403d-99a7-af6612eb434f_C2_R3">
+                        Windows 10,  version 1903 and later
+                    </td><td class="resultsbottomBorder resultspadding" id="16644b72-7795-403d-99a7-af6612eb434f_C3_R3">
+                        Security Updates
+                    </td><td class="resultsbottomBorder resultspadding " id="16644b72-7795-403d-99a7-af6612eb434f_C4_R3">
+                        8/11/2026
+                    </td><td class="resultsbottomBorder resultspadding" id="16644b72-7795-403d-99a7-af6612eb434f_C5_R3">
+                        n/a
+                    </td><td class="resultsbottomBorder resultspadding resultsSizeWidth" id="16644b72-7795-403d-99a7-af6612eb434f_C6_R3">
+                       <span id="16644b72-7795-403d-99a7-af6612eb434f_size">895.2 MB</span> 
+                       <span class="noDisplay" id="16644b72-7795-403d-99a7-af6612eb434f_originalSize">938722696</span>
+                    </td><td class="resultsbottomBorder resultsButtonWidth" id="16644b72-7795-403d-99a7-af6612eb434f_C7_R3">
+                        
+                            <input id="16644b72-7795-403d-99a7-af6612eb434f" class="flatBlueButtonDownload focus-only" type="button" value='Download' />
+                        </td>
+	</tr><tr id="73800bd8-4d85-415b-b38b-601e36cc7bae_R4">
+		<td class="resultsbottomBorder resultspadding resultsIconWidth " id="73800bd8-4d85-415b-b38b-601e36cc7bae_C0_R4">
+                    </td><td class="resultsbottomBorder resultspadding" id="73800bd8-4d85-415b-b38b-601e36cc7bae_C1_R4">
+                        <a id='73800bd8-4d85-415b-b38b-601e36cc7bae_link' href= "javascript:void(0);" onclick='goToDetails("73800bd8-4d85-415b-b38b-601e36cc7bae");' class="contentTextItemSpacerNoBreakLink">
+                            2026-08 Cumulative Update for Windows 10 Version 21H2 for x64-based Systems (KB5120249)
+                        </a>
+                    </td><td class="resultsbottomBorder resultspadding" id="73800bd8-4d85-415b-b38b-601e36cc7bae_C2_R4">
+                        Windows 10 LTSB
+                    </td><td class="resultsbottomBorder resultspadding" id="73800bd8-4d85-415b-b38b-601e36cc7bae_C3_R4">
+                        Security Updates
+                    </td><td class="resultsbottomBorder resultspadding " id="73800bd8-4d85-415b-b38b-601e36cc7bae_C4_R4">
+                        8/11/2026
+                    </td><td class="resultsbottomBorder resultspadding" id="73800bd8-4d85-415b-b38b-601e36cc7bae_C5_R4">
+                        n/a
+                    </td><td class="resultsbottomBorder resultspadding resultsSizeWidth" id="73800bd8-4d85-415b-b38b-601e36cc7bae_C6_R4">
+                       <span id="73800bd8-4d85-415b-b38b-601e36cc7bae_size">895.2 MB</span> 
+                       <span class="noDisplay" id="73800bd8-4d85-415b-b38b-601e36cc7bae_originalSize">938722696</span>
+                    </td><td class="resultsbottomBorder resultsButtonWidth" id="73800bd8-4d85-415b-b38b-601e36cc7bae_C7_R4">
+                        
+                            <input id="73800bd8-4d85-415b-b38b-601e36cc7bae" class="flatBlueButtonDownload focus-only" type="button" value='Download' />
+                        </td>
+	</tr><tr id="4026652c-8ede-40af-be57-1b09aeb9fce6_R5">
+		<td class="resultsbottomBorder resultspadding resultsIconWidth " id="4026652c-8ede-40af-be57-1b09aeb9fce6_C0_R5">
+                    </td><td class="resultsbottomBorder resultspadding" id="4026652c-8ede-40af-be57-1b09aeb9fce6_C1_R5">
+                        <a id='4026652c-8ede-40af-be57-1b09aeb9fce6_link' href= "javascript:void(0);" onclick='goToDetails("4026652c-8ede-40af-be57-1b09aeb9fce6");' class="contentTextItemSpacerNoBreakLink">
+                            2026-08 Cumulative Update for Windows 10 Version 21H2 for x86-based Systems (KB5120249)
+                        </a>
+                    </td><td class="resultsbottomBorder resultspadding" id="4026652c-8ede-40af-be57-1b09aeb9fce6_C2_R5">
+                        Windows 10 LTSB
+                    </td><td class="resultsbottomBorder resultspadding" id="4026652c-8ede-40af-be57-1b09aeb9fce6_C3_R5">
+                        Security Updates
+                    </td><td class="resultsbottomBorder resultspadding " id="4026652c-8ede-40af-be57-1b09aeb9fce6_C4_R5">
+                        8/11/2026
+                    </td><td class="resultsbottomBorder resultspadding" id="4026652c-8ede-40af-be57-1b09aeb9fce6_C5_R5">
+                        n/a
+                    </td><td class="resultsbottomBorder resultspadding resultsSizeWidth" id="4026652c-8ede-40af-be57-1b09aeb9fce6_C6_R5">
+                       <span id="4026652c-8ede-40af-be57-1b09aeb9fce6_size">553.2 MB</span> 
+                       <span class="noDisplay" id="4026652c-8ede-40af-be57-1b09aeb9fce6_originalSize">580123363</span>
+                    </td><td class="resultsbottomBorder resultsButtonWidth" id="4026652c-8ede-40af-be57-1b09aeb9fce6_C7_R5">
+                        
+                            <input id="4026652c-8ede-40af-be57-1b09aeb9fce6" class="flatBlueButtonDownload focus-only" type="button" value='Download' />
+                        </td>
+	</tr><tr id="ee246655-6511-443f-9e52-42cd27a8eb24_R6">
+		<td class="resultsbottomBorder resultspadding resultsIconWidth " id="ee246655-6511-443f-9e52-42cd27a8eb24_C0_R6">
+                    </td><td class="resultsbottomBorder resultspadding" id="ee246655-6511-443f-9e52-42cd27a8eb24_C1_R6">
+                        <a id='ee246655-6511-443f-9e52-42cd27a8eb24_link' href= "javascript:void(0);" onclick='goToDetails("ee246655-6511-443f-9e52-42cd27a8eb24");' class="contentTextItemSpacerNoBreakLink">
+                            2026-08 Cumulative Update for Windows 10 Version 22H2 for x86-based Systems (KB5120249)
+                        </a>
+                    </td><td class="resultsbottomBorder resultspadding" id="ee246655-6511-443f-9e52-42cd27a8eb24_C2_R6">
+                        Windows 10,  version 1903 and later
+                    </td><td class="resultsbottomBorder resultspadding" id="ee246655-6511-443f-9e52-42cd27a8eb24_C3_R6">
+                        Security Updates
+                    </td><td class="resultsbottomBorder resultspadding " id="ee246655-6511-443f-9e52-42cd27a8eb24_C4_R6">
+                        8/11/2026
+                    </td><td class="resultsbottomBorder resultspadding" id="ee246655-6511-443f-9e52-42cd27a8eb24_C5_R6">
+                        n/a
+                    </td><td class="resultsbottomBorder resultspadding resultsSizeWidth" id="ee246655-6511-443f-9e52-42cd27a8eb24_C6_R6">
+                       <span id="ee246655-6511-443f-9e52-42cd27a8eb24_size">553.2 MB</span> 
+                       <span class="noDisplay" id="ee246655-6511-443f-9e52-42cd27a8eb24_originalSize">580123363</span>
+                    </td><td class="resultsbottomBorder resultsButtonWidth" id="ee246655-6511-443f-9e52-42cd27a8eb24_C7_R6">
+                        
+                            <input id="ee246655-6511-443f-9e52-42cd27a8eb24" class="flatBlueButtonDownload focus-only" type="button" value='Download' />
+                        </td>
+	</tr><tr id="f0de1cb8-1f17-4873-8ab0-8f5938be354c_R7">
+		<td class="resultsbottomBorder resultspadding resultsIconWidth " id="f0de1cb8-1f17-4873-8ab0-8f5938be354c_C0_R7">
+                    </td><td class="resultsbottomBorder resultspadding" id="f0de1cb8-1f17-4873-8ab0-8f5938be354c_C1_R7">
+                        <a id='f0de1cb8-1f17-4873-8ab0-8f5938be354c_link' href= "javascript:void(0);" onclick='goToDetails("f0de1cb8-1f17-4873-8ab0-8f5938be354c");' class="contentTextItemSpacerNoBreakLink">
+                            2026-08 Dynamic Cumulative Update for Windows 10 Version 21H2 for ARM64-based Systems (KB5120249)
+                        </a>
+                    </td><td class="resultsbottomBorder resultspadding" id="f0de1cb8-1f17-4873-8ab0-8f5938be354c_C2_R7">
+                        Windows 10 and later GDR-DU
+                    </td><td class="resultsbottomBorder resultspadding" id="f0de1cb8-1f17-4873-8ab0-8f5938be354c_C3_R7">
+                        Security Updates
+                    </td><td class="resultsbottomBorder resultspadding " id="f0de1cb8-1f17-4873-8ab0-8f5938be354c_C4_R7">
+                        8/11/2026
+                    </td><td class="resultsbottomBorder resultspadding" id="f0de1cb8-1f17-4873-8ab0-8f5938be354c_C5_R7">
+                        n/a
+                    </td><td class="resultsbottomBorder resultspadding resultsSizeWidth" id="f0de1cb8-1f17-4873-8ab0-8f5938be354c_C6_R7">
+                       <span id="f0de1cb8-1f17-4873-8ab0-8f5938be354c_size">834.7 MB</span> 
+                       <span class="noDisplay" id="f0de1cb8-1f17-4873-8ab0-8f5938be354c_originalSize">875251842</span>
+                    </td><td class="resultsbottomBorder resultsButtonWidth" id="f0de1cb8-1f17-4873-8ab0-8f5938be354c_C7_R7">
+                        
+                            <input id="f0de1cb8-1f17-4873-8ab0-8f5938be354c" class="flatBlueButtonDownload focus-only" type="button" value='Download' />
+                        </td>
+	</tr><tr id="242e1ad7-5305-43ec-8ccb-bae1a71a35b5_R8">
+		<td class="resultsbottomBorder resultspadding resultsIconWidth " id="242e1ad7-5305-43ec-8ccb-bae1a71a35b5_C0_R8">
+                    </td><td class="resultsbottomBorder resultspadding" id="242e1ad7-5305-43ec-8ccb-bae1a71a35b5_C1_R8">
+                        <a id='242e1ad7-5305-43ec-8ccb-bae1a71a35b5_link' href= "javascript:void(0);" onclick='goToDetails("242e1ad7-5305-43ec-8ccb-bae1a71a35b5");' class="contentTextItemSpacerNoBreakLink">
+                            2026-08 Cumulative Update for Windows 10 Version 21H2 for ARM64-based Systems (KB5120249)
+                        </a>
+                    </td><td class="resultsbottomBorder resultspadding" id="242e1ad7-5305-43ec-8ccb-bae1a71a35b5_C2_R8">
+                        Windows 10 LTSB
+                    </td><td class="resultsbottomBorder resultspadding" id="242e1ad7-5305-43ec-8ccb-bae1a71a35b5_C3_R8">
+                        Security Updates
+                    </td><td class="resultsbottomBorder resultspadding " id="242e1ad7-5305-43ec-8ccb-bae1a71a35b5_C4_R8">
+                        8/11/2026
+                    </td><td class="resultsbottomBorder resultspadding" id="242e1ad7-5305-43ec-8ccb-bae1a71a35b5_C5_R8">
+                        n/a
+                    </td><td class="resultsbottomBorder resultspadding resultsSizeWidth" id="242e1ad7-5305-43ec-8ccb-bae1a71a35b5_C6_R8">
+                       <span id="242e1ad7-5305-43ec-8ccb-bae1a71a35b5_size">849.7 MB</span> 
+                       <span class="noDisplay" id="242e1ad7-5305-43ec-8ccb-bae1a71a35b5_originalSize">891025554</span>
+                    </td><td class="resultsbottomBorder resultsButtonWidth" id="242e1ad7-5305-43ec-8ccb-bae1a71a35b5_C7_R8">
+                        
+                            <input id="242e1ad7-5305-43ec-8ccb-bae1a71a35b5" class="flatBlueButtonDownload focus-only" type="button" value='Download' />
+                        </td>
+	</tr>
+</table>
+    </div>
+    <div id="detailsPopup" class="poupInfoDiv">
+        <table cellpadding="0" cellspacing="0" border="0">
+            <tr>
+                <td valign="top">
+                    <img src="Images/decor_BigInformation.gif" />
+                </td>
+                <td class="poupInfoText">
+                    <span id="ctl00_catalogBody_textDetailsPopupBlocked">If you have a pop-up blocker enabled, the Update Details window might not open. To open the Update Details window, configure your pop-blocker to allow pop-ups for this Web site.</span>
+                </td>
+            </tr>
+            <tr>
+                <td colspan="2" valign="bottom" class="textAlignRight">
+                    <input type="button" onclick="detailsPopup.style.display='none';" class="flatBlueButton cancelButton "
+                        id="closeButton" value='Close' />
+                </td>
+            </tr>
+        </table>
+    </div>
+
+    <span id="addButtonText" class="notVisible">Add</span>
+    <span id="addAllButtonText" class="notVisible">Add All</span>
+    <span id="removeButtonText" class="notVisible">Remove</span>
+    <span id="removeAllButtonText" class="notVisible">Remove All</span>
+
+                        </div>
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td id="minWidthCell">
+                    <img src="Images/spacer.gif" alt="" class="browserWidthSpacer" />
+                </td>
+            </tr>
+            <tr> 
+                <td>           
+                    <div id="footerBox" role="contentinfo">
+                        <div id="innerFooterBox">
+                            <span id="copyrightText">&copy;
+                                2026
+                                <span id="ctl00_textCopyrightFooter">Microsoft Corporation. All Rights Reserved.</span><span class="footerDivider">|</span><a href="https://go.microsoft.com/fwlink/?LinkId=521839" id="privacyLinkBox" class="footerLink" ><span id="ctl00_privacyResource">privacy</span></a><span class="footerDivider">|</span><a href="https://go.microsoft.com/fwlink/?linkid=2259814" id="He" class="footerLink" target="health"><span id="ctl00_ConsumerHealthPrivacyResource">Consumer Health Privacy</span> </a><span class="footerDivider">|</span><a href="https://go.microsoft.com/fwlink/?linkid=9482" id="legalLinkBox" class="footerLink" target="legal"><span id="ctl00_legalResource">terms of use</span></a><span class="footerDivider">|</span><a href="Support.aspx" id="supportLinkBox" onclick="propogateBasketState('Support.aspx')" class="footerLink"><span id="ctl00_supportResource">help</span></a>
+                                <span class="footerDivider">|</span><a href="https://www.microsoft.com/fr-fr/accessibility/accessibility-statement" id="supportLinkBoxFrench" 
+                                    class="footerLink"><span id="ctl00_Resource1">Accessibilité</span>
+                                </a>
+                        </div>
+                    </div>
+                </td>
+            </tr>
+        </table>
+        </div>
+        <input type="hidden" id="updateIDs" name="updateIDs" />
+        <input type="hidden" id="contentImport" name="contentImport" value=""/>
+        <input type="hidden" id="sku" name="sku" value="" />
+        <input type="hidden" id="serverName" name="serverName" value=""/>
+        <input type="hidden" id="ssl" name="ssl" value=""/>
+        <input type="hidden" id="portNumber" name="portNumber" value=""/>
+        <input type="hidden" id="version" name="version" value=""/>
+        <input type="hidden" id="protocol" name="protocol" value=""/>                         
+        </form>
+    </div>
+</body>
+</html>

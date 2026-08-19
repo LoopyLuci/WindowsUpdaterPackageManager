@@ -1,6 +1,6 @@
 ﻿{
     "schemaVersion":  "1.0",
-    "generatedAt":  "2026-08-18T10:36:53.9231236-04:00",
+    "generatedAt":  "2026-08-18T13:17:22.2935207-04:00",
     "repositoryUrl":  "https://github.com/LoopyLuci/WindowsUpdateAndPackageManager",
     "packages":  [
                      {
@@ -136,12 +136,192 @@
                          "channel":  "stable",
                          "publishedAt":  "August 11, 2026",
                          "sizeBytes":  904937370,
-                         "sha256":  "2a2bed69a31af953195fd8bae535df861bac1bfdafa6dbbfa0170c9c7f405d92",
+                         "sha256":  "d8016990b1d1cce93dcdf31eb8ff54bb6ef6058ba127b3c5bca513c477a4c99e",
                          "sourceUrl":  "https://www.catalog.update.microsoft.com/Home/Search?q=2026-08%20Cumulative%20Update%20for%20Windows%2010%20Version%2022H2%20for%20x64-based%20Systems%20(KB5120249)",
                          "supportUrl":  "https://support.microsoft.com/help/?kb=5120249",
                          "tags":  [
                                       "windows-update",
                                       "kb5120249"
+                                  ]
+                     },
+                     {
+                         "id":  "kb5120249",
+                         "version":  "2026-Aug",
+                         "displayName":  "KB5120249 - August 2026 Security Updates",
+                         "description":  "KB5120249 - August 2026 Security Updates",
+                         "architecture":  "all",
+                         "osVersion":  "Windows 10",
+                         "channel":  "stable",
+                         "publishedAt":  "2026-08-11T07:00:00Z",
+                         "sizeBytes":  904937171,
+                         "sha256":  "b0af48c0aca00ecdb1578358dc6448f79fe6206ae8cdbaceb031213d7717f56e",
+                         "sourceUrl":  "https://www.catalog.update.microsoft.com/Search.aspx?q=KB5120249",
+                         "supportUrl":  "https://support.microsoft.com/help/?kb=5120249",
+                         "tags":  [
+                                      "windows-update",
+                                      "kb5120249"
+                                  ]
+                     },
+                     {
+                         "id":  "kb5120238",
+                         "version":  "2026-Aug",
+                         "displayName":  "KB5120238 - August 2026 Security Updates",
+                         "description":  "KB5120238 - August 2026 Security Updates",
+                         "architecture":  "all",
+                         "osVersion":  "Windows 10",
+                         "channel":  "stable",
+                         "publishedAt":  "2026-08-11T07:00:00Z",
+                         "sizeBytes":  15679,
+                         "sha256":  "f4ba7c3dc63c28c4767cce7e5095ee238e83cc32777bce5cb8d2afe485593a90",
+                         "sourceUrl":  "https://www.catalog.update.microsoft.com/Search.aspx?q=KB5120238",
+                         "supportUrl":  "https://support.microsoft.com/help/?kb=5120238",
+                         "tags":  [
+                                      "windows-update",
+                                      "kb5120238"
+                                  ]
+                     },
+                     {
+                         "id":  "kb5120242",
+                         "version":  "2026-Aug",
+                         "displayName":  "KB5120242 - August 2026 Security Updates",
+                         "description":  "KB5120242 - August 2026 Security Updates",
+                         "architecture":  "all",
+                         "osVersion":  "Windows 10",
+                         "channel":  "stable",
+                         "publishedAt":  "2026-08-11T07:00:00Z",
+                         "sizeBytes":  13329,
+                         "sha256":  "379a3fe7f47300c10ada4d51073d63d02d7133b58575a76c33135db611601840",
+                         "sourceUrl":  "https://www.catalog.update.microsoft.com/Search.aspx?q=KB5120242",
+                         "supportUrl":  "https://support.microsoft.com/help/?kb=5120242",
+                         "tags":  [
+                                      "windows-update",
+                                      "kb5120242"
+                                  ]
+                     },
+                     {
+                         "id":  "kb5120994",
+                         "version":  "2026-Aug",
+                         "displayName":  "KB5120994 - August 2026 Security Updates",
+                         "description":  "KB5120994 - August 2026 Security Updates",
+                         "architecture":  "all",
+                         "osVersion":  "Windows 10",
+                         "channel":  "stable",
+                         "publishedAt":  "2026-08-11T07:00:00Z",
+                         "sizeBytes":  29733,
+                         "sha256":  "498c15dd71452c76fee729431ece151593ec145df37137d5b25e1d13c50e5ea2",
+                         "sourceUrl":  "https://www.catalog.update.microsoft.com/Search.aspx?q=KB5120994",
+                         "supportUrl":  "https://support.microsoft.com/help/?kb=5120994",
+                         "tags":  [
+                                      "windows-update",
+                                      "kb5120994"
+                                  ]
+                     },
+                     {
+                         "id":  "kb5121000",
+                         "version":  "2026-Aug",
+                         "displayName":  "KB5121000 - August 2026 Security Updates",
+                         "description":  "KB5121000 - August 2026 Security Updates",
+                         "architecture":  "all",
+                         "osVersion":  "Windows 10",
+                         "channel":  "stable",
+                         "publishedAt":  "2026-08-11T07:00:00Z",
+                         "sizeBytes":  14605,
+                         "sha256":  "f13aebd4d651661a284f115959977a6e4d841692c39374dc1d447e1743145cd1",
+                         "sourceUrl":  "https://www.catalog.update.microsoft.com/Search.aspx?q=KB5121000",
+                         "supportUrl":  "https://support.microsoft.com/help/?kb=5121000",
+                         "tags":  [
+                                      "windows-update",
+                                      "kb5121000"
+                                  ]
+                     },
+                     {
+                         "id":  "kb5120229",
+                         "version":  "2026-Aug",
+                         "displayName":  "KB5120229 - August 2026 Security Updates",
+                         "description":  "KB5120229 - August 2026 Security Updates",
+                         "architecture":  "all",
+                         "osVersion":  "Windows 10",
+                         "channel":  "stable",
+                         "publishedAt":  "2026-08-11T07:00:00Z",
+                         "sizeBytes":  0,
+                         "sha256":  "",
+                         "sourceUrl":  "https://www.catalog.update.microsoft.com/Search.aspx?q=KB5120229",
+                         "supportUrl":  "https://support.microsoft.com/help/?kb=5120229",
+                         "tags":  [
+                                      "windows-update",
+                                      "kb5120229"
+                                  ]
+                     },
+                     {
+                         "id":  "kb5120233",
+                         "version":  "2026-Aug",
+                         "displayName":  "KB5120233 - August 2026 Security Updates",
+                         "description":  "KB5120233 - August 2026 Security Updates",
+                         "architecture":  "all",
+                         "osVersion":  "Windows 10",
+                         "channel":  "stable",
+                         "publishedAt":  "2026-08-11T07:00:00Z",
+                         "sizeBytes":  0,
+                         "sha256":  "",
+                         "sourceUrl":  "https://www.catalog.update.microsoft.com/Search.aspx?q=KB5120233",
+                         "supportUrl":  "https://support.microsoft.com/help/?kb=5120233",
+                         "tags":  [
+                                      "windows-update",
+                                      "kb5120233"
+                                  ]
+                     },
+                     {
+                         "id":  "kb5120228",
+                         "version":  "2026-Aug",
+                         "displayName":  "KB5120228 - August 2026 Security Updates",
+                         "description":  "KB5120228 - August 2026 Security Updates",
+                         "architecture":  "all",
+                         "osVersion":  "Windows 10",
+                         "channel":  "stable",
+                         "publishedAt":  "2026-08-11T07:00:00Z",
+                         "sizeBytes":  0,
+                         "sha256":  "",
+                         "sourceUrl":  "https://www.catalog.update.microsoft.com/Search.aspx?q=KB5120228",
+                         "supportUrl":  "https://support.microsoft.com/help/?kb=5120228",
+                         "tags":  [
+                                      "windows-update",
+                                      "kb5120228"
+                                  ]
+                     },
+                     {
+                         "id":  "kb5121003",
+                         "version":  "2026-Aug",
+                         "displayName":  "KB5121003 - August 2026 Security Updates",
+                         "description":  "KB5121003 - August 2026 Security Updates",
+                         "architecture":  "all",
+                         "osVersion":  "Windows 10",
+                         "channel":  "stable",
+                         "publishedAt":  "2026-08-11T07:00:00Z",
+                         "sizeBytes":  0,
+                         "sha256":  "",
+                         "sourceUrl":  "https://www.catalog.update.microsoft.com/Search.aspx?q=KB5121003",
+                         "supportUrl":  "https://support.microsoft.com/help/?kb=5121003",
+                         "tags":  [
+                                      "windows-update",
+                                      "kb5121003"
+                                  ]
+                     },
+                     {
+                         "id":  "kb5120240",
+                         "version":  "2026-Aug",
+                         "displayName":  "KB5120240 - August 2026 Security Updates",
+                         "description":  "KB5120240 - August 2026 Security Updates",
+                         "architecture":  "all",
+                         "osVersion":  "Windows 10",
+                         "channel":  "stable",
+                         "publishedAt":  "2026-08-11T07:00:00Z",
+                         "sizeBytes":  0,
+                         "sha256":  "",
+                         "sourceUrl":  "https://www.catalog.update.microsoft.com/Search.aspx?q=KB5120240",
+                         "supportUrl":  "https://support.microsoft.com/help/?kb=5120240",
+                         "tags":  [
+                                      "windows-update",
+                                      "kb5120240"
                                   ]
                      }
                  ]
